@@ -1,17 +1,17 @@
 # Dependencies
 node_modules/
+web/node_modules/
 
 # Build & output
 build/
+app/build/
 dist/
+web/dist/
 coverage/
 *.tsbuildinfo
 
-# Electron packaging
-release/
-release-*/
-electron-builder-override.json
-*.blockmap
+# Generated Web Assets in Android (Always build from web/ folder)
+app/src/main/assets/web/
 
 # Environment & secrets (never commit)
 .env
@@ -28,54 +28,32 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .npm
-lerna-debug.log*
 
 # OS files
 .DS_Store
-.DS_Store?
 Thumbs.db
-ehthumbs.db
 desktop.ini
 
-# IDE & editors (uncomment .vscode/ if you want to share workspace settings)
+# IDE & editors
 .idea/
-*.sublime-project
-*.sublime-workspace
-*.swp
-*.swo
-*~
-
-# Optional: Cursor/editor local state (remove if you want to share .cursor)
+.vscode/
+*.iml
+.kotlin/
 .cursor/
 
-# Cache & temp
-.cache/
-.parcel-cache/
-.turbo/
-.temp/
-tmp/
-*.tmp
+# Android specifics
+.gradle/
+local.properties
+captures/
+**/build/
+**/.cxx/
+**/*.apk
+**/*.aab
+*.jks
+*.keystore
+!**/debug.keystore
 
-# Local databases (if your app writes SQLite etc. locally)
+# Local databases
 *.db
 *.sqlite
 *.sqlite3
-
-# Optional: lock file (uncomment to avoid committing; usually you want to commit package-lock.json)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# Android (native app under android/)
-android/.gradle/
-android/**/build/
-android/**/.cxx/
-android/local.properties
-android/.idea/
-android/*.iml
-android/captures/
-android/**/*.apk
-android/**/*.aab
-*.jks
-*.keystore
-!android/**/debug.keystore

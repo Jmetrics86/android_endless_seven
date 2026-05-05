@@ -17,11 +17,11 @@ export class SceneManager {
   /** Stabilized resize handler so removeEventListener works. */
   private readonly onResizeBound = () => this.onWindowResize();
 
-  private static readonly CAMERA_DEFAULT = { fov: 45, y: 28, z: 32 };
+  private static readonly CAMERA_DEFAULT = { fov: 40, y: 22, z: 24 };
   /** Pull back on short layouts (phone landscape WebView uses min dimension). */
-  private static readonly CAMERA_COMPACT = { fov: 52, y: 31.5, z: 36.5 };
+  private static readonly CAMERA_COMPACT = { fov: 45, y: 24, z: 26 };
   /** Landscape phones in hand are often shallow; widen FOV slightly. */
-  private static readonly CAMERA_LANDSCAPE_SHALLOW = { fov: 54, y: 32.2, z: 37.5 };
+  private static readonly CAMERA_LANDSCAPE_SHALLOW = { fov: 48, y: 26, z: 28 };
 
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();

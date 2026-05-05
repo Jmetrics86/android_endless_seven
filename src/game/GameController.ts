@@ -161,6 +161,8 @@ export class GameController implements IGameController {
     this.setupBoard();
     this.inputHandler.onMouseMove = this.handleMouseMove.bind(this);
     this.inputHandler.onMouseDown = this.handleMouseDown.bind(this);
+    this.inputHandler.onMouseUp = this.handleMouseUp.bind(this);
+    this.inputHandler.onLongPress = this.handleLongPress.bind(this);
 
     this.animate();
   }
@@ -907,6 +909,10 @@ export class GameController implements IGameController {
   }
 
   private handleMouseMove(event: MouseEvent | PointerEvent) {
+    if (this.state.draggingCard) {
+      this.updateState({ dragPosition: { x: event.clientX, y: event.clientY } });
+    }
+
     // When a decision or targeting prompt is active, still allow card hover preview but don't overwrite instruction text
     const promptActive = !!this.state.decisionContext ||
       this.state.currentPhase === Phase.ABILITY_TARGETING ||
@@ -1048,6 +1054,53 @@ export class GameController implements IGameController {
     }
   }
 
+  private handleLongPress(event: MouseEvent | PointerEvent) {
+    if (this.state.currentPhase !== Phase.PREP) return;
+
+    const handIntersects = this.inputHandler.raycaster.intersectObjects(this.playerHand.map(c => c.mesh), true);
+    if (handIntersects.length > 0) {
+      const picked = this.findCardEntityFromObject(handIntersects[0].object, this.playerHand);
+      if (picked) {
+        this.clearCardHoverLiftTarget();
+        this.activeSelection = picked;
+        this.updateState({
+          draggingCard: this.cardToHoveredInfo(picked),
+          dragPosition: { x: event.clientX, y: event.clientY }
+        });
+      }
+    }
+  }
+
+  private handleMouseUp(event: MouseEvent | PointerEvent) {
+    if (this.state.draggingCard && this.activeSelection) {
+      const slotIntersects = this.inputHandler.raycaster.intersectObjects(this.slotMeshes);
+      const playerSlotIntersect = slotIntersects.find(i => i.object.position.z > 0.5);
+
+      if (playerSlotIntersect) {
+        const idx = playerSlotIntersect.object.userData.slotIndex;
+        if (idx >= 0 && idx < GAME_CONSTANTS.SEVEN && !this.playerBattlefield[idx]) {
+          const card = this.activeSelection;
+          this.addLog(`Player places ${card.data.name} at Seal ${idx + 1}`);
+          this.playerHand = this.playerHand.filter(c => c !== card);
+          this.playerBattlefield[idx] = card;
+          card.resetHoverLift(0.06);
+          gsap.to(card.mesh.position, {
+            x: (idx - 3) * GAME_CONSTANTS.SLOT_SPACING,
+            y: 0.1,
+            z: 3.2,
+            duration: 0.5
+          });
+          gsap.to(card.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.5 });
+          card.applyBackTextureIfNeeded();
+          this.prepUndoStack.push({ type: 'place', slotIndex: idx, card });
+          this.abilityManager.syncBoardPresencePowerMarkers();
+        }
+      }
+      this.activeSelection = null;
+      this.updateState({ draggingCard: null, dragPosition: null });
+    }
+  }
+
   private async handleMouseDown(event: MouseEvent | PointerEvent) {
     if (this.state.currentPhase === Phase.PREP) {
       const limboIntersects = this.inputHandler.raycaster.intersectObjects(this.playerLimbo.map(c => c.mesh), true);
@@ -1091,14 +1144,9 @@ export class GameController implements IGameController {
         }
       }
 
+      // Drag and drop handles hand selection; tap on hand is ignored here to avoid conflict.
       const handIntersects = this.inputHandler.raycaster.intersectObjects(this.playerHand.map(c => c.mesh), true);
-      if (handIntersects.length > 0) {
-        const picked = this.findCardEntityFromObject(handIntersects[0].object, this.playerHand);
-        this.clearCardHoverLiftTarget();
-        this.activeSelection = picked;
-        this.updateState({});
-        return;
-      }
+      if (handIntersects.length > 0) return;
 
       if (this.activeSelection) {
         const slotIntersects = this.inputHandler.raycaster.intersectObjects(this.slotMeshes);

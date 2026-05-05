@@ -93,6 +93,10 @@ export interface GameState {
   logs: string[];
   /** Set when a card is hovered (for small-screen magnified preview). Cleared when not hovered or when a prompt is active. */
   hoveredCard?: HoveredCardInfo | null;
+  /** Set when a card is being dragged (Prep phase long-press). */
+  draggingCard?: HoveredCardInfo | null;
+  /** Client coordinates for the drag preview. */
+  dragPosition?: { x: number; y: number } | null;
   /** Card summaries for Limbo/Graveyard search UI. Updated whenever state is pushed. */
   playerLimboCards: HoveredCardInfo[];
   enemyLimboCards: HoveredCardInfo[];

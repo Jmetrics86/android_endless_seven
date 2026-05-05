@@ -19,10 +19,10 @@ export class InputHandler {
   public onLongPress: ((event: InputPointerEvent) => void) | null = null;
 
   private longPressTimeout: number | null = null;
-  private readonly LONG_PRESS_DURATION = 350; // ms
+  private readonly LONG_PRESS_DURATION = 300; // ms
   private longPressActive = false;
   private startCoords = { x: 0, y: 0 };
-  private readonly MOVE_THRESHOLD = 10; // px
+  private readonly MOVE_THRESHOLD = 30; // px
 
   private readonly supportsPointerEvents: boolean;
   private readonly handlePointerMoveBound: (event: PointerEvent) => void;

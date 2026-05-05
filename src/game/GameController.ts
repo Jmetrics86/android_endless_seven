@@ -1063,6 +1063,8 @@ export class GameController implements IGameController {
       if (picked) {
         this.clearCardHoverLiftTarget();
         this.activeSelection = picked;
+        // Dim the 3D card while dragging in 2D space
+        picked.setOpacity(0.4);
         this.updateState({
           draggingCard: this.cardToHoveredInfo(picked),
           dragPosition: { x: event.clientX, y: event.clientY }
@@ -1073,28 +1075,52 @@ export class GameController implements IGameController {
 
   private handleMouseUp(event: MouseEvent | PointerEvent) {
     if (this.state.draggingCard && this.activeSelection) {
+      // Restore opacity
+      this.activeSelection.setOpacity(1.0);
+
       const slotIntersects = this.inputHandler.raycaster.intersectObjects(this.slotMeshes);
       const playerSlotIntersect = slotIntersects.find(i => i.object.position.z > 0.5);
 
+      let targetIdx = -1;
       if (playerSlotIntersect) {
-        const idx = playerSlotIntersect.object.userData.slotIndex;
-        if (idx >= 0 && idx < GAME_CONSTANTS.SEVEN && !this.playerBattlefield[idx]) {
-          const card = this.activeSelection;
-          this.addLog(`Player places ${card.data.name} at Seal ${idx + 1}`);
-          this.playerHand = this.playerHand.filter(c => c !== card);
-          this.playerBattlefield[idx] = card;
-          card.resetHoverLift(0.06);
-          gsap.to(card.mesh.position, {
-            x: (idx - 3) * GAME_CONSTANTS.SLOT_SPACING,
-            y: 0.1,
-            z: 3.2,
-            duration: 0.5
+        targetIdx = playerSlotIntersect.object.userData.slotIndex;
+      } else {
+        // Lenient proximity check if direct intersection missed on emulator
+        const ray = this.inputHandler.raycaster.ray;
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const intersectPoint = new THREE.Vector3();
+        if (ray.intersectPlane(plane, intersectPoint)) {
+          let closestSlot = -1;
+          let minDist = 2.5; // Detection radius
+          this.slotMeshes.forEach(slot => {
+            if (slot.position.z > 0.5) {
+              const dist = intersectPoint.distanceTo(slot.position);
+              if (dist < minDist) {
+                minDist = dist;
+                closestSlot = slot.userData.slotIndex;
+              }
+            }
           });
-          gsap.to(card.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.5 });
-          card.applyBackTextureIfNeeded();
-          this.prepUndoStack.push({ type: 'place', slotIndex: idx, card });
-          this.abilityManager.syncBoardPresencePowerMarkers();
+          targetIdx = closestSlot;
         }
+      }
+
+      if (targetIdx >= 0 && targetIdx < GAME_CONSTANTS.SEVEN && !this.playerBattlefield[targetIdx]) {
+        const card = this.activeSelection;
+        this.addLog(`Player places ${card.data.name} at Seal ${targetIdx + 1}`);
+        this.playerHand = this.playerHand.filter(c => c !== card);
+        this.playerBattlefield[targetIdx] = card;
+        card.resetHoverLift(0.06);
+        gsap.to(card.mesh.position, {
+          x: (targetIdx - 3) * GAME_CONSTANTS.SLOT_SPACING,
+          y: 0.1,
+          z: 3.2,
+          duration: 0.5
+        });
+        gsap.to(card.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.5 });
+        card.applyBackTextureIfNeeded();
+        this.prepUndoStack.push({ type: 'place', slotIndex: targetIdx, card });
+        this.abilityManager.syncBoardPresencePowerMarkers();
       }
       this.activeSelection = null;
       this.updateState({ draggingCard: null, dragPosition: null });

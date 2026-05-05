@@ -24,11 +24,11 @@ export function tweenPlayerHandCardToPrepPose(
 ): void {
   const offset = playerHandPrepHandOffset(handIndex);
   gsap.to(card.mesh.position, {
-    x: offset * 2.15,
-    y: 12,
-    z: 21 + Math.abs(offset) * 0.3,
+    x: offset * 1.9,
+    y: 16,
+    z: 22 + Math.abs(offset) * 0.2,
     duration,
     ease: 'power2.out',
   });
-  gsap.to(card.mesh.rotation, { x: 0.85, y: offset * 0.06, duration, ease: 'power2.out' });
+  gsap.to(card.mesh.rotation, { x: 0.7, y: offset * 0.08, duration, ease: 'power2.out' });
 }

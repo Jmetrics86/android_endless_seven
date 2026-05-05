@@ -125,11 +125,11 @@ export default function App() {
         </button>
       )}
 
-      {/* Bottom Center Prompt / Instructions */}
+      {/* Top Center Prompt / Instructions */}
       {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none w-full max-w-lg px-4 text-center">
-          <div className="glass-panel px-4 py-2 rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm">
-            <p className="text-sm text-white/90 italic drop-shadow-md">
+        <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-full max-w-md px-4 text-center">
+          <div className="glass-panel px-4 py-2 rounded-lg border border-[#00f2ff]/20 bg-black/60 backdrop-blur-md shadow-[0_0_20px_rgba(0,242,255,0.15)]">
+            <p className="text-sm text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
               {gameState.instructionText}
             </p>
           </div>
@@ -295,17 +295,21 @@ export default function App() {
       <AnimatePresence>
         {gameState?.draggingCard && gameState.dragPosition && (
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1.1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.7, opacity: 0, y: 20 }}
+            animate={{ scale: 1.1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.7, opacity: 0, y: 20 }}
             className="fixed pointer-events-none z-[200]"
             style={{
               left: gameState.dragPosition.x,
               top: gameState.dragPosition.y,
-              transform: 'translate(-50%, -100%)'
+              transform: 'translate(-50%, -115%)'
             }}
           >
-            <CardPreview card={gameState.draggingCard} size="large" />
+            <div className="relative">
+              {/* Added a subtle glow behind the dragging card */}
+              <div className="absolute inset-0 bg-[#00f2ff]/20 blur-2xl rounded-full" />
+              <CardPreview card={gameState.draggingCard} size="large" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

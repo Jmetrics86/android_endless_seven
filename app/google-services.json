@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "76147912886",
+    "project_id": "endless-seven",
+    "storage_bucket": "endless-seven.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:76147912886:android:b23c65794fc928d6577617",
+        "android_client_info": {
+          "package_name": "com.endlessseven.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-0JtHhh3t3W2SZcRHqlBqeFY8yPJmfuc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

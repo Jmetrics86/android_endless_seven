@@ -9,7 +9,6 @@ import gsap from 'gsap';
 import type { CardEntity } from '../entities/CardEntity';
 import type { GameState } from '../types';
 import { GAME_CONSTANTS } from '../constants';
-import { tweenPlayerHandCardToPrepPose } from './prepHandLayout';
 
 export type PrepUndoEntry =
   | { type: 'place'; slotIndex: number; card: CardEntity }
@@ -21,6 +20,7 @@ export interface PrepUndoControllerSlice {
   playerLimbo: CardEntity[];
   abilityManager: { syncBoardPresencePowerMarkers(): void };
   updateState(patch: Partial<GameState>): void;
+  realignPlayerHand(duration?: number): void;
 }
 
 export function killCardMeshTweens(card: CardEntity): void {
@@ -32,9 +32,8 @@ export function applyUndoPlace(c: PrepUndoControllerSlice, slotIndex: number, ca
   killCardMeshTweens(card);
   c.playerBattlefield[slotIndex] = null;
   c.playerHand.push(card);
-  const handIdx = c.playerHand.length - 1;
   card.resetHoverLift(0.06);
-  tweenPlayerHandCardToPrepPose(card, handIdx, 0.5);
+  c.realignPlayerHand(0.4);
   card.applyBackTextureIfNeeded();
   c.abilityManager.syncBoardPresencePowerMarkers();
   c.updateState({});

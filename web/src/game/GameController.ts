@@ -22,6 +22,7 @@ import { IGameController } from './interfaces';
 import { shouldEnemyUseLuna } from './EnemyEasyAI';
 import { scheduleCombatExchangeFloats } from '../engine/FloatingCombatNumbers';
 import { executePrepUndoEntry, type PrepUndoEntry } from './prepUndo';
+import { tweenPlayerHandCardToPrepPose } from './prepHandLayout';
 
 /** Temporary: zone/label tuning. Remove ZoneTuningGui and use final values in createPile/setupPiles when done. */
 export interface ZoneTuningParams {
@@ -67,6 +68,8 @@ export class GameController implements IGameController {
   public playerGraveyardMesh!: THREE.Group;
   public enemyGraveyardMesh!: THREE.Group;
   private slotMeshes: THREE.Mesh[] = [];
+  private highlightedSlotMesh: THREE.Mesh | null = null;
+  private currentTheme: EnvironmentTheme = 'dark';
   private floorMesh!: THREE.Mesh;
   private tableMesh!: THREE.Mesh;
   /** Spotlights over table (red and blue hues). */
@@ -102,6 +105,7 @@ export class GameController implements IGameController {
   public uiManager: UIManager;
   public abilityManager: AbilityManager;
   public phaseManager: PhaseManager;
+  private readonly onResizeBound = () => this.handleResize();
 
   /** Zone/label layout (final values from zone tuning). */
   public zoneTuningParams: ZoneTuningParams = {
@@ -164,6 +168,7 @@ export class GameController implements IGameController {
     this.inputHandler.onMouseUp = this.handleMouseUp.bind(this);
     this.inputHandler.onLongPress = this.handleLongPress.bind(this);
 
+    window.addEventListener('resize', this.onResizeBound);
     this.animate();
   }
 
@@ -356,6 +361,7 @@ export class GameController implements IGameController {
     const loader = new THREE.TextureLoader().setCrossOrigin('anonymous');
     loader.load(cardArtUrl(CARD_BACK_PATH), (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 16;
       this.pileCardBackMaterials.forEach((m) => {
         m.map = tex;
         m.color.setHex(0xffffff);
@@ -378,6 +384,7 @@ export class GameController implements IGameController {
 
   /** Switch 3D environment theme (dark/light) for accessibility. */
   public setEnvironmentTheme(theme: EnvironmentTheme) {
+    this.currentTheme = theme;
     const colors = ENV_THEME_COLORS[theme];
     this.sceneManager.setTheme(theme);
 
@@ -730,6 +737,18 @@ export class GameController implements IGameController {
     );
   }
 
+  public realignPlayerHand(duration = 0.5) {
+    this.playerHand.forEach((card, i) => {
+      tweenPlayerHandCardToPrepPose(card, i, this.playerHand.length, this.sceneManager.camera, duration);
+    });
+  }
+
+  private handleResize() {
+    if (this.state.currentPhase === Phase.PREP) {
+      this.realignPlayerHand(0);
+    }
+  }
+
   public undoLastPrepAction(): void {
     if (this.state.currentPhase !== Phase.PREP) {
       this.addLog('Undo is only available during Prep.');
@@ -911,6 +930,64 @@ export class GameController implements IGameController {
   private handleMouseMove(event: MouseEvent | PointerEvent) {
     if (this.state.draggingCard) {
       this.updateState({ dragPosition: { x: event.clientX, y: event.clientY } });
+
+      // Highlight slot/seal being dragged over
+      const ray = this.inputHandler.raycaster.ray;
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersectPoint = new THREE.Vector3();
+      let hoveredSlot: THREE.Mesh | null = null;
+
+      if (ray.intersectPlane(plane, intersectPoint)) {
+        let closestSlotMesh: THREE.Mesh | null = null;
+        let minDist = 2.0; // Tightened detection radius (weighted) to require drag closer to slot
+        this.slotMeshes.forEach(slot => {
+          if (slot.position.z > 0.5) {
+            const dx = intersectPoint.x - slot.position.x;
+            const dz = intersectPoint.z - slot.position.z;
+            const dist = Math.sqrt(dx * dx + dz * dz * 0.16); // Weighted: Z has 0.4x weight
+            if (dist < minDist) {
+              minDist = dist;
+              closestSlotMesh = slot;
+            }
+          }
+        });
+        hoveredSlot = closestSlotMesh;
+      }
+
+      if (hoveredSlot !== this.highlightedSlotMesh) {
+        if (this.highlightedSlotMesh) {
+          const defaultColors = ENV_THEME_COLORS[this.currentTheme];
+          const mat = this.highlightedSlotMesh.material as THREE.MeshBasicMaterial;
+          mat.color.setHex(defaultColors.slotFill);
+          mat.opacity = defaultColors.slotOpacity;
+
+          // Reset the highlighted seal as well
+          const oldSlotIdx = this.highlightedSlotMesh.userData.slotIndex;
+          if (oldSlotIdx >= 0 && oldSlotIdx < this.seals.length) {
+            this.seals[oldSlotIdx].setHoverHighlight(false, false);
+          }
+        }
+        if (hoveredSlot) {
+          const slotIdx = hoveredSlot.userData.slotIndex;
+          const isOccupied = !!this.playerBattlefield[slotIdx];
+          const mat = hoveredSlot.material as THREE.MeshBasicMaterial;
+          if (!isOccupied) {
+            mat.color.setHex(0x00f2ff); // Cyan for valid
+            mat.opacity = 0.8;
+          } else {
+            mat.color.setHex(0xff0044); // Red/pink for invalid (occupied)
+            mat.opacity = 0.8;
+          }
+          this.highlightedSlotMesh = hoveredSlot;
+
+          // Highlight the corresponding seal
+          if (slotIdx >= 0 && slotIdx < this.seals.length) {
+            this.seals[slotIdx].setHoverHighlight(true, !isOccupied);
+          }
+        } else {
+          this.highlightedSlotMesh = null;
+        }
+      }
     }
 
     // When a decision or targeting prompt is active, still allow card hover preview but don't overwrite instruction text
@@ -1027,14 +1104,16 @@ export class GameController implements IGameController {
         this.cardHoverLiftTarget.resetHoverLift(0.24);
       }
       this.cardHoverLiftTarget = nextTarget;
-      nextTarget.tweenHoverLift(desiredY, 0.3, 'power2.out');
+      const isHand = this.playerHand.includes(nextTarget);
+      nextTarget.tweenHoverLift(desiredY, 0.3, 'power2.out', isHand);
       return;
     }
 
     // Same card still hovered: rotation may change during flip / haste reveal while `faceUp` lags — retarget lift.
     const curY = nextTarget.getVisualLiftLocalY();
     if (Math.abs(desiredY - curY) > 0.025) {
-      nextTarget.tweenHoverLift(desiredY, 0.14, 'power2.out');
+      const isHand = this.playerHand.includes(nextTarget);
+      nextTarget.tweenHoverLift(desiredY, 0.14, 'power2.out', isHand);
     }
   }
 
@@ -1055,28 +1134,28 @@ export class GameController implements IGameController {
   }
 
   private handleLongPress(event: MouseEvent | PointerEvent) {
-    if (this.state.currentPhase !== Phase.PREP) return;
-
-    const handIntersects = this.inputHandler.raycaster.intersectObjects(this.playerHand.map(c => c.mesh), true);
-    if (handIntersects.length > 0) {
-      const picked = this.findCardEntityFromObject(handIntersects[0].object, this.playerHand);
-      if (picked) {
-        this.clearCardHoverLiftTarget();
-        this.activeSelection = picked;
-        // Dim the 3D card while dragging in 2D space
-        picked.setOpacity(0.4);
-        this.updateState({
-          draggingCard: this.cardToHoveredInfo(picked),
-          dragPosition: { x: event.clientX, y: event.clientY }
-        });
-      }
-    }
+    // Handled immediately in handleMouseDown to enable responsive tap-and-drag.
   }
 
   private handleMouseUp(event: MouseEvent | PointerEvent) {
     if (this.state.draggingCard && this.activeSelection) {
       // Restore opacity
       this.activeSelection.setOpacity(1.0);
+
+      // Reset highlighted slot and seal if any
+      if (this.highlightedSlotMesh) {
+        const defaultColors = ENV_THEME_COLORS[this.currentTheme];
+        const mat = this.highlightedSlotMesh.material as THREE.MeshBasicMaterial;
+        mat.color.setHex(defaultColors.slotFill);
+        mat.opacity = defaultColors.slotOpacity;
+
+        const slotIdx = this.highlightedSlotMesh.userData.slotIndex;
+        if (slotIdx >= 0 && slotIdx < this.seals.length) {
+          this.seals[slotIdx].setHoverHighlight(false, false);
+        }
+
+        this.highlightedSlotMesh = null;
+      }
 
       const slotIntersects = this.inputHandler.raycaster.intersectObjects(this.slotMeshes);
       const playerSlotIntersect = slotIntersects.find(i => i.object.position.z > 0.5);
@@ -1091,10 +1170,12 @@ export class GameController implements IGameController {
         const intersectPoint = new THREE.Vector3();
         if (ray.intersectPlane(plane, intersectPoint)) {
           let closestSlot = -1;
-          let minDist = 2.5; // Detection radius
+          let minDist = 2.0; // Tightened detection radius (weighted) to require drag closer to slot
           this.slotMeshes.forEach(slot => {
             if (slot.position.z > 0.5) {
-              const dist = intersectPoint.distanceTo(slot.position);
+              const dx = intersectPoint.x - slot.position.x;
+              const dz = intersectPoint.z - slot.position.z;
+              const dist = Math.sqrt(dx * dx + dz * dz * 0.16); // Weighted: Z has 0.4x weight
               if (dist < minDist) {
                 minDist = dist;
                 closestSlot = slot.userData.slotIndex;
@@ -1111,6 +1192,7 @@ export class GameController implements IGameController {
         this.playerHand = this.playerHand.filter(c => c !== card);
         this.playerBattlefield[targetIdx] = card;
         card.resetHoverLift(0.06);
+        this.realignPlayerHand(0.4);
         gsap.to(card.mesh.position, {
           x: (targetIdx - 3) * GAME_CONSTANTS.SLOT_SPACING,
           y: 0.1,
@@ -1170,37 +1252,23 @@ export class GameController implements IGameController {
         }
       }
 
-      // Drag and drop handles hand selection; tap on hand is ignored here to avoid conflict.
+      // Drag and drop handles hand selection; start dragging immediately on pointer/mouse down!
       const handIntersects = this.inputHandler.raycaster.intersectObjects(this.playerHand.map(c => c.mesh), true);
-      if (handIntersects.length > 0) return;
-
-      if (this.activeSelection) {
-        const slotIntersects = this.inputHandler.raycaster.intersectObjects(this.slotMeshes);
-        const playerSlotIntersect = slotIntersects.find(i => i.object.position.z > 0.5);
-        
-        if (playerSlotIntersect) {
-          const idx = playerSlotIntersect.object.userData.slotIndex;
-          if (idx >= 0 && idx < GAME_CONSTANTS.SEVEN && !this.playerBattlefield[idx]) {
-            const card = this.activeSelection;
-            this.addLog(`Player places ${card.data.name} at Seal ${idx + 1}`);
-            this.playerHand = this.playerHand.filter(c => c !== card);
-            this.playerBattlefield[idx] = card;
-            card.resetHoverLift(0.06);
-            gsap.to(card.mesh.position, {
-              x: (idx - 3) * GAME_CONSTANTS.SLOT_SPACING,
-              y: 0.1,
-              z: 3.2,
-              duration: 0.5
-            });
-            gsap.to(card.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.5 });
-            card.applyBackTextureIfNeeded();
-            this.activeSelection = null;
-            this.prepUndoStack.push({ type: 'place', slotIndex: idx, card });
-            this.abilityManager.syncBoardPresencePowerMarkers();
-            this.updateState({});
-          }
+      if (handIntersects.length > 0) {
+        const picked = this.findCardEntityFromObject(handIntersects[0].object, this.playerHand);
+        if (picked) {
+          this.clearCardHoverLiftTarget();
+          this.activeSelection = picked;
+          picked.setOpacity(0.4);
+          this.updateState({
+            draggingCard: this.cardToHoveredInfo(picked),
+            dragPosition: { x: event.clientX, y: event.clientY }
+          });
         }
+        return;
       }
+
+
     } else if (this.state.currentPhase === Phase.COUNTER_ALLOCATION) {
       const allBoard = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)].filter(c => c !== null && c.data.faceUp) as CardEntity[];
       const intersects = this.inputHandler.raycaster.intersectObjects(allBoard.map(c => c.mesh), true);
@@ -1330,12 +1398,20 @@ export class GameController implements IGameController {
   private animate() {
     requestAnimationFrame(this.animate.bind(this));
     const time = Date.now() * 0.001;
+
+    // Synchronize locked status to SealEntities
+    const lockedIdx = this.state.lockedSealIndex ?? -1;
+    this.seals.forEach((seal, idx) => {
+      seal.setLocked(idx === lockedIdx);
+    });
+
     this.entityManager.update(time);
     this.sceneManager.update();
   }
 
   public dispose() {
     this.clearCardHoverLiftTarget();
+    window.removeEventListener('resize', this.onResizeBound);
     this.sceneManager.dispose();
     this.inputHandler.dispose();
     this.entityManager.clear();

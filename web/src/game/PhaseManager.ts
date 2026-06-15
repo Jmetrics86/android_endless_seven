@@ -12,7 +12,6 @@ import {
   preferEnemyFirstWhenFlipPowerTied,
   vacantSlotPriorityForReinforce,
 } from './EnemyEasyAI';
-import { tweenPlayerHandCardToPrepPose } from './prepHandLayout';
 
 export class PhaseManager {
   constructor(private controller: IGameController) {}
@@ -40,8 +39,7 @@ export class PhaseManager {
       this.controller.playerHand.push(card);
       card.applyBackTextureIfNeeded(); // All cards share same back graphic; ensure it is applied as soon as ready
 
-      const handIdx = this.controller.playerHand.length - 1;
-      tweenPlayerHandCardToPrepPose(card, handIdx, 0.6);
+      this.controller.realignPlayerHand(0.6);
       await new Promise(r => setTimeout(r, 100));
     }
 
@@ -1085,8 +1083,21 @@ export class PhaseManager {
   }
 
   public zoomOut() {
-    gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration: 1.2, ease: "power2.inOut" });
-    gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration: 1.2, ease: "power2.inOut" });
+    const phase = this.controller.state.currentPhase;
+    if (
+      phase === Phase.COUNTER_ALLOCATION ||
+      phase === Phase.ABILITY_TARGETING ||
+      phase === Phase.SEAL_TARGETING ||
+      phase === Phase.DELTA_BUFF_TARGETING
+    ) {
+      // Orthogonal top-down view centered on the battlefield slots (hides hand at z=22)
+      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 25, z: 0.1, duration: 1.2, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: 0, duration: 1.2, ease: "power2.inOut" });
+    } else {
+      // Default perspective view
+      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration: 1.2, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration: 1.2, ease: "power2.inOut" });
+    }
   }
 
   public zoomIn(idx: number) {

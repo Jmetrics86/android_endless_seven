@@ -31,6 +31,7 @@ function getOrLoadFaceTexture(url: string): Promise<THREE.Texture> {
     const loader = new THREE.TextureLoader().setCrossOrigin('anonymous');
     loader.load(url, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 16;
       faceTextureResolvedCache[url] = tex;
       resolve(tex);
     }, undefined, reject);
@@ -48,6 +49,7 @@ export function getOrLoadBackTexture(): Promise<THREE.Texture> {
     const url = cardArtUrl(CARD_BACK_PATH);
     loader.load(url, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 16;
       sharedBackTexture = tex;
       resolve(tex);
     }, undefined, reject);
@@ -298,16 +300,54 @@ export class CardEntity implements GameEntity {
     return this.data.faceUp ? 1 : -1;
   }
 
-  /** Animate local Y lift for hover (does not touch mesh.position). */
-  public tweenHoverLift(localY: number, duration: number, ease: string = 'power2.out') {
+  /** Animate local Y lift for hover. If isHand is true, applies fan-flattening rotation and scale-up. */
+  public tweenHoverLift(localY: number, duration: number, ease: string = 'power2.out', isHand = false) {
     gsap.killTweensOf(this.visualLiftRoot.position);
+    gsap.killTweensOf(this.visualLiftRoot.rotation);
+    gsap.killTweensOf(this.visualLiftRoot.scale);
+
     gsap.to(this.visualLiftRoot.position, { y: localY, duration, ease });
+
+    if (isHand) {
+      // Flatten yaw (Y) and roll (Z) rotations, and tilt slightly upright (X)
+      gsap.to(this.visualLiftRoot.rotation, {
+        x: -0.16,
+        y: -this.mesh.rotation.y,
+        z: -this.mesh.rotation.z,
+        duration,
+        ease
+      });
+      // Scale up the card slightly
+      gsap.to(this.visualLiftRoot.scale, { x: 1.28, y: 1.28, z: 1.28, duration, ease });
+      
+      // Set render order to draw on top of adjacent hand cards
+      this.setHoverRenderOrder(true);
+    }
   }
 
-  /** Return hover lift to neutral. */
+  /** Return hover lift and rotation/scale to neutral. */
   public resetHoverLift(duration: number = 0.28, ease: string = 'power2.out') {
     gsap.killTweensOf(this.visualLiftRoot.position);
+    gsap.killTweensOf(this.visualLiftRoot.rotation);
+    gsap.killTweensOf(this.visualLiftRoot.scale);
+
     gsap.to(this.visualLiftRoot.position, { y: 0, duration, ease });
+    gsap.to(this.visualLiftRoot.rotation, { x: 0, y: 0, z: 0, duration, ease });
+    gsap.to(this.visualLiftRoot.scale, { x: 1, y: 1, z: 1, duration, ease });
+
+    this.setHoverRenderOrder(false);
+  }
+
+  private setHoverRenderOrder(hovered: boolean) {
+    const order = hovered ? 99 : 0;
+    this.mesh.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        obj.renderOrder = order;
+        if ((obj as THREE.Mesh).material) {
+          ((obj as THREE.Mesh).material as THREE.Material).depthWrite = !hovered;
+        }
+      }
+    });
   }
 
   public updateVisualMarkers() {

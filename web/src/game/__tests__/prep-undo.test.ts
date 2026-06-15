@@ -53,6 +53,7 @@ describe('executePrepUndoEntry', () => {
       playerLimbo: [] as CardEntity[],
       abilityManager: { syncBoardPresencePowerMarkers: sync },
       updateState,
+      realignPlayerHand: vi.fn(),
       ...over,
     };
   }

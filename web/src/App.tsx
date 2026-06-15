@@ -203,9 +203,14 @@ export default function App() {
                           <div className="text-base font-bold text-[#ff0044]">{gameState.weaknessPool}</div>
                         </div>
                       </div>
-                      <button onClick={handleFinishCounters} className="drawer-btn-primary py-1 text-[0.55rem]">
-                        Confirm
-                      </button>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button onClick={handleFinishCounters} className="drawer-btn-secondary py-1 text-[0.55rem]">
+                          Skip
+                        </button>
+                        <button onClick={handleFinishCounters} className="drawer-btn-primary py-1 text-[0.55rem] font-bold">
+                          Confirm
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -350,38 +355,16 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Dragging Preview */}
+      {/* Left-aligned Preview (Hover/Drag) */}
       <AnimatePresence>
-        {gameState?.draggingCard && gameState.dragPosition && (
-          <motion.div
-            initial={{ scale: 0.7, opacity: 0, y: 20 }}
-            animate={{ scale: 1.1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.7, opacity: 0, y: 20 }}
-            className="fixed pointer-events-none z-[200]"
-            style={{
-              left: gameState.dragPosition.x,
-              top: gameState.dragPosition.y,
-              transform: 'translate(-50%, -115%)'
-            }}
-          >
-            <div className="relative">
-              <div className="absolute inset-0 bg-[#00f2ff]/20 blur-2xl rounded-full" />
-              <CardPreview card={gameState.draggingCard} size="large" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Hover Preview */}
-      <AnimatePresence>
-        {gameState?.hoveredCard && !gameState.draggingCard && !isDrawerOpen && (
+        {(gameState?.draggingCard || (gameState?.hoveredCard && !isDrawerOpen)) && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="fixed left-4 bottom-24 z-[90] pointer-events-none"
+            className="fixed left-4 top-1/2 -translate-y-1/2 z-[90] pointer-events-none"
           >
-            <CardPreview card={gameState.hoveredCard} size="small" />
+            <CardPreview card={gameState.draggingCard || gameState.hoveredCard} size="large" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -509,29 +492,32 @@ export default function App() {
   );
 }
 
-function CardPreview({ card, size = 'small' }: { card: HoveredCardInfo, size?: 'small' | 'large' }) {
+function CardPreview({ card, size = 'large' }: { card: HoveredCardInfo, size?: 'small' | 'large' }) {
   const effectivePower = card.power + card.powerMarkers - card.weaknessMarkers;
   const faceSrc = card.faceArtPath ? cardArtUrl(card.faceArtPath) : undefined;
 
-  const width = size === 'large' ? 'w-48' : 'w-36';
-  const height = size === 'large' ? 'h-72' : 'h-54';
+  const width = size === 'large' ? 'w-56' : 'w-44';
+  const height = size === 'large' ? 'h-84' : 'h-66';
 
   return (
-    <div className={`${width} ${height} rounded-xl overflow-hidden border-2 border-white/20 bg-black/95 shadow-2xl flex flex-col`}>
-      <div className="flex-1 relative bg-black/60 overflow-hidden">
+    <div className={`${width} ${height} rounded-2xl overflow-hidden border-2 border-white/30 bg-black shadow-[0_0_25px_rgba(0,0,0,0.8),0_0_15px_rgba(0,242,255,0.15)] relative flex flex-col`}>
+      {/* Full Card Art background */}
+      <div className="absolute inset-0 z-0 bg-[#0d0d11]">
         {faceSrc ? (
-          <img src={faceSrc} alt={card.name} className="w-full h-full object-cover" />
+          <img src={faceSrc} alt={card.name} className="w-full h-full object-cover object-center" />
         ) : (
-          <div className="h-full flex items-center justify-center text-xs text-gray-600 p-4 text-center">{card.name}</div>
+          <div className="h-full flex items-center justify-center text-xs text-gray-400 p-4 text-center">{card.name}</div>
         )}
       </div>
-      <div className="p-2 bg-black/80 border-t border-white/10">
-        <div className="text-[0.65rem] font-bold text-white uppercase truncate mb-0.5">{card.name}</div>
-        <div className="flex justify-between items-center text-[0.6rem] mb-1">
+
+      {/* Elegant overlay for text description */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black via-black/85 to-transparent pt-10">
+        <div className="text-xs font-bold text-white uppercase truncate mb-0.5 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">{card.name}</div>
+        <div className="flex justify-between items-center text-[0.65rem] mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
           <span className="text-[#00f2ff] font-bold">PWR {effectivePower}</span>
-          <span className="text-gray-500 uppercase">{card.faction}</span>
+          <span className="text-gray-400 uppercase font-semibold">{card.faction}</span>
         </div>
-        <div className="text-[0.5rem] text-gray-400 leading-tight line-clamp-3 italic">
+        <div className="text-[0.55rem] text-gray-300 leading-tight line-clamp-3 italic drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
           {card.ability}
         </div>
       </div>

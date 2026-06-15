@@ -40,6 +40,7 @@ export class SceneManager {
     this.camera.lookAt(this.cameraTarget);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     container.appendChild(this.renderer.domElement);

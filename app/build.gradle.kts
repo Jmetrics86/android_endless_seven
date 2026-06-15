@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.endlessseven.app"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.endlessseven.app"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 2
-        versionName = "0.0.2"
+        targetSdk = 34
+        versionCode = 10
+        versionName = "0.0.10"
     }
 
     buildTypes {
@@ -45,7 +45,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.webkit:webkit:1.12.1")

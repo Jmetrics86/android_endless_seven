@@ -60,4 +60,5 @@ export interface IGameController {
   appendEnemyPrepCardsToLimbo(): void;
   forceSkip(): void;
   selectLimboCardForAbility(zone: 'player' | 'enemy', index: number): void;
+  realignPlayerHand(duration?: number): void;
 }

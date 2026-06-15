@@ -27,6 +27,10 @@ export interface AchievementsProgress {
   unlocked: string[];
   winStreak: number;
   loseStreak: number;
+  lifetimeWins: number;
+  lifetimeLosses: number;
+  lifetimeDraws: number;
+  lifetimeGames: number;
 }
 
 export const ACHIEVEMENTS_STORAGE_VERSION = 1 as const;

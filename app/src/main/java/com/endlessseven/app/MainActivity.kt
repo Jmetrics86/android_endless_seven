@@ -13,6 +13,11 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.JavascriptInterface
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.ktx.Firebase
+import org.json.JSONObject
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -120,12 +125,14 @@ private fun EndlessSevenWebBoard(
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(appContext))
             .build()
     }
+    val firebaseAnalytics = remember { Firebase.analytics }
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             WebView(context).apply {
                 onWebViewAttached(this)
+                addJavascriptInterface(WebAnalyticsInterface(firebaseAnalytics), "AndroidAnalytics")
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -204,3 +211,26 @@ private fun EndlessSevenWebBoard(
 private const val GAME_URL = "https://appassets.androidplatform.net/assets/web/index.html"
 private const val BLANK_PAGE = "about:blank"
 private const val TEXT_ZOOM_DEFAULT_PERCENT = 100
+
+class WebAnalyticsInterface(private val analytics: FirebaseAnalytics) {
+    @JavascriptInterface
+    fun logEvent(name: String, jsonParams: String) {
+        val bundle = Bundle()
+        try {
+            val json = JSONObject(jsonParams)
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                when (val value = json.get(key)) {
+                    is Int -> bundle.putInt(key, value)
+                    is Double -> bundle.putDouble(key, value)
+                    is Boolean -> bundle.putBoolean(key, value)
+                    else -> bundle.putString(key, value.toString())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("E7_WEB_ANALYTICS", "Failed to parse jsonParams: $jsonParams", e)
+        }
+        analytics.logEvent(name, bundle)
+    }
+}

@@ -1,5 +1,6 @@
 import gsap from 'gsap';
-import { recordGameEndAndPersist } from '../achievements/storage';
+import { recordGameEndAndPersist, loadAchievementsProgress } from '../achievements/storage';
+import { logGameEvent } from './analytics';
 import { Phase, Alignment, CardData } from '../types';
 import { CardEntity, getOrLoadBackTexture } from '../entities/CardEntity';
 import { IGameController } from './interfaces';
@@ -1071,6 +1072,25 @@ export class PhaseManager {
       roundEnded: this.controller.state.currentRound,
     };
     const gameOverNewAchievements = recordGameEndAndPersist(gameOverStats);
+
+    const progress = loadAchievementsProgress();
+    logGameEvent('game_over', {
+      result,
+      player_seals: pCount,
+      enemy_seals: eCount,
+      cycles: this.controller.state.currentRound,
+      lifetime_wins: progress.lifetimeWins,
+      lifetime_losses: progress.lifetimeLosses,
+      lifetime_draws: progress.lifetimeDraws,
+      lifetime_games: progress.lifetimeGames,
+      unlocked_count: progress.unlocked.length,
+    });
+
+    gameOverNewAchievements.forEach((id) => {
+      logGameEvent('achievement_unlocked', {
+        achievement_id: id,
+      });
+    });
 
     this.controller.updateState({
       currentPhase: Phase.GAME_OVER,

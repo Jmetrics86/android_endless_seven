@@ -17,21 +17,29 @@ function defaultProgress(): AchievementsProgress {
     unlocked: [],
     winStreak: 0,
     loseStreak: 0,
+    lifetimeWins: 0,
+    lifetimeLosses: 0,
+    lifetimeDraws: 0,
+    lifetimeGames: 0,
   };
 }
 
 function parseProgress(raw: string | null | undefined): AchievementsProgress {
   if (!raw) return defaultProgress();
   try {
-    const parsed = JSON.parse(raw) as Partial<AchievementsProgress>;
+    const parsed = JSON.parse(raw) as any;
     if (parsed.v !== ACHIEVEMENTS_STORAGE_VERSION || !Array.isArray(parsed.unlocked)) {
       return defaultProgress();
     }
     return {
       v: ACHIEVEMENTS_STORAGE_VERSION,
-      unlocked: [...new Set(parsed.unlocked.filter((x) => typeof x === 'string'))],
+      unlocked: [...new Set<string>(parsed.unlocked.filter((x: any) => typeof x === 'string'))],
       winStreak: Math.max(0, Math.min(999, Number(parsed.winStreak) || 0)),
       loseStreak: Math.max(0, Math.min(999, Number(parsed.loseStreak) || 0)),
+      lifetimeWins: Math.max(0, Number(parsed.lifetimeWins) || 0),
+      lifetimeLosses: Math.max(0, Number(parsed.lifetimeLosses) || 0),
+      lifetimeDraws: Math.max(0, Number(parsed.lifetimeDraws) || 0),
+      lifetimeGames: Math.max(0, Number(parsed.lifetimeGames) || 0),
     };
   } catch {
     return defaultProgress();
@@ -99,10 +107,17 @@ export function computeAchievementsAfterGame(
 
   let winStreak = prev.winStreak;
   let loseStreak = prev.loseStreak;
+  let lifetimeWins = prev.lifetimeWins ?? 0;
+  let lifetimeLosses = prev.lifetimeLosses ?? 0;
+  let lifetimeDraws = prev.lifetimeDraws ?? 0;
+  let lifetimeGames = prev.lifetimeGames ?? 0;
+
+  lifetimeGames += 1;
 
   if (stats.result === 'player') {
     winStreak += 1;
     loseStreak = 0;
+    lifetimeWins += 1;
 
     add('first_victory');
     if (stats.playerSealCount >= 4) add('seals_4');
@@ -115,10 +130,12 @@ export function computeAchievementsAfterGame(
   } else if (stats.result === 'enemy') {
     loseStreak += 1;
     winStreak = 0;
+    lifetimeLosses += 1;
     if (loseStreak >= 10) add('streak_losses_10');
   } else {
     winStreak = 0;
     loseStreak = 0;
+    lifetimeDraws += 1;
   }
 
   const next: AchievementsProgress = {
@@ -126,6 +143,10 @@ export function computeAchievementsAfterGame(
     unlocked: [...unlocked],
     winStreak,
     loseStreak,
+    lifetimeWins,
+    lifetimeLosses,
+    lifetimeDraws,
+    lifetimeGames,
   };
 
   return { next, newlyUnlocked };

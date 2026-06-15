@@ -46,8 +46,9 @@ export function GameOverAchievements({ result, gameOverStats, newThisSession, cl
             </>
           )}
           <span className="text-[#00f2ff]/70">
-            <span className="text-white">{progress.winStreak}</span>W ·{' '}
-            <span className="text-white">{progress.loseStreak}</span>L
+            Streak: <span className="text-white">{progress.winStreak}</span>W / <span className="text-white">{progress.loseStreak}</span>L
+            {' · '}
+            Lifetime: <span className="text-white">{progress.lifetimeWins}</span>W / <span className="text-white">{progress.lifetimeLosses}</span>L / <span className="text-white">{progress.lifetimeGames}</span>G
           </span>
         </div>
         <p className="text-[0.48rem] text-gray-600 uppercase tracking-wider mt-1.5 leading-tight">

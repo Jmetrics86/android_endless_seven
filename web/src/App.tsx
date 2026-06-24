@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GameController } from './game/GameController';
 import { GAME_VERSION } from './constants';
 import { Alignment, Phase, GameState, HoveredCardInfo } from './types';
-import { cardArtUrl } from './cardArtPaths';
+import { cardArtUrl, CARD_BACK_PATH } from './cardArtPaths';
 import type { EnvironmentTheme } from './theme';
 import { THEME_STORAGE_KEY } from './theme';
 import { GameOverAchievements } from './components/GameOverAchievements';
@@ -32,6 +32,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
+  const [isSlowMode, setIsSlowMode] = useState(false);
 
   const LOG_RECENT_COUNT = 30;
   const displayLogs =
@@ -67,6 +68,10 @@ export default function App() {
     document.documentElement.dataset.theme = environmentTheme;
     gameRef.current?.setEnvironmentTheme(environmentTheme);
   }, [environmentTheme]);
+
+  useEffect(() => {
+    gameRef.current?.setSlowMode(isSlowMode);
+  }, [isSlowMode]);
 
   const toggleEnvironmentTheme = () => {
     setEnvironmentTheme((prev) => {
@@ -135,13 +140,122 @@ export default function App() {
         </button>
       )}
 
-      {/* Top Center Prompt / Instructions */}
+      {/* Top Center Prompt / Instructions & Direct Actions */}
       {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
         <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-full max-w-md px-4 text-center">
-          <div className="glass-panel px-4 py-2 rounded-lg border border-[#00f2ff]/20 bg-black/60 backdrop-blur-md shadow-[0_0_20px_rgba(0,242,255,0.15)]">
-            <p className="text-sm text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
+          <div className="glass-panel px-4 py-2.5 rounded-xl border border-[#00f2ff]/30 bg-black/85 backdrop-blur-md shadow-[0_0_25px_rgba(0,242,255,0.2)] pointer-events-auto transition-all">
+            <p className="text-xs text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
               {gameState.instructionText}
             </p>
+
+            {/* Preparation Actions */}
+            {gameState.currentPhase === Phase.PREP && (
+              <div className="flex gap-2 justify-center mt-2">
+                <button
+                  onClick={handlePrepBack}
+                  disabled={!gameRef.current?.canUndoPrep()}
+                  className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded disabled:opacity-30 disabled:pointer-events-none"
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={handleEndPrep}
+                  className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/30 transition-all rounded shadow-[0_0_10px_rgba(0,242,255,0.15)]"
+                >
+                  End Prep
+                </button>
+              </div>
+            )}
+
+            {/* Counter Allocation Actions */}
+            {gameState.currentPhase === Phase.COUNTER_ALLOCATION && (
+              <div className="mt-2.5 flex flex-col gap-1.5 items-center">
+                <div className="flex gap-4 text-[0.55rem] uppercase tracking-wider font-mono">
+                  <span className="text-[#00f2ff] font-bold">Power Left: {gameState.powerPool}</span>
+                  <span className="text-[#ff0044] font-bold">Weakness Left: {gameState.weaknessPool}</span>
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    onClick={handleFinishCounters}
+                    className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded"
+                  >
+                    Skip / Reset
+                  </button>
+                  <button
+                    onClick={handleFinishCounters}
+                    className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/30 transition-all rounded shadow-[0_0_10px_rgba(0,242,255,0.15)]"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Decision Actions */}
+            {gameState.decisionContext && (
+              <div className="flex gap-2 justify-center mt-2.5">
+                {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
+                  <>
+                    <button
+                      onClick={() => handleMarkerTypeChoice('power')}
+                      className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/35 transition-all rounded"
+                    >
+                      Power (+1)
+                    </button>
+                    <button
+                      onClick={() => handleMarkerTypeChoice('weakness')}
+                      className="px-3 py-1 bg-[#ff0044]/20 border border-[#ff0044]/50 text-[#ff0044] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#ff0044]/35 transition-all rounded"
+                    >
+                      Weakness (-1)
+                    </button>
+                  </>
+                ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
+                  <>
+                    <button
+                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)}
+                      className="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-amber-500/35 transition-all rounded"
+                    >
+                      Light
+                    </button>
+                    <button
+                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)}
+                      className="px-3 py-1 bg-purple-500/20 border border-purple-500/50 text-purple-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-purple-500/35 transition-all rounded"
+                    >
+                      Dark
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleDecision(true)}
+                      className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/35 transition-all rounded"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => handleDecision(false)}
+                      className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded"
+                    >
+                      Skip
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Targeting Phase Actions */}
+            {(gameState.currentPhase === Phase.ABILITY_TARGETING ||
+              gameState.currentPhase === Phase.SEAL_TARGETING ||
+              gameState.currentPhase === Phase.DELTA_BUFF_TARGETING) && (
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={handleForceSkip}
+                  className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all rounded"
+                >
+                  Pass / Skip Action
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -308,12 +422,25 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Theme Toggle in Drawer Footer */}
-                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
-                   <button onClick={toggleEnvironmentTheme} className="text-[0.6rem] text-gray-500 uppercase hover:text-white transition-colors">
-                     {environmentTheme === 'dark' ? '☀ Light Mode' : '☽ Dark Mode'}
-                   </button>
-                   <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
+                {/* Theme Toggle & Slow Mode in Drawer Footer */}
+                <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-2">
+                   <div className="flex items-center justify-between">
+                     <label className="flex items-center gap-1.5 cursor-pointer text-[0.6rem] text-gray-500 hover:text-white transition-colors">
+                       <input
+                         type="checkbox"
+                         checked={isSlowMode}
+                         onChange={(e) => setIsSlowMode(e.target.checked)}
+                         className="rounded border-white/20 bg-black/50 text-[#00f2ff] focus:ring-0 focus:ring-offset-0 w-3 h-3"
+                       />
+                       <span>🐢 Slow Play Mode</span>
+                     </label>
+                     <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <button onClick={toggleEnvironmentTheme} className="text-[0.6rem] text-gray-500 uppercase hover:text-white transition-colors">
+                       {environmentTheme === 'dark' ? '☀ Light Mode' : '☽ Dark Mode'}
+                     </button>
+                   </div>
                 </div>
               </div>
             </motion.div>
@@ -442,6 +569,232 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Combat/Interaction Interstitial Overlay */}
+      <AnimatePresence>
+        {gameState?.combatInterstitial?.active && (() => {
+          const isInteractive = !!(
+            gameState.currentPhase === Phase.COUNTER_ALLOCATION ||
+            gameState.currentPhase === Phase.ABILITY_TARGETING ||
+            gameState.currentPhase === Phase.SEAL_TARGETING ||
+            gameState.currentPhase === Phase.DELTA_BUFF_TARGETING ||
+            gameState.decisionContext
+          );
+
+          if (isInteractive) {
+            // Interactive mode: compact, floating, non-blocking top panel
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="fixed top-4 left-4 right-4 z-[150] pointer-events-none flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[#00f2ff]/30 bg-black/90 backdrop-blur-sm text-white font-cinzel shadow-[0_0_20px_rgba(0,242,255,0.25)]"
+              >
+                {/* Floating Content (left side: text, right side: compact card view) */}
+                <div className="flex-1 pointer-events-auto">
+                  <h2 className="text-[#00f2ff] text-[0.65rem] tracking-[0.2em] font-bold uppercase mb-1">
+                    SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION · ACTION REQUIRED
+                  </h2>
+                  <p className="text-[0.75rem] font-semibold text-gray-200 leading-snug">
+                    {gameState.combatInterstitial.description}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 pointer-events-auto">
+                  {/* Compact Side-by-Side Card Preview */}
+                  <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                    {/* Left Card */}
+                    {gameState.combatInterstitial.leftCard && (
+                      <div
+                        className={`w-12 h-18 rounded border border-white/20 overflow-hidden relative flex flex-col
+                          ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                          ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
+                          ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
+                        `}
+                      >
+                        <img
+                          src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
+                          alt={gameState.combatInterstitial.leftCard.name}
+                          className="w-full h-full object-cover object-center"
+                        />
+                      </div>
+                    )}
+                    
+                    <span className="text-[0.55rem] text-gray-500 font-bold">VS</span>
+
+                    {/* Right Card */}
+                    {gameState.combatInterstitial.rightCard && (
+                      <div
+                        className={`w-12 h-18 rounded border border-white/20 overflow-hidden relative flex flex-col
+                          ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                          ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
+                          ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
+                        `}
+                      >
+                        <img
+                          src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
+                          alt={gameState.combatInterstitial.rightCard.name}
+                          className="w-full h-full object-cover object-center"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleForceSkip}
+                    className="px-3 py-1.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.55rem] uppercase tracking-wider hover:bg-[#ff0044]/10 transition-all font-bold pointer-events-auto"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </motion.div>
+            );
+          }
+
+          // Full-screen automatic resolution showcase mode
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 text-white font-cinzel"
+            >
+              {/* Header with Seal Index and Step Status */}
+              <div className="text-center mb-3 max-w-2xl px-4">
+                <h2 className="text-[#00f2ff] text-xs tracking-[0.3em] font-bold uppercase mb-1">
+                  SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION
+                </h2>
+                <div className="h-0.5 w-32 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-2" />
+                <p className="text-sm font-semibold tracking-wider text-gray-100 min-h-[2rem] animate-pulse">
+                  {gameState.combatInterstitial.description}
+                </p>
+              </div>
+
+              {/* Side-by-Side Cards Display */}
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 my-2 w-full max-w-5xl px-4">
+                
+                {/* Left Card Checklist (Desktop) */}
+                <div className="hidden md:block">
+                  <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
+                </div>
+
+                {/* Left Card (Player Card) */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-[0.55rem] uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player Seal Guardian</div>
+                  {gameState.combatInterstitial.leftCard ? (
+                    <div
+                      className={`w-36 h-54 rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                        ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                        ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
+                        ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
+                      `}
+                    >
+                      <img
+                        src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
+                        alt={gameState.combatInterstitial.leftCard.name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                      {gameState.combatInterstitial.leftDamageFlash && (
+                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
+                      No Card
+                    </div>
+                  )}
+                  {/* Math/Power text & Checklist under Left Card */}
+                  {gameState.combatInterstitial.leftCard && (
+                    <div className="text-center min-h-0 flex flex-col items-center gap-1">
+                      <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.leftCard.name}</div>
+                      <div className="text-[0.55rem] text-gray-400 max-w-[150px] leading-relaxed">
+                        {gameState.combatInterstitial.leftPowerText || `Power: ${gameState.combatInterstitial.leftCard.power}`}
+                      </div>
+                      {/* Mobile Checklist (hidden on desktop) */}
+                      <div className="block md:hidden mt-1">
+                        <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Versus Divider */}
+                <div className="text-lg font-bold italic text-gray-500 tracking-wider font-cinzel select-none md:my-0 my-1">
+                  VS
+                </div>
+
+                {/* Right Card (Enemy Card / Seal Champion) */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-[0.55rem] uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival / Seal Champion</div>
+                  {gameState.combatInterstitial.rightCard ? (
+                    <div
+                      className={`w-36 h-54 rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                        ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                        ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
+                        ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
+                      `}
+                    >
+                      <img
+                        src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
+                        alt={gameState.combatInterstitial.rightCard.name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                      {gameState.combatInterstitial.rightDamageFlash && (
+                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
+                      No Card
+                    </div>
+                  )}
+                  {/* Math/Power text & Checklist under Right Card */}
+                  {gameState.combatInterstitial.rightCard && (
+                    <div className="text-center min-h-0 flex flex-col items-center gap-1">
+                      <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.rightCard.name}</div>
+                      <div className="text-[0.55rem] text-gray-400 max-w-[150px] leading-relaxed">
+                        {gameState.combatInterstitial.rightPowerText || `Power: ${gameState.combatInterstitial.rightCard.power}`}
+                      </div>
+                      {/* Mobile Checklist (hidden on desktop) */}
+                      <div className="block md:hidden mt-1">
+                        <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Card Checklist (Desktop) */}
+                <div className="hidden md:block">
+                  <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
+                </div>
+              </div>
+
+              {/* Step Indicators */}
+              <div className="flex items-center justify-center gap-2 my-3 text-[0.5rem] uppercase tracking-wider text-gray-500 font-mono">
+                <span className={gameState.combatInterstitial.step === 'haste' ? 'text-[#ff5000] font-bold shadow-pulse' : ''}>Haste Step</span>
+                <span>•</span>
+                <span className={gameState.combatInterstitial.step === 'flip' ? 'text-[#00f2ff] font-bold shadow-pulse' : ''}>Flip Step</span>
+                <span>•</span>
+                <span className={gameState.combatInterstitial.step === 'ability' ? 'text-purple-400 font-bold shadow-pulse' : ''}>Ability Step</span>
+                <span>•</span>
+                <span className={gameState.combatInterstitial.step === 'combat' ? 'text-red-500 font-bold shadow-pulse' : ''}>Combat Step</span>
+                <span>•</span>
+                <span className={gameState.combatInterstitial.step === 'done' ? 'text-green-400 font-bold shadow-pulse' : ''}>Resolved</span>
+              </div>
+
+              {/* Controls */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleForceSkip}
+                  className="px-4 py-1.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.6rem] uppercase tracking-widest hover:bg-[#ff0044]/10 transition-all font-bold"
+                >
+                  Skip Interaction
+                </button>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       <style>{`
         .drawer-btn {
           width: 100%;
@@ -487,13 +840,121 @@ export default function App() {
           font-size: 0.8rem;
           text-align: center;
         }
+
+        @keyframes haste-glow {
+          0%, 100% {
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.6), inset 0 0 10px rgba(255, 69, 0, 0.4);
+            border-color: rgba(255, 80, 0, 0.8);
+          }
+          50% {
+            box-shadow: 0 0 35px rgba(255, 120, 0, 0.9), inset 0 0 20px rgba(255, 120, 0, 0.6);
+            border-color: rgba(255, 140, 0, 1);
+          }
+        }
+        .haste-glow-active {
+          animation: haste-glow 1.5s infinite ease-in-out;
+          border-width: 3px !important;
+        }
+
+        @keyframes flip-glow {
+          0%, 100% {
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.6), inset 0 0 10px rgba(0, 242, 255, 0.4);
+            border-color: rgba(0, 242, 255, 0.8);
+          }
+          50% {
+            box-shadow: 0 0 35px rgba(0, 242, 255, 1), inset 0 0 20px rgba(0, 242, 255, 0.7);
+            border-color: rgba(0, 242, 255, 1);
+          }
+        }
+        .flip-glow-active {
+          animation: flip-glow 1.5s infinite ease-in-out;
+          border-width: 3px !important;
+        }
+
+        @keyframes damage-flash {
+          0%, 100% { background-color: rgba(255, 0, 68, 0); }
+          50% { background-color: rgba(255, 0, 68, 0.55); }
+        }
+        @keyframes card-shake {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          20% { transform: translate(-8px, 5px) rotate(-3deg); }
+          40% { transform: translate(6px, -5px) rotate(3deg); }
+          60% { transform: translate(-5px, 2px) rotate(-1deg); }
+          80% { transform: translate(4px, 1px) rotate(2deg); }
+        }
+        .damage-flash-active {
+          animation: damage-flash 0.3s ease-in-out 3;
+        }
+        .card-shake-active {
+          animation: card-shake 0.3s ease-in-out;
+        }
+        .shadow-pulse {
+          text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
       `}</style>
     </div>
   );
 }
 
+function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft: boolean; card: any }) {
+  if (!card) return null;
+
+  const items = [
+    { id: 'haste', label: 'Haste Strike Check', activeStep: 'haste', prevSteps: ['flip', 'ability', 'combat', 'done'] },
+    { id: 'flip', label: 'Reveal & Flip Ability', activeStep: 'flip', prevSteps: ['ability', 'combat', 'done'] },
+    { id: 'ability', label: 'Activation Ability', activeStep: 'ability', prevSteps: ['combat', 'done'] },
+    { id: 'combat', label: 'Combat Resolution', activeStep: 'combat', prevSteps: ['done'] },
+    { id: 'done', label: 'Post-Combat / Ascension', activeStep: 'done', prevSteps: [] }
+  ];
+
+  return (
+    <div className="flex flex-col gap-1 p-2 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm w-36 font-mono text-[0.5rem] uppercase tracking-wider text-left">
+      <div className="text-[0.52rem] font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5">
+        {isLeft ? 'Player Rules' : 'Rival Rules'}
+      </div>
+      {items.map((item) => {
+        let status: 'pending' | 'active' | 'done' | 'na' = 'pending';
+        if (step === item.activeStep) {
+          status = 'active';
+        } else if (item.prevSteps.includes(step)) {
+          status = 'done';
+        }
+
+        const hasHaste = card.ability?.toLowerCase().includes('haste') || card.hasHaste;
+        const hasFlip = card.ability?.toLowerCase().includes('flip') || card.hasNullify || card.hasLustSealEffect;
+        const hasActivate = card.ability?.toLowerCase().includes('activate') || card.hasActivate;
+        const cannotBattle = card.cannotBattleOrBeBattled;
+
+        if (item.id === 'haste' && !hasHaste && status !== 'done') status = 'na';
+        if (item.id === 'flip' && !hasFlip && status !== 'done') status = 'na';
+        if (item.id === 'ability' && !hasActivate && status !== 'done') status = 'na';
+        if (item.id === 'combat' && cannotBattle && status !== 'done') status = 'na';
+
+        let icon = '○';
+        let textClass = 'text-gray-600';
+        if (status === 'active') {
+          icon = '●';
+          textClass = isLeft ? 'text-[#00f2ff] font-bold shadow-pulse' : 'text-[#ff0044] font-bold shadow-pulse';
+        } else if (status === 'done') {
+          icon = '✓';
+          textClass = 'text-green-500';
+        } else if (status === 'na') {
+          icon = '—';
+          textClass = 'line-through text-gray-700';
+        }
+
+        return (
+          <div key={item.id} className={`flex items-center gap-1 leading-none ${textClass}`}>
+            <span className="text-[0.55rem] font-bold w-2.5">{icon}</span>
+            <span>{item.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CardPreview({ card, size = 'large' }: { card: HoveredCardInfo, size?: 'small' | 'large' }) {
-  const effectivePower = card.power + card.powerMarkers - card.weaknessMarkers;
   const faceSrc = card.faceArtPath ? cardArtUrl(card.faceArtPath) : undefined;
 
   const width = size === 'large' ? 'w-56' : 'w-44';
@@ -508,18 +969,6 @@ function CardPreview({ card, size = 'large' }: { card: HoveredCardInfo, size?: '
         ) : (
           <div className="h-full flex items-center justify-center text-xs text-gray-400 p-4 text-center">{card.name}</div>
         )}
-      </div>
-
-      {/* Elegant overlay for text description */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-black via-black/85 to-transparent pt-10">
-        <div className="text-xs font-bold text-white uppercase truncate mb-0.5 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">{card.name}</div>
-        <div className="flex justify-between items-center text-[0.65rem] mb-1 drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
-          <span className="text-[#00f2ff] font-bold">PWR {effectivePower}</span>
-          <span className="text-gray-400 uppercase font-semibold">{card.faction}</span>
-        </div>
-        <div className="text-[0.55rem] text-gray-300 leading-tight line-clamp-3 italic drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-          {card.ability}
-        </div>
       </div>
     </div>
   );
@@ -603,23 +1052,25 @@ function ZoneSearchModal({
                 ))}
              </div>
            </section>
-           <section>
-             <div className="text-[0.6rem] text-gray-500 uppercase tracking-widest mb-3">Rival {zoneLabel}</div>
-             <div className="grid grid-cols-1 gap-2">
-                {enemyFiltered.map(({card, index}) => (
-                  <div key={index}
-                    onClick={() => isSelectingTarget && onSelectLimboCard('enemy', index)}
-                    className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg hover:border-[#ff0044]/50 transition-all cursor-pointer"
-                  >
-                    <div className="flex-1">
-                      <div className="text-[0.7rem] font-bold text-white">{card.name}</div>
-                      <div className="text-[0.55rem] text-gray-500">{card.faction} · {card.type}</div>
-                    </div>
-                    <div className="text-xs font-bold text-[#ff0044]">P{card.power}</div>
-                  </div>
-                ))}
-             </div>
-           </section>
+            {zone !== 'deck' && (
+              <section>
+                <div className="text-[0.6rem] text-gray-500 uppercase tracking-widest mb-3">Rival {zoneLabel}</div>
+                <div className="grid grid-cols-1 gap-2">
+                   {enemyFiltered.map(({card, index}) => (
+                     <div key={index}
+                       onClick={() => isSelectingTarget && onSelectLimboCard('enemy', index)}
+                       className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg hover:border-[#ff0044]/50 transition-all cursor-pointer"
+                     >
+                       <div className="flex-1">
+                         <div className="text-[0.7rem] font-bold text-white">{card.name}</div>
+                         <div className="text-[0.55rem] text-gray-500">{card.faction} · {card.type}</div>
+                       </div>
+                       <div className="text-xs font-bold text-[#ff0044]">P{card.power}</div>
+                     </div>
+                   ))}
+                </div>
+              </section>
+            )}
         </div>
       </motion.div>
     </motion.div>

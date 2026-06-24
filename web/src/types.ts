@@ -41,16 +41,15 @@ export interface CardData {
   hasHaste?: boolean;
   hasLimboAbility?: boolean;
   hasActivate?: boolean;
-  /** Baron: Swap with creature in Limbo you control */
-  hasSwapAbility?: boolean;
-  /** Fledgeling: Cannot battle or be battled */
+  /** Cyprian (formerly Fledgeling): Cannot battle or be battled */
   cannotBattleOrBeBattled?: boolean;
-  /** Fledgeling: Sacrifice at end of turn */
+  /** Cyprian (formerly Fledgeling): Sacrifice at end of turn */
   sacrificeEndOfTurn?: boolean;
-  /** Sloth: Unaffected by abilities */
+  /** Belphegor (formerly Sloth): Unaffected by abilities */
   abilityImmune?: boolean;
-  /** Lust: After sacrifice, may change seal influence if no champion */
+  /** Desire (formerly Lust): After sacrifice, may change seal influence if no champion */
   hasLustSealEffect?: boolean;
+  hasTarkidosNullifyUsedThisRound?: boolean;
 }
 
 /** Card summary for magnified hover preview (small screens). */
@@ -83,7 +82,7 @@ export interface GameState {
   weaknessPool: number;
   abilitySourceCardName?: string;
   lockedSealIndex?: number;
-  decisionContext?: 'FALLEN_ONE' | 'DELTA_SACRIFICE' | 'LUNA_NULLIFY' | 'ALMIGHTY_MARKER_TYPE' | 'DESTROYER_MARKER_TYPE' | 'LUST_SEAL_INFLUENCE' | 'DEATH_CREATURE_TYPE';
+  decisionContext?: 'FALLEN_ONE' | 'DELTA_SACRIFICE' | 'LUNA_NULLIFY' | 'ALMIGHTY_MARKER_TYPE' | 'DESTROYER_MARKER_TYPE' | 'LUST_SEAL_INFLUENCE' | 'DEATH_CREATURE_TYPE' | 'COAL_BLOCK_ASCENSION';
   /** Seal index when choosing influence (e.g. Lust effect). */
   sealIndexForChoice?: number;
   /** Death Flip: creature types in play to choose from (Avatar, God, Horseman, Vampyre, Lycan, Celestial, Daemon). */
@@ -117,4 +116,23 @@ export interface GameState {
   gameOverNewAchievements?: string[];
   /** When hovering over a Limbo or Graveyard zone, shows which zone and card count. */
   hoveredZone?: { zone: 'playerLimbo' | 'enemyLimbo' | 'playerGraveyard' | 'enemyGraveyard'; count: number } | null;
+  /** Active combat/interaction interstitial overlay state. */
+  combatInterstitial?: CombatInterstitialState | null;
+  slowMode: boolean;
+}
+
+export interface CombatInterstitialState {
+  active: boolean;
+  sealIndex: number;
+  leftCard?: HoveredCardInfo | null;
+  rightCard?: HoveredCardInfo | null;
+  step: 'idle' | 'haste' | 'flip' | 'ability' | 'combat' | 'done';
+  description: string;
+  hasteActive?: 'left' | 'right' | 'both' | 'none';
+  leftGlow?: boolean;
+  rightGlow?: boolean;
+  leftDamageFlash?: boolean;
+  rightDamageFlash?: boolean;
+  leftPowerText?: string;
+  rightPowerText?: string;
 }

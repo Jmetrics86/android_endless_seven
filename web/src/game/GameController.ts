@@ -88,7 +88,7 @@ export class GameController implements IGameController {
   private cardHoverLiftTarget: CardEntity | null = null;
   public currentResolvingSealIndex: number = -1;
   private selectedObject: CardEntity | null = null;
-  public pendingBaronSwapSlot: number | null = null;
+
 
   private prepUndoStack: PrepUndoEntry[] = [];
 
@@ -150,7 +150,9 @@ export class GameController implements IGameController {
       playerGraveyardCards: [],
       enemyGraveyardCards: [],
       playerDeckCards: [],
-      enemyDeckCards: []
+      enemyDeckCards: [],
+      combatInterstitial: null,
+      slowMode: false
     };
 
     this.uiManager = new UIManager(initialState, (s) => {
@@ -532,7 +534,7 @@ export class GameController implements IGameController {
     this.uiManager.addLog(msg);
   }
 
-  private cardToHoveredInfo(card: CardEntity): HoveredCardInfo {
+  public cardToHoveredInfo(card: CardEntity): HoveredCardInfo {
     return {
       name: card.data.name,
       faction: card.data.faction,
@@ -590,7 +592,7 @@ export class GameController implements IGameController {
     if (!card || this.state.currentPhase !== Phase.ABILITY_TARGETING || !this.pendingAbilityData?.effect) return;
     if (this.pendingAbilityData.effect === 'sentinel_absorb') {
       this.abilityManager.applyAbilityEffect(card, this.pendingAbilityData);
-    } else if (this.pendingAbilityData.effect === 'hades_limbo_to_deck') {
+    } else if (this.pendingAbilityData.effect === 'pazoo_limbo_to_deck') {
       if (zone !== 'player') return;
       const idx = limbo.indexOf(card);
       if (idx !== -1) limbo.splice(idx, 1);
@@ -598,7 +600,7 @@ export class GameController implements IGameController {
       const { powerMarkers, weaknessMarkers, faceUp, isInvincible, isSuppressed, boardPresencePowerMarkers, ...baseData } = card.data;
       deck.push({ ...baseData });
       this.disposeCard(card);
-      this.addLog(`Hades places ${card.data.name} from Limbo on top of deck.`);
+      this.addLog(`Pazoo places ${card.data.name} from Limbo on top of deck.`);
       this.abilityManager.syncBoardPresencePowerMarkers();
     } else {
       return;
@@ -709,6 +711,10 @@ export class GameController implements IGameController {
     }
   }
 
+  public setSlowMode(enabled: boolean) {
+    this.updateState({ slowMode: enabled });
+  }
+
   public async handleBattle(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean): Promise<boolean> {
     return await this.phaseManager.handleBattle(attacker, defender, idx, isAgainstChamp);
   }
@@ -732,7 +738,6 @@ export class GameController implements IGameController {
       this.state.currentPhase === Phase.PREP &&
       !this.isProcessing &&
       (this.prepUndoStack.length > 0 ||
-        this.pendingBaronSwapSlot !== null ||
         this.activeSelection !== null)
     );
   }
@@ -763,11 +768,7 @@ export class GameController implements IGameController {
       return;
     }
 
-    if (this.pendingBaronSwapSlot !== null) {
-      this.pendingBaronSwapSlot = null;
-      this.updateState({ instructionText: '' });
-      return;
-    }
+
 
     if (this.activeSelection !== null) {
       this.clearCardHoverLiftTarget();
@@ -797,11 +798,7 @@ export class GameController implements IGameController {
       else this.playerBattlefield[idx] = null;
     }
 
-    // Martyr: Limbo Trigger: Purify one Neutral Seal without a Champion.
-    if (card.data.name === "Martyr") {
-      const target = this.seals.find(s => s.alignment === Alignment.NEUTRAL && !s.champion);
-      if (target) this.claimSeal(target.index, Alignment.LIGHT, { type: 'ability', cardName: 'Martyr' });
-    }
+
 
     const destX = mesh.position.x + (Math.random() - 0.5);
     const destY = 0.2 + (limbo.length * 0.05);
@@ -893,12 +890,12 @@ export class GameController implements IGameController {
       }
     }
 
-    // Prophet: Passive: Prevents Purified Seals from being Corrupted while in play.
-    // Exception: Lust's explicit player choice to corrupt is allowed (Lust's "influence seal dark" option).
+    // Valtarious: Passive: Prevents Purified Seals from being Corrupted while in play.
+    // Exception: Desire's explicit player choice to corrupt is allowed (Desire's "influence seal dark" option).
     if (status === Alignment.DARK) {
-      const hasProphet = [...this.playerBattlefield, ...this.seals.map(s => s.champion)].some(c => c && c.data.name === "Prophet");
-      const isLustChoice = cause?.cardName === 'Lust';
-      if (hasProphet && this.seals[idx].alignment === Alignment.LIGHT && !isLustChoice) return;
+      const hasValtarious = [...this.playerBattlefield, ...this.seals.map(s => s.champion)].some(c => c && c.data.name === "Valtarious");
+      const isDesireChoice = cause?.cardName === 'Desire';
+      if (hasValtarious && this.seals[idx].alignment === Alignment.LIGHT && !isDesireChoice) return;
     }
 
     const previousAlignment = this.seals[idx].alignment;
@@ -1008,7 +1005,18 @@ export class GameController implements IGameController {
       }
       if (card && this.selectedObject !== card) {
         this.selectedObject = card;
-        const hovered: HoveredCardInfo = {
+        const isSecret = card.data.isEnemy && !card.data.faceUp;
+        const hovered: HoveredCardInfo = isSecret ? {
+          name: 'Face Down Card',
+          faction: 'Unknown',
+          power: 0,
+          type: 'Unknown',
+          isChampion: false,
+          ability: 'This card is face down.',
+          powerMarkers: 0,
+          weaknessMarkers: 0,
+          faceArtPath: CARD_BACK_PATH
+        } : {
           name: card.data.name,
           faction: card.data.faction,
           power: card.data.power,
@@ -1022,7 +1030,11 @@ export class GameController implements IGameController {
         if (promptActive) {
           this.updateState({ hoveredCard: hovered, hoveredZone: null });
         } else {
-          this.updateState({ instructionText: `${card.data.name}: ${card.data.ability}`, hoveredCard: hovered, hoveredZone: null });
+          this.updateState({
+            instructionText: isSecret ? 'Face Down Card' : `${card.data.name}: ${card.data.ability}`,
+            hoveredCard: hovered,
+            hoveredZone: null
+          });
         }
       }
     } else {
@@ -1214,40 +1226,8 @@ export class GameController implements IGameController {
       const limboIntersects = this.inputHandler.raycaster.intersectObjects(this.playerLimbo.map(c => c.mesh), true);
       if (limboIntersects.length > 0) {
         const card = this.findCardEntityFromObject(limboIntersects[0].object, this.playerLimbo);
-        if (card && this.pendingBaronSwapSlot !== null) {
-          const slot = this.pendingBaronSwapSlot;
-          const baron = this.playerBattlefield[slot];
-          if (baron?.data.hasSwapAbility) {
-            this.playerBattlefield[slot] = null;
-            this.playerLimbo = this.playerLimbo.filter(c => c !== card);
-            this.playerLimbo.push(baron);
-            this.playerBattlefield[slot] = card;
-            gsap.to(baron.mesh.position, { x: 15, y: 0.2 + (this.playerLimbo.length * 0.05), z: 6, duration: 0.4 });
-            gsap.to(baron.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.4 });
-            gsap.to(card.mesh.position, { x: (slot - 3) * GAME_CONSTANTS.SLOT_SPACING, y: 0.1, z: 3.2, duration: 0.4 });
-            gsap.to(card.mesh.rotation, { x: Math.PI, y: 0, z: 0, duration: 0.4 });
-            card.applyBackTextureIfNeeded();
-            this.addLog(`Baron swaps with ${card.data.name} in Limbo.`);
-            this.prepUndoStack.push({ type: 'baron_swap', slotIndex: slot, baron, limboCard: card });
-            this.pendingBaronSwapSlot = null;
-            this.updateState({ instructionText: '' });
-            this.abilityManager.syncBoardPresencePowerMarkers();
-          }
-          return;
-        }
         if (card && card.data.hasLimboAbility) {
           this.abilityManager.handleLimboAbility(card);
-          return;
-        }
-      }
-      const playerBfCards = this.playerBattlefield.filter(c => c !== null) as CardEntity[];
-      const bfIntersects = this.inputHandler.raycaster.intersectObjects(playerBfCards.map(c => c.mesh), true);
-      if (bfIntersects.length > 0 && this.pendingBaronSwapSlot === null) {
-        const card = this.findCardEntityFromObject(bfIntersects[0].object, playerBfCards);
-        if (card?.data.hasSwapAbility) {
-          const slot = this.playerBattlefield.indexOf(card);
-          this.pendingBaronSwapSlot = slot;
-          this.updateState({ instructionText: "Baron: Select a creature in your Limbo to swap with Baron." });
           return;
         }
       }

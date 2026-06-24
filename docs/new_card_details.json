@@ -1,0 +1,212 @@
+{
+  "Avatars of light/Dawn copy.png": {
+    "faction": "Avatars of light",
+    "filename": "Dawn copy.png",
+    "raw_text": "Dawn\n9\nOathbringer/Avatar of Light\nChampion.\nFlip: Gain +I Power Marker for each\nOathbringer in play.\nActivate: If you have 4 Oathbringers\nin play with at least one Champion\ncontroling a Seal, you win the\ngame."
+  },
+  "Avatars of light/bella copy.png": {
+    "faction": "Avatars of light",
+    "filename": "bella copy.png",
+    "raw_text": "Bella\n9\nOathbringer/Avatar of Light\nChampion.\nFlip: Destroy any Champion on any\nSeal.\nActivate: Destroy one Marker\non any creature.\ntype"
+  },
+  "Avatars of light/calmadious copy.png": {
+    "faction": "Avatars of light",
+    "filename": "calmadious copy.png",
+    "raw_text": "Calmadious\nGod of Light\n15\nChampion.\nFlip: Purify any Corrupted Seal\nwithout a Champion.\nActivate: Destroy any one Marker\ntype."
+  },
+  "Avatars of light/coal copy.png": {
+    "faction": "Avatars of light",
+    "filename": "coal copy.png",
+    "raw_text": "Coal\nOathbringer/Avatar of Light\n10\nChampion.\nActivate: If\nyou\ncontrol 5 or more Seals\nwith Champions you win the game.\nFinal Act: While in Limbo, you may\nmove this creature into the Graveyard to\nstop a creature from Championing a\nSeal."
+  },
+  "Avatars of light/noble the Great copy.png": {
+    "faction": "Avatars of light",
+    "filename": "noble the Great copy.png",
+    "raw_text": "Noble The Great\n9\nOathbringer/Avatar of Light\nChampion.\nAfter destroying a creature in battle,\nyou may destroy another creature or\nMarker type in play."
+  },
+  "Avatars of light/tarkidos copy.png": {
+    "faction": "Avatars of light",
+    "filename": "tarkidos copy.png",
+    "raw_text": "Tarkidos\nOathbringer/Avatar of Light\n9\nChampion.\nNullify the first ability that would\ndestroy or reduce this creatures Power\nValue each round.\nFinal Act: While in Limbo, you may\nmove this creature into the Graveyard an\nPurify any one Seal without a Champion"
+  },
+  "Avatars of light/valtarious copy.png": {
+    "faction": "Avatars of light",
+    "filename": "valtarious copy.png",
+    "raw_text": "Valtarious\nOathbringer/Avatar of Light\n9\nChampion.\nWhile in play, Purified Seals cannot\nbe Corrupted."
+  },
+  "Celestial/Anakim The Wise copy.png": {
+    "faction": "Celestial",
+    "filename": "Anakim The Wise copy.png",
+    "raw_text": "Anakim The Wise\n3\nCelestial/Creature\nCannot be destroyed by battle this\nturn.\nActivate: After the Flip, before battle\nyou may choose a Seal. Your Enemy\nmay not Champion or Influence\nthat Seal until the end of the round."
+  },
+  "Celestial/Metatron copy.png": {
+    "faction": "Celestial",
+    "filename": "Metatron copy.png",
+    "raw_text": "Metatron 7\nCelestial/Creature\nChampion.\nWhile this creature Champions a\nSeal, all other Celestials you control\nare unaffected by creature abilities.\nActivate: Destroy one Marker type\non any creature."
+  },
+  "Celestial/Remiel.png": {
+    "faction": "Celestial",
+    "filename": "Remiel.png",
+    "raw_text": "Remiel\n2\nCelestial/Creature\nFlip: Reveal any face-down card, its\nFlip ability is Nullified."
+  },
+  "Celestial/cassiel haggis copy.png": {
+    "faction": "Celestial",
+    "filename": "cassiel haggis copy.png",
+    "raw_text": "Cassiel Haggis 5\nCelestial/Creature\nFlip: Reveal the\ntop card of your\ndeck, this creature gains Power\nMarkers equal to that creatures Power\nValue."
+  },
+  "Celestial/jophiel.png": {
+    "faction": "Celestial",
+    "filename": "jophiel.png",
+    "raw_text": "Jophiel\n4\nCelestial/Creature\nFlip: Return any creature in play to\nthe\ntop\nof its owners deck."
+  },
+  "Celestial/oriel the bold copy.png": {
+    "faction": "Celestial",
+    "filename": "oriel the bold copy.png",
+    "raw_text": "Oriel The bold 1\nCelestial/Creature\nFlip: Change the Influence of any\nSeal without a Champion."
+  },
+  "Celestial/samyaza copy.png": {
+    "faction": "Celestial",
+    "filename": "samyaza copy.png",
+    "raw_text": "Samyaza\nCelestial Creature\n10\n6\nHaste: Resolves battle before Flip\nabilities.\nFinal Act: While in the Limbo, you\nmay move this creature into the\nGraveyard to Nullify the activation\nany creature ability.\nof"
+  },
+  "Daemon/Alistar elren copy.png": {
+    "faction": "Daemon",
+    "filename": "Alistar elren copy.png",
+    "raw_text": "Alistar Elren 6\nDaemon/Creature\nFlip: Place a -3 Weakness Marker on\nany creature in play.\nFinal Act: While in limbo, you may\nmove this creature into the Graveyard\nto place a -3 Weakness Marker on\nany creature in play."
+  },
+  "Daemon/Bacchus copy.png": {
+    "faction": "Daemon",
+    "filename": "Bacchus copy.png",
+    "raw_text": "Bacchus\n1\nDaemon/Creature\nFlip: Transfer all Power Markers in\nplay\nto this creature."
+  },
+  "Daemon/Belphegor copy.png": {
+    "faction": "Daemon",
+    "filename": "Belphegor copy.png",
+    "raw_text": "Belphegor\nDaemon/Creature\n4\nUnaffected by abilities.\nFlip: Place a -3 Weakness Marker on\nany creature in play.\nFinal Act: While in Limbo, you may\nmove this creature into the Graveyard\nto Nullify the activation of any\ncreature ability."
+  },
+  "Daemon/bogva.png": {
+    "faction": "Daemon",
+    "filename": "bogva.png",
+    "raw_text": "Bogva\nDaemon/Creature\n7\nChampion\nFlip: Place a -1 Weakness Marker\non each of your enemy's\ncreatures.\nAction: Destroy any creature in\nplay with a Weakness Marker\non it."
+  },
+  "Daemon/desire copy.png": {
+    "faction": "Daemon",
+    "filename": "desire copy.png",
+    "raw_text": "Desire\n2\nDaemon/Creature\nFlip: All players sacrifice a creature\nat this position. If the Seal has no\nChampion, you may change the\ninfluence of this Seal."
+  },
+  "Daemon/mammon copy.png": {
+    "faction": "Daemon",
+    "filename": "mammon copy.png",
+    "raw_text": "Mammon 5\nDaemon/Creature\nCannot be destroyed by battle this\nturn.\nActivate: Transfer all Power Markers\nin play to this creature."
+  },
+  "Daemon/zelus copy.png": {
+    "faction": "Daemon",
+    "filename": "zelus copy.png",
+    "raw_text": "Zelus\n3\nDaemon/Creature\nFlip: Place a -3 Weakness Marker on\nany creature in play with a Power\nValue equal to or greater than this\ncreature."
+  },
+  "Darkness/Karlyah copy.png": {
+    "faction": "Darkness",
+    "filename": "Karlyah copy.png",
+    "raw_text": "Karlyah\nGraveborn/Avatar of Darkness\n10\nChampion.\nActivate: If you control 5 or more Seals\nwith Champions you win the game.\nFinal Act: While in Limbo, you may\nmove this creature into the Graveyard to\ndestroy a creature that battled this turn."
+  },
+  "Darkness/Nix copy.png": {
+    "faction": "Darkness",
+    "filename": "Nix copy.png",
+    "raw_text": "Nix\nGraveborn/Avatar of Darkness\n9\nChampion.\nFlip: Choose a creature type, destroy\nall cards of that type in play.\nActivate: If you have 4 Graveborn in\nplay with at least one Champion\ncontroling a Seal,\nyou win the\ngame."
+  },
+  "Darkness/Skarados copy.png": {
+    "faction": "Darkness",
+    "filename": "Skarados copy.png",
+    "raw_text": "Skarados\nGod of Darkness\n15\nChampion.\nFlip: Currupt every Purified seal\nwithout a Champion.\nActivate: Destroy any one Marker\ntype."
+  },
+  "Darkness/golgothane copy.png": {
+    "faction": "Darkness",
+    "filename": "golgothane copy.png",
+    "raw_text": "Golgothane\nGraveborn/Avatar of Darkness\n9\nChampion.\nFlip: Destroy any creature in play.\nFinal Act: While in Limbo, you may\nmove this creature to the Graveyard\nand shuffle all the creatures in\nyour\nenemy's Limbo back into their deck."
+  },
+  "Darkness/lycandor copy.png": {
+    "faction": "Darkness",
+    "filename": "lycandor copy.png",
+    "raw_text": "Lycandor\nGraveborn/Avatar of Darkness\n9\nChampion.\nFlip: Place a -2 Weakness Marker on\nall Enemy creatures for each\nGraveborn you have in play."
+  },
+  "Darkness/pazoo copy.png": {
+    "faction": "Darkness",
+    "filename": "pazoo copy.png",
+    "raw_text": "Pazoo\nGraveborn/Avatar of Darkness\n9\nChampion.\nFlip: Gains a +2 Power Marker for\neach Graveborn in play. You may\nplace any creature from Limbo you\ncontrol on top of your deck."
+  },
+  "Darkness/umbarax copy.png": {
+    "faction": "Darkness",
+    "filename": "umbarax copy.png",
+    "raw_text": "Umbarax\nGraveborn/Avatar of Darkness\n9\nChampion.\nFlip: Cannot be destroyed by battle\nthis turn.After Umbarax destroys a\ncreature in battle place a +2 Power\nmarker on this creature for each\nGraveborn in play."
+  },
+  "Lycan/Fenris Lightfoot copy.png": {
+    "faction": "Lycan",
+    "filename": "Fenris Lightfoot copy.png",
+    "raw_text": "Fenris Lightfoot 1\nLycan/Creature\nHaste: Resolves battle before Flip\nabilities. Any creature that does battle\nwith this creature is destroyed at the\nend of the round."
+  },
+  "Lycan/Garmr.png": {
+    "faction": "Lycan",
+    "filename": "Garmr.png",
+    "raw_text": "Garmr\nLycan/Creature\n5\nFlip: Gain a +I Power Marker for\neach Lycan in play and in Limbo."
+  },
+  "Lycan/kaelo copy.png": {
+    "faction": "Lycan",
+    "filename": "kaelo copy.png",
+    "raw_text": "Kaelo\nLycan/Creature\n4\nFlip: Choose a creature in Limbo,\nplace Power Markers on this creature\nequal to that creatures Power Value."
+  },
+  "Lycan/lucian blackwood copy.png": {
+    "faction": "Lycan",
+    "filename": "lucian blackwood copy.png",
+    "raw_text": "Lucian Blackwood 7\nLycan/Creature\nChampion.\nHaste- Resolves combat before Flip\nabilities.\nPlace a +2 Power Marker on this\ncreature after destroying an\nEnemy creature in battle."
+  },
+  "Lycan/luna copy.png": {
+    "faction": "Lycan",
+    "filename": "luna copy.png",
+    "raw_text": "Luna\nLycan/Creature\n2\nyour\nFinal Act: While in Limbo, if\nEnemy changes the Influence of a\nSeal without a Champion, you may\nmove this creature into the\nGraveyard to Nullify that action."
+  },
+  "Lycan/ulfric thorne copy.png": {
+    "faction": "Lycan",
+    "filename": "ulfric thorne copy.png",
+    "raw_text": "Ulfric Thorne 6\nLycan/Creature\nCannot be destroyed by battle this\nturn.\nActivate: Place a +2 Power Marker\nan any creature."
+  },
+  "Lycan/varg greyback copy.png": {
+    "faction": "Lycan",
+    "filename": "varg greyback copy.png",
+    "raw_text": "Varg Fur-back 3\nLycan/Creature\nFlip: Place a +I Power Marker on up\nto any 3 creatures in play.\nActivate: Sacrifice this creature and\nplace a +3 Power Marker on\nany creature."
+  },
+  "Vampyre/cyprian copy.png": {
+    "faction": "Vampyre",
+    "filename": "cyprian copy.png",
+    "raw_text": "Cyprian\n1\nVampyre/Creature\nCannot battle or be battled.\nFlip: Place a +3 Power Marker on\nany creature in play. Sacrifice\nthis creature at the end of the turn."
+  },
+  "Vampyre/duke aren drakos copy.png": {
+    "faction": "Vampyre",
+    "filename": "duke aren drakos copy.png",
+    "raw_text": "Duke Aren Drakos 6\nVampyre/Creature\nFlip- Place a creature in play on top\nof that players deck. While this\ncreature is in Play, your creatures are\nconsidered Vampyre."
+  },
+  "Vampyre/elowen thornver.png": {
+    "faction": "Vampyre",
+    "filename": "elowen thornver.png",
+    "raw_text": "Elowen Thornver 3\nVampyre/Creature\nFlip: Change the Influence of\nSeal without a Champion.\nany"
+  },
+  "Vampyre/grelyn copy.png": {
+    "faction": "Vampyre",
+    "filename": "grelyn copy.png",
+    "raw_text": "Kaelarion\nVampyre/Creature\n4\nFlip: Destroy any one creature in\nplay. At the end of the turn, place a\n+2 Power Marker on this creature.\nFinal Act: While in Limbo, you may\nmove this creature into the\nGraveyard and place a Champion on\nof its owners deack.\ntop"
+  },
+  "Vampyre/lord Alaric copy.png": {
+    "faction": "Vampyre",
+    "filename": "lord Alaric copy.png",
+    "raw_text": "Lord Alaric 7\nVampyre/Creature\nChampion.\nFlip: Place any Champion on top of\nits owners deck.\nActivate: Place a +I Power Marker\non this creature for each Vampyre ing\nplay."
+  },
+  "Vampyre/sulvian vane copy.png": {
+    "faction": "Vampyre",
+    "filename": "sulvian vane copy.png",
+    "raw_text": "Sulvian Vane 5\nVampire/Creature\nHaste: Resolve battle before Flip\nabilities. Any creature that battles this\ncreature is placed on top of its\nowners deck."
+  },
+  "Vampyre/valerius nightshade copy.png": {
+    "faction": "Vampyre",
+    "filename": "valerius nightshade copy.png",
+    "raw_text": "Valerius Nightshade 2\nVampyre/Creature\nHaste: Resolve battle before Flip\nabilities. Any creature battling\nthis creature has its Flip ability\nNullified."
+  }
+}

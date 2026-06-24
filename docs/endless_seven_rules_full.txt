@@ -1,0 +1,344 @@
+
+
+--- Page 1 ---
+
+Endless
+Bo
+Seven
+The Endless Seven is a high-stakes dark fantasy saga where the afterlife
+is not a place of rest, but a battlefield for the fate of existence. During
+the Septennial Reckoning, the barrier between the mortal realm and the
+void thins, and seven supernatural points known as the Sacred Seals
+unveil themselves. These seals act as a cosmic dam; if they remain pure,
+life continues with the rule of law and benevolence. Should they be
+corrupted, the dam breaks, and the realm is consumed by an era of
+absolute anarchy and discord.
+The
+game is set. The Seven Endless Seals stand before us, fragile and in
+a constant state of flux. To claim Victory one must first lay waste to
+their enemies and claim the Seven Seals.
+Avatars of Light: Seek to Purify the Seals
+to prevent Armageddon.
+Avatars of Darkness: Seek to Corrupt the
+Seals to usher in a new era.
+
+--- Page 2 ---
+
+Set-Up
+Alignment & Avatars: Choose your Alignment. Set aside the 7
+Avatar cards affiliated with that Alignment, and place your
+Paradigm face up in your play area.
+Deck Construction: Combine any two Factions with the Avatar
+and God cards from your alignment to create your deck. Each
+faction consists of 21 cards.
+Fenris Lightfoot 1
+Lycan/Creature
+Bacchus 1
+Daemon/Creature
+Duke Aren Drakos 6
+Vampyr/Creature
+Oriel the Bold 1
+Celestial/Creature
+Haste: Resolve battle before
+Flip abilities.
+Any creature that battles Fenris
+Lightfoot is destroyed at the
+Flip: Transfer all Power
+Marker
+rkers in play to Bacchus.
+end of the round.
+Flip: Return any Creature ing
+play to the top of it's owner's
+deck
+While Duke Aren Drakos is in
+play, all of your Creatures are
+considered Vampyres
+Flip: Change the influence of
+any one Seal without a
+Champion
+In the Core Set, the factions you can choose from are the Lycan,
+Daemon, Vampyr, and Celestial factions.
+Hella
+Pazoo
+Avatar
+Gravskerne
+Your Avatar and God cards within the Core Set are decided by
+your Alignment to Avatars of Light or Avatars of Dark.
+
+--- Page 3 ---
+
+The Phases
+I. The Prep Phase (Start of Round)
+I. Draw: Take 8 cards.
+2. Reinforce: Place cards face-down on vacant Battlefield positions.
+3. Purge: Discard remaining hand to Limbo.
+2. The Seal Phase (Sequential I - 7)
+Resolve each Seal through this loop:
+I. The Flip: Reveal cards. Higher Power triggers "Flip" abilities first.
+2. The Tie: Equal Power = both cards are destroyed immediately.
+Activation Window I (Pre-Battle): Use "Activate" abilities or Paradigms.
+Higher Power has priority.
+3. Battle: Compare Power, Loser goes to Limbo.
+If the Battlefield is clear, you may battle the Champion on the Seal.
+Activation Window II (Post-Battle): Use "Activate" abilities or Paradigms.
+4. Claim/Ascend: If killed the defender or the Seal was empty, flip the
+Seal to your Alignment. If your unit is a Champion, move it from the
+you
+Battlefield onto the Seal.
+3. The Cleanup Phase (End of Round)
+I. Duplicate Rule: Sacrifice copies; keep only one of any specific card
+name.
+2. Persistence: Face-up cards stay on the Battlefield for the next round.
+3. Victory Check: If a player controls all 7 Seals, they win instantly.
+Otherwise, proceed to the next Round (Max 3).
+
+--- Page 4 ---
+
+Alignments
+Card Types
+Ally/ Enemy: Any card under
+your control vs. your opponent's
+control.
+Avatar: While Championing a
+Seal, it is unaffected by standard
+Creature abilities.
+Champion: Cards that may
+occupy a Seal after victory. Only
+one Champion may occupy a Seal
+at a time.
+Alignment
+Card Type
+Corrupted
+Alignment
+The Halo
+Paradigm
+Paradigm Title
+Card Type
+Paradigm Markers cannot be destroyed.
+Place a Halo Marker on The Halo each
+time you Champion a Seal.
+Halo Life (Activate): Remove any number of
+Halo Life Markers to place that many Power
+Markers on an Avatar.
+Description
+нашиб
+Paradigms
+Ally/ Enemy: Any card under
+your control vs. your opponent's
+control.
+Avatar: While Championing a
+Seal, it is unaffected by standard
+Creature abilities.
+Champion: Cards that may
+occupy a Seal after victory. Only
+one Champion may occupy a Seal
+
+--- Page 5 ---
+
+Creature Cards
+Bacchus
+Daemon/Creature
+Power Value
+Card Type
+Bella
+Oathbringer/ Avatar
+Power Value
+Card Type
+Flip: Transfer all Power
+Markers in play to this
+creature.
+Champion
+Flip: Destroy any Creature on any
+Abilities
+Seal
+Activate: Destroy each Marker of
+Cone type on any one Creature.
+Abilities
+Card Classifications
+Ally/ Enemy: Any card under your control vs. your opponent's
+control.
+Avatar: While Championing a Seal, it is unaffected by standard
+Creature abilities.
+Champion: Cards that may occupy a Seal after victory. Only one
+Champion may occupy a Seal at a time.
+Creature: Standard units.
+Final Act: An ability that can be activated while the card is in Limbo.
+God: While Championing a Seal, it is unaffected by abilities.
+Purify/ Corrupt: Physical representations of a Seal's alignment.
+Round: A full cycle of play, 7 Seal resolutions, and Cleanup.
+
+--- Page 6 ---
+
+Winning the Game
+I. The Instant Win: The Grand Convergence
+The ultimate achievement is to align all seven Seals.
+If all 7 are Purified, the cycle of death and rebirth halts, and a permanent utopia is
+established. If all 7 are Corrupted, the physical world is consumed by Limbo. The
+"New Era" begins instantly. The game ends the moment the 7th Seal flips.
+2. The Victory by Tally: The Fragile Balance
+If neither side can achieve total dominance after 3 Rounds, the universe enters a
+Stagnant Age. The player controlling the majority (4 or more) of the Seals dictates
+the favor of the next era, representative of a tactical victory.
+3. Victory by Attrition: The Empty Void
+If at the start of any Prep Phase, a player is unable to draw the required 8 cards
+from their deck, that player loses the game.
+4. The Toll of War
+In the event of a tie, the player controlling the most Seals with Champions, is
+declared the winner. If a tie persists, both players enter a fourth round; the first
+player to claim a Seal using a Champion wins the game immediately.
+5. Paradigms
+The influences, A player may win the game by way of specific conditions met as
+described on your Factions Paradigm.
+
+--- Page 7 ---
+
+Шарелед
+Game Layout
+2
+xpan
+wood
++wood
+wood
+wood wood
+3
+Position 1
+Position 2
+Position 3
+Position 4
+Position 5
+Position 6
+Position 7
+Deck
+co
+Paradigm
+Graveyard
+Locations & States
+In Play: Any face-up card on the Battlefield or on a Seal.
+Limbo: A face-up, out-of-play zone for destroyed/discarded cards.
+Graveyard: A zone for cards removed from the
+game entirely.
+Nullifying: Negates a card's special abilities but does not reduce its
+Power.
+Summon: Placing a card face-up from a specified zone onto the
+Battlefield. Summoning does not trigger Flip abilities.
+Face-Down: Any face down creature card on the Battlefield that has not
+been summoned. This creature is not in play.
+
+--- Page 8 ---
+
+Duels Game Layout
+©
+Endless Seven
+Endless Seven
+P
+Set-up
+Both Teams choose a player to play as Light and the other player to play as Dark.
+This will consist of 7 cards for each player. Then, each player takes the cards
+affiliated with their chosen alignment and sets them aside.
+Take all 7
+Both players will then choose any one faction to create one deck with there chosen
+alignment. This will consist of 7 sets of 3 cards. Shuffle the 21 faction cards with the
+7 Alignment cards, to create your deck. Place deck in front of
+your
+seals and lay them between all four players in sequential order, or layout your play
+mat. All players draw 8 cards.
+you.
+Each player places one card face down on each position of the battlefield with the
+understanding that each will be flipped over in sequential order. Each round, battles
+will take place starting at the first seal and ending at the seventh and final seal. Place
+any remaining cards from your hand into Limbo. Both teams players each choose an
+opponent to battle and place themselves directly across from that player.
+
+--- Page 9 ---
+
+How to Play Duels
+The round begins at the first seal and ends at the seventh seal. The order of
+operations for each seal is as follows:
+Flip: Both teams simultaneously flip over any face-down cards on the current seal,
+facing off against each other they Resolve any "Flip" abilities.
+Battle: Creatures on the current seal enter battle. Compare their Power values,
+factoring in modifiers or
+any
+abilities. The creature with the higher Power value wins
+and remains on the seal. The losing creature is destroyed and placed into limbo.
+Resolve any abilities that pertain to the battle or are activated by being destroyed.
+After the battle, resolve any abilities of creatures that remain on the field of play.
+The two players that won there battles now face off against each other to determine a
+winner. In the event of a one battle stalemate the outcome of the other battle takes
+The position or the seal. In the event of two stalemates, both teams move to the next
+battle. If two players on the same team are victorious in battle, they will then choose
+amongst
+themselves which creature will remain to occupy the position or the seal.
+When a players creature ability destroys an opponent creature in Play, you may Purify
+or corrupt a seal. When a player's creature attacks an empty seal, you may purify or
+corrupt that seal based on your alignment and then take control of that seal.
+At the end of the round, choose and sacrifice any duplicate creatures on the Field of
+Play.
+Continue these
+steps until
+you
+reach the seventh and final seal, ending the turn.
+
+--- Page 10 ---
+
+How to Play Duels (Continued)
+At the beginning of the new round, draw 8 cards. Both players place I card, face
+down, on each vacant seal. Any cards that remained from the previous turn stay in
+play. Place any remaining cards from your hand into Limbo.
+Winning
+Repeat this process for 3 rounds. At the end of 3 rounds, the team with the most
+Seals under their control wins the game. If at any time a team has all 7 Seals, they
+instantly win the game.
+If any player runs out of cards to draw from their deck, that player takes all cards
+from their limbo and graveyard and shuffles them into a new deck to draw from.
+Updated Siege Rules: The Dual Front
+Clearing the Way: To attack an enemy Champion, you must first clear the Battlefield
+position directly in front of you.
+Lane Assistance: If Player A clears their lane, but their teammate Player B is still
+blocked by a card, Player A can initiate a Siege on the Champion.
+If both teammates clear their respective positions, they both engage the Champion.
+In this case, their Power is not combined; instead, the Champion must defend against
+two separate battles. If either teammate wins, the Champion is defeated.
+Ascension Choice: When a Champion is defeated and the Seal is claimed, the winning
+team decides which of their two victorious creatures will Ascend to become the new
+Champion. The other creature remains on the Battlefield to guard the lane.
+
+--- Page 11 ---
+
+How to Play Duels (Continued)
+-
+At the beginning of the new round, draw 8 cards. Both players place I card, face down, on
+each vacant seal. Any cards that remained from the previous turn stay in play. Place any
+remaining cards from your hand into Limbo.
+Repeat this
+process for 3 rounds. At the end of 3 rounds, the team with the most Seals
+under their control wins the game. If at any time a team has all 7 Seals, they instantly win
+the
+game. If any player runs out of cards to draw from their deck, that player takes all
+cards from their limbo and graveyard and shuffles them into a new deck to draw from.
+Updated Siege Rules: The Dual Front
+Clearing the Way: To attack an enemy Champion, you must first clear the Battlefield
+position directly in front of you.
+Lane Assistance: If Player A clears their lane, but their teammate Player B is still blocked
+by a card, Player A can initiate a Siege on the Champion. If both teammates clear their
+respective positions, they both engage the Champion. In this case, their Power is not
+combined; instead, the Champion must defend against two separate battles. If either
+teammate wins, the Champion is defeated.
+Ascension Choice: When a Champion is defeated and the Seal is claimed, the winning
+team decides which of their two victorious creatures will Ascend to become the new
+Champion. The other creature remains on the Battlefield to guard the lane.
+Unified Defense: A Champion defending a Seal is considered to be "in combat" with any
+opponent who has an empty Battlefield position in front of them.
+Shared Limbo: While teammates have separate decks, they may look through each other's
+Limbo piles at any time to coordinate Final Act abilities.
+
+--- Page 12 ---
+
+The Final Decree
+Endless Seven is an infinite, unending war. The triumph of the Purified
+offers
+no lasting peace, just as the reign of the Corrupted provides no final
+end; instead, each outcome serves as a cosmic reset for the next. Whether
+the Light secures the seals or the Dark shatters them, the cycle is destined
+to repeat, the fate of existence forever locked in a boundless loop of rebirth
+and ruin.

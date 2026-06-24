@@ -83,7 +83,7 @@ export function pickBestEnemyWeaknessTarget(candidates: CardEntity[], seals: Sea
   return best;
 }
 
-export function pickChampionForLord(source: CardEntity, champions: CardEntity[], seals: SealEntity[]): CardEntity | null {
+export function pickChampionForLordAlaric(source: CardEntity, champions: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = champions.filter((c) => c.data.isEnemy !== source.data.isEnemy);
   if (foes.length > 0) return pickBestHarmTarget(source, foes, seals);
   const allies = champions.filter((c) => c.data.isEnemy === source.data.isEnemy);
@@ -91,24 +91,28 @@ export function pickChampionForLord(source: CardEntity, champions: CardEntity[],
   return allies.reduce((a, b) => (effectivePower(a) <= effectivePower(b) ? a : b));
 }
 
-export function pickLimboForSentinel(cards: CardEntity[]): CardEntity | null {
+// Sentinel -> Kaelo
+export function pickLimboForKaelo(cards: CardEntity[]): CardEntity | null {
   if (cards.length === 0) return null;
   return cards.reduce((a, b) => (a.data.power >= b.data.power ? a : b));
 }
 
-export function pickSlothDestroyTarget(source: CardEntity, validTargets: CardEntity[], seals: SealEntity[]): CardEntity | null {
+// Sloth -> Bogva (has the destroy weakness target action now)
+export function pickBogvaDestroyTarget(source: CardEntity, validTargets: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = validTargets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
   const pool = foes.length > 0 ? foes : validTargets;
   return pickBestHarmTarget(source, pool, seals);
 }
 
-export function pickInevitableFollowUp(winner: CardEntity, board: CardEntity[], seals: SealEntity[]): CardEntity | null {
+// Inevitable -> Noble The Great
+export function pickNobleTheGreatFollowUp(winner: CardEntity, board: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = board.filter((c) => c.data.isEnemy !== winner.data.isEnemy);
   const pool = foes.length > 0 ? foes : board;
   return pickBestHarmTarget(winner, pool, seals);
 }
 
-export function pickAllotterTarget(source: CardEntity, withMarkers: CardEntity[], seals: SealEntity[]): CardEntity | null {
+// Allotter -> Bella
+export function pickBellaTarget(source: CardEntity, withMarkers: CardEntity[], seals: SealEntity[]): CardEntity | null {
   if (withMarkers.length === 0) return null;
   const score = (t: CardEntity) => {
     const vsOpponent = t.data.isEnemy !== source.data.isEnemy;
@@ -151,7 +155,8 @@ export function pickSealForEnemySealAbility(
   return validSeals.reduce((a, b) => (score(a) >= score(b) ? a : b));
 }
 
-export function pickNephilimSealIndex(seals: SealEntity[], eAlign: Alignment): number {
+// Nephilim -> Anakim The Wise
+export function pickAnakimSealIndex(seals: SealEntity[], eAlign: Alignment): number {
   let bestIdx = 0;
   let best = -Infinity;
   for (const s of seals) {
@@ -168,7 +173,8 @@ export function pickNephilimSealIndex(seals: SealEntity[], eAlign: Alignment): n
   return bestIdx;
 }
 
-export function pickHadesLimboCard(limbo: CardEntity[]): CardEntity | null {
+// Hades -> Pazoo
+export function pickPazooLimboCard(limbo: CardEntity[]): CardEntity | null {
   if (limbo.length === 0) return null;
   return limbo.reduce((a, b) => {
     const pa = a.data.power + (a.data.isChampion ? 3 : 0);
@@ -177,13 +183,14 @@ export function pickHadesLimboCard(limbo: CardEntity[]): CardEntity | null {
   });
 }
 
-export type DeathTypePickerArgs = {
+export type NixTypePickerArgs = {
   typesInPlay: string[];
   allInPlay: CardEntity[];
   sourceIsEnemy: boolean;
 };
 
-export function pickDeathCreatureType(args: DeathTypePickerArgs): string {
+// Death -> Nix
+export function pickNixCreatureType(args: NixTypePickerArgs): string {
   const { typesInPlay, allInPlay, sourceIsEnemy } = args;
   if (typesInPlay.length === 0) return '';
   const isCreatureFaction = (t: string) => ['Vampyre', 'Lycan', 'Celestial', 'Daemon'].includes(t);
@@ -233,24 +240,25 @@ export function vacantSlotPriorityForReinforce(
   return contested + center;
 }
 
-const FALLEN_ONE_HIGH_THREAT_NAMES = new Set([
-  'Death',
-  'Pestilence',
-  'The Almighty',
-  'The Destroyer',
-  'Greed',
-  'Lord',
-  'The Inevitable',
-  'Sloth',
-  'Envy',
-  'Wrath',
+// Fallen One -> Samyaza
+const SAMYAZA_HIGH_THREAT_NAMES = new Set([
+  'Nix',
+  'Lycandor',
+  'Calmadious',
+  'Skarados',
+  'Mammon',
+  'Lord Alaric',
+  'Noble The Great',
+  'Belphegor',
+  'Zelus',
+  'Bogva',
 ]);
 
-export function shouldEnemyUseFallenOneAgainst(source: CardEntity): boolean {
+export function shouldEnemyUseSamyazaAgainst(source: CardEntity): boolean {
   if (source.data.hasNullify) return true;
   if (source.data.hasGlobalAbility) return true;
   if (source.data.needsAllocation && (source.data.markerPower ?? 0) + (source.data.markerWeakness ?? 0) >= 4) return true;
-  if (FALLEN_ONE_HIGH_THREAT_NAMES.has(source.data.name)) return true;
+  if (SAMYAZA_HIGH_THREAT_NAMES.has(source.data.name)) return true;
   if (source.data.isChampion && source.data.power >= 7) return true;
   return false;
 }
@@ -275,7 +283,8 @@ export function shouldEnemyUseLuna(
   return false;
 }
 
-export function pickDeltaBuffTarget(enemyAllies: CardEntity[], seals: SealEntity[]): CardEntity {
+// Delta -> Varg Fur-back
+export function pickVargBuffTarget(enemyAllies: CardEntity[], seals: SealEntity[]): CardEntity {
   let best = enemyAllies[0];
   let bestS = -Infinity;
   for (const c of enemyAllies) {
@@ -288,14 +297,14 @@ export function pickDeltaBuffTarget(enemyAllies: CardEntity[], seals: SealEntity
   return best;
 }
 
-/** Martyr (Limbo): neutral undefended seal — prefer center contest. */
-export function pickMartyrNeutralSeal(seals: SealEntity[]): SealEntity | null {
+// Martyr -> Tarkidos
+export function pickTarkidosNeutralSeal(seals: SealEntity[]): SealEntity | null {
   const valid = seals.filter((s) => !s.champion && s.alignment === Alignment.NEUTRAL);
   if (valid.length === 0) return null;
   return valid.reduce((a, b) => (Math.abs(a.index - 3) <= Math.abs(b.index - 3) ? a : b));
 }
 
-function thronesSealScore(s: SealEntity, targetAlign: Alignment, pAlign: Alignment, eAlign: Alignment): number {
+function orielSealScore(s: SealEntity, targetAlign: Alignment, pAlign: Alignment, eAlign: Alignment): number {
   let sc = 0;
   if (s.alignment !== targetAlign) sc += 55;
   if (targetAlign === eAlign && s.alignment === pAlign) sc += 45;
@@ -305,8 +314,8 @@ function thronesSealScore(s: SealEntity, targetAlign: Alignment, pAlign: Alignme
   return sc;
 }
 
-/** Thrones (enemy): flip influence toward `targetAlign` on an empty seal. */
-export function pickThronesSeal(
+// Thrones -> Oriel The bold
+export function pickOrielSeal(
   validSeals: SealEntity[],
   targetAlign: Alignment,
   pAlign: Alignment,
@@ -314,7 +323,7 @@ export function pickThronesSeal(
 ): SealEntity | null {
   if (validSeals.length === 0) return null;
   return validSeals.reduce((a, b) =>
-    thronesSealScore(a, targetAlign, pAlign, eAlign) >= thronesSealScore(b, targetAlign, pAlign, eAlign) ? a : b
+    orielSealScore(a, targetAlign, pAlign, eAlign) >= orielSealScore(b, targetAlign, pAlign, eAlign) ? a : b
   );
 }
 
@@ -331,9 +340,21 @@ export function baronSwapImprovesLane(baron: CardEntity, candidate: CardEntity):
   return limboCardStrengthForBaronSwap(candidate) > limboCardStrengthForBaronSwap(baron);
 }
 
-/** Saint Michael / Lilith Final Act — prefer destroying an opponent that battled. */
 export function pickAvatarFinalActTarget(source: CardEntity, validTargets: CardEntity[], seals: SealEntity[]): CardEntity | null {
-  const foes = validTargets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-  const pool = foes.length > 0 ? foes : validTargets;
-  return pickBestHarmTarget(source, pool, seals);
+  const foes = validTargets.filter((c) => c.data.isEnemy !== source.data.isEnemy);
+  if (foes.length === 0) return null;
+  return pickBestHarmTarget(source, foes, seals);
 }
+
+// Keep old names mapping for back-compat
+export const pickLimboForSentinel = pickLimboForKaelo;
+export const pickSlothDestroyTarget = pickBogvaDestroyTarget;
+export const pickInevitableFollowUp = pickNobleTheGreatFollowUp;
+export const pickAllotterTarget = pickBellaTarget;
+export const pickNephilimSealIndex = pickAnakimSealIndex;
+export const pickHadesLimboCard = pickPazooLimboCard;
+export const pickDeathCreatureType = pickNixCreatureType;
+export const pickDeltaBuffTarget = pickVargBuffTarget;
+export const pickMartyrNeutralSeal = pickTarkidosNeutralSeal;
+export const pickThronesSeal = pickOrielSeal;
+export const pickChampionForLord = pickChampionForLordAlaric;

@@ -1,5 +1,5 @@
 import { CardEntity } from '../entities/CardEntity';
-import { GameState, Alignment, CardData } from '../types';
+import { GameState, Alignment, CardData, HoveredCardInfo } from '../types';
 import { SealEntity } from '../entities/SealEntity';
 
 export interface IGameController {
@@ -35,6 +35,7 @@ export interface IGameController {
   nullifyCallback: ((confirmed: boolean) => void) | null;
   sealSelectionCallback: ((idx: number) => void) | null;
   updateState(patch: Partial<GameState>): void;
+  cardToHoveredInfo(card: CardEntity): HoveredCardInfo;
   addLog(msg: string): void;
   isImmuneToAbilities(target: CardEntity, source: CardEntity): boolean;
   isProtected(card: CardEntity): boolean;
@@ -59,6 +60,7 @@ export interface IGameController {
   resolveSeal(idx: number): Promise<void>;
   appendEnemyPrepCardsToLimbo(): void;
   forceSkip(): void;
+  setSlowMode(enabled: boolean): void;
   selectLimboCardForAbility(zone: 'player' | 'enemy', index: number): void;
   realignPlayerHand(duration?: number): void;
 }

@@ -8,8 +8,8 @@ import { GAME_CONSTANTS } from '../constants';
 import {
   pickDeathCreatureType,
   pickDeltaBuffTarget,
-  pickHadesLimboCard,
-  pickThronesSeal,
+  pickPazooLimboCard,
+  pickOrielSeal,
   preferEnemyFirstWhenFlipPowerTied,
   vacantSlotPriorityForReinforce,
 } from './EnemyEasyAI';
@@ -17,8 +17,96 @@ import {
 export class PhaseManager {
   constructor(private controller: IGameController) {}
 
+  private updateInterstitial(patch: Partial<NonNullable<import('../types').GameState['combatInterstitial']>>) {
+    if (!this.controller.state.slowMode) return;
+    const current = this.controller.state.combatInterstitial || {
+      active: true,
+      sealIndex: this.controller.currentResolvingSealIndex,
+      step: 'idle',
+      description: '',
+      leftCard: null,
+      rightCard: null
+    };
+    this.controller.updateState({
+      combatInterstitial: {
+        ...current,
+        ...patch
+      }
+    });
+  }
+
+  private clearInterstitial() {
+    this.controller.updateState({ combatInterstitial: null });
+  }
+
+  private async delay(ms: number) {
+    if (this.controller.state.slowMode) {
+      await new Promise(r => setTimeout(r, ms));
+    }
+  }
+
+  private refreshInterstitialCards(description: string, step: NonNullable<import('../types').GameState['combatInterstitial']>['step'] = 'idle', patch?: Partial<NonNullable<import('../types').GameState['combatInterstitial']>>) {
+    if (!this.controller.state.slowMode) return;
+    const idx = this.controller.currentResolvingSealIndex;
+    if (idx === -1) return;
+    const pCard = this.controller.playerBattlefield[idx];
+    const eCard = this.controller.enemyBattlefield[idx];
+    const seal = this.controller.seals[idx];
+    const right = eCard || seal.champion;
+
+    const leftHovered = pCard ? this.controller.cardToHoveredInfo(pCard) : null;
+    let rightHovered = null;
+    if (right) {
+      const isSecret = right.data.isEnemy && !right.data.faceUp;
+      rightHovered = isSecret ? {
+        name: 'Face Down Card',
+        faction: 'Unknown',
+        power: 0,
+        type: 'Unknown',
+        isChampion: false,
+        ability: 'This card is face down.',
+        powerMarkers: 0,
+        weaknessMarkers: 0,
+        faceArtPath: undefined
+      } : this.controller.cardToHoveredInfo(right);
+    }
+
+    const leftPow = pCard ? pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers : 0;
+    const rightPow = right ? right.data.power + right.data.powerMarkers - right.data.weaknessMarkers : 0;
+
+    const leftPowerText = pCard ? `${pCard.data.power} Base${pCard.data.powerMarkers ? ` + ${pCard.data.powerMarkers} Buff` : ''}${pCard.data.weaknessMarkers ? ` - ${pCard.data.weaknessMarkers} Weak` : ''} = ${leftPow} Power` : '';
+    const rightPowerText = right ? (right.data.isEnemy && !right.data.faceUp ? 'Power: Unknown' : `${right.data.power} Base${right.data.powerMarkers ? ` + ${right.data.powerMarkers} Buff` : ''}${right.data.weaknessMarkers ? ` - ${right.data.weaknessMarkers} Weak` : ''} = ${rightPow} Power`) : '';
+
+    this.updateInterstitial({
+      leftCard: leftHovered,
+      rightCard: rightHovered,
+      description,
+      step,
+      leftPowerText,
+      rightPowerText,
+      ...patch
+    });
+  }
+
   public async startPrepPhase() {
     if (this.controller.isProcessing) return;
+    
+    // Attrition check
+    if (this.controller.playerDeck.length < 8 || this.controller.enemyDeck.length < 8) {
+      let result: 'player' | 'enemy' | 'draw';
+      const pLen = this.controller.playerDeck.length;
+      const eLen = this.controller.enemyDeck.length;
+      if (pLen < 8 && eLen < 8) {
+        result = 'draw';
+      } else if (pLen < 8) {
+        result = 'enemy';
+      } else {
+        result = 'player';
+      }
+      this.finalizeGame("Attrition", result);
+      return;
+    }
+
     (this.controller as { clearPrepUndoStack?: () => void }).clearPrepUndoStack?.();
     this.controller.isProcessing = true;
     this.controller.addLog(`--- Round ${this.controller.state.currentRound} Prep Phase ---`);
@@ -30,6 +118,8 @@ export class PhaseManager {
     // Preload card back texture before creating any hand cards so the first (leftmost) card is never rendered without it
     await getOrLoadBackTexture();
 
+    const isSlow = this.controller.state.slowMode;
+
     for (let i = 0; i < 8; i++) {
       if (this.controller.playerDeck.length === 0) break;
       const cardData = this.controller.playerDeck.pop()!;
@@ -40,8 +130,14 @@ export class PhaseManager {
       this.controller.playerHand.push(card);
       card.applyBackTextureIfNeeded(); // All cards share same back graphic; ensure it is applied as soon as ready
 
-      this.controller.realignPlayerHand(0.6);
-      await new Promise(r => setTimeout(r, 100));
+      if (isSlow) {
+        this.controller.realignPlayerHand(0.6);
+        await this.delay(100);
+      }
+    }
+
+    if (!isSlow) {
+      this.controller.realignPlayerHand(0);
     }
 
     this.enemyReinforce();
@@ -74,6 +170,7 @@ export class PhaseManager {
         vacantSlotPriorityForReinforce(b, this.controller.playerBattlefield) -
         vacantSlotPriorityForReinforce(a, this.controller.playerBattlefield)
     );
+    const isSlow = this.controller.state.slowMode;
     for (let i = 0; i < vacantSlots.length && aiHand.length > 0; i++) {
       const slotIdx = vacantSlots[i];
       const cardData = aiHand.shift()!;
@@ -85,12 +182,14 @@ export class PhaseManager {
       this.controller.enemyBattlefield[slotIdx] = card;
       card.applyBackTextureIfNeeded(); // All cards share same back graphic; ensure it is applied as soon as ready
 
+      const duration = isSlow ? 0.8 : 0;
+      const delay = isSlow ? i * 0.15 : 0;
       gsap.to(card.mesh.position, {
         x: (slotIdx - 3) * GAME_CONSTANTS.SLOT_SPACING,
         y: 0.1,
         z: -3.2,
-        duration: 0.8,
-        delay: i * 0.15
+        duration: duration,
+        delay: delay
       });
     }
     this.controller.enemyPrepRemainder = [...aiHand];
@@ -105,14 +204,17 @@ export class PhaseManager {
     this.controller.addLog("Ending Prep Phase. Purging hand...");
     this.controller.updateState({ phaseStep: 'Purging hand...' });
 
+    const isSlow = this.controller.state.slowMode;
     this.controller.playerHand.forEach((card, i) => {
       this.controller.playerLimbo.push(card);
+      const duration = isSlow ? 0.6 : 0;
+      const delay = isSlow ? i * 0.05 : 0;
       gsap.to(card.mesh.position, {
         x: 15,
         y: 0.2 + (this.controller.playerLimbo.length * 0.05),
         z: 6,
-        duration: 0.6,
-        delay: i * 0.05,
+        duration: duration,
+        delay: delay,
         onComplete: () => {
           card.mesh.rotation.set(0, 0, 0);
           card.updateVisualMarkers();
@@ -120,12 +222,14 @@ export class PhaseManager {
       });
     });
     (this.controller as any).playerHand = [];
-    setTimeout(() => void this.finishEndPrepAndStartResolution(), 800);
+    
+    const finishDelay = isSlow ? 800 : 50;
+    setTimeout(() => void this.finishEndPrepAndStartResolution(), finishDelay);
   }
 
   private async finishEndPrepAndStartResolution() {
     this.controller.appendEnemyPrepCardsToLimbo();
-    await new Promise((r) => setTimeout(r, 400));
+    await this.delay(400);
     await this.controller.abilityManager.runEnemyPrepAutomation();
     await this.startResolution();
   }
@@ -144,14 +248,41 @@ export class PhaseManager {
     await this.cleanupEndOfRoundEffects();
     
     if (this.controller.state.currentPhase !== Phase.GAME_OVER) {
-      // Reset camera (not via zoomOut — still mark wide view for hover/UI)
+      // Reset camera
       this.controller.sealCameraZoomedIn = false;
-      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration: 1.5, ease: "power2.inOut" });
-      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration: 1.5, ease: "power2.inOut" });
-      await new Promise(r => setTimeout(r, 1600));
+      const camDuration = this.controller.state.slowMode ? 1.5 : 0;
+      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration: camDuration, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration: camDuration, ease: "power2.inOut" });
+      if (this.controller.state.slowMode) {
+        await this.delay(1600);
+      }
 
       if (this.controller.state.currentRound >= 3) {
-        this.finalizeGame();
+        const pAlign = this.controller.state.playerAlignment;
+        const eAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
+        const pCount = this.controller.seals.filter(s => s.alignment === pAlign).length;
+        const eCount = this.controller.seals.filter(s => s.alignment === eAlign).length;
+        
+        if (pCount === eCount && this.controller.state.currentRound === 3) {
+          const pChamps = this.controller.seals.filter(s => s.alignment === pAlign && s.champion !== null).length;
+          const eChamps = this.controller.seals.filter(s => s.alignment === eAlign && s.champion !== null).length;
+          
+          this.controller.addLog(`Round 3 ended in a ${pCount}-${eCount} tie.`);
+          this.controller.addLog(`Tie-breaker: Seals controlled by Champions (Player: ${pChamps}, Enemy: ${eChamps})`);
+          
+          if (pChamps > eChamps) {
+            this.finalizeGame("Champion Tie-breaker");
+          } else if (eChamps > pChamps) {
+            this.finalizeGame("Champion Tie-breaker");
+          } else {
+            this.controller.addLog("Champions count is also tied! Entering Round 4 Sudden Death...");
+            this.controller.state.currentRound++;
+            this.controller.isProcessing = false;
+            this.startPrepPhase();
+          }
+        } else {
+          this.finalizeGame();
+        }
       } else {
         this.controller.state.currentRound++;
         this.controller.isProcessing = false;
@@ -166,11 +297,21 @@ export class PhaseManager {
     this.controller.updateState({ phaseStep: `Resolving Seal ${idx + 1}` });
     this.controller.addLog(`Resolving Seal ${idx + 1}...`);
     
-    this.controller.zoomIn(idx);
-    await new Promise(r => setTimeout(r, 1000));
+    if (this.controller.state.slowMode) {
+      this.controller.zoomIn(idx);
+    }
 
     let pCard = this.controller.playerBattlefield[idx];
     let eCard = this.controller.enemyBattlefield[idx];
+    const rightCard = eCard || seal.champion;
+    const hasCards = !!pCard || !!rightCard;
+
+    if (hasCards) {
+      this.refreshInterstitialCards(`Resolving Seal ${idx + 1}...`, 'idle');
+      await this.delay(1200);
+    } else {
+      await this.delay(1000);
+    }
 
     // Step 0: Haste Check
     const pHaste = pCard && pCard.data.hasHaste;
@@ -178,14 +319,22 @@ export class PhaseManager {
 
     if ((pHaste || eHaste) && !pCard?.data.cannotBattleOrBeBattled && !eCard?.data.cannotBattleOrBeBattled) {
       this.controller.updateState({ phaseStep: "Step 0: Haste Strike" });
-      // Champion must be battled first (same priority as Step C: Combat); only then slot vs slot.
-      // Visual rule: if we are about to battle while cards are still face-down, reveal them first
-      // (but do NOT set `data.faceUp=true`, so flip abilities still trigger later in Step A/B).
+      
+      if (hasCards) {
+        const hasteActive = pHaste && eHaste ? 'both' : (pHaste ? 'left' : 'right');
+        this.refreshInterstitialCards(
+          `Haste Strike! ${pHaste ? pCard.data.name : ''}${pHaste && eHaste ? ' and ' : ''}${eHaste ? eCard.data.name : ''} strike immediately.`,
+          'haste',
+          { hasteActive }
+        );
+        await this.delay(1800);
+      }
+
       const revealForCombat = async (...cards: (CardEntity | null | undefined)[]) => {
         const toReveal = cards.filter((c): c is CardEntity => !!c && !c.data.faceUp);
         if (toReveal.length === 0) return;
         toReveal.forEach((c) => gsap.to(c.mesh.rotation, { x: 0, duration: 0.35 }));
-        await new Promise((r) => setTimeout(r, 420));
+        await this.delay(420);
       };
 
       if (pCard && seal.champion && seal.champion.data.isEnemy) {
@@ -200,31 +349,85 @@ export class PhaseManager {
       }
       pCard = this.controller.playerBattlefield[idx];
       eCard = this.controller.enemyBattlefield[idx];
+
+      if (hasCards) {
+        this.refreshInterstitialCards("Haste Strike completed.", 'haste', { hasteActive: 'none' });
+        await this.delay(1000);
+      }
     }
 
     // Step A: The Flip
     this.controller.updateState({ phaseStep: "Step A: The Flip" });
     const pFlipping = pCard && !pCard.data.faceUp;
     const eFlipping = eCard && !eCard.data.faceUp;
-    if (pFlipping) {
-      gsap.to(pCard.mesh.rotation, { x: 0, duration: 0.5 });
-      this.controller.addLog(`Player reveals ${pCard.data.name}`);
+    
+    if (pFlipping || eFlipping) {
+      if (hasCards) {
+        this.refreshInterstitialCards(
+          `Revealing face-down cards: ${pFlipping ? pCard.data.name : ''}${pFlipping && eFlipping ? ' and ' : ''}${eFlipping ? eCard.data.name : ''}.`,
+          'flip',
+          {
+            leftGlow: pFlipping,
+            rightGlow: eFlipping
+          }
+        );
+      }
+      if (pFlipping) gsap.to(pCard.mesh.rotation, { x: 0, duration: 0.5 });
+      if (eFlipping) gsap.to(eCard.mesh.rotation, { x: 0, duration: 0.5 });
+      await this.delay(1200);
     }
-    if (eFlipping) {
-      gsap.to(eCard.mesh.rotation, { x: 0, duration: 0.5 });
-      this.controller.addLog(`Enemy reveals ${eCard.data.name}`);
+
+    if (pCard) pCard.data.faceUp = true;
+    if (eCard) eCard.data.faceUp = true;
+
+    if (hasCards && (pFlipping || eFlipping)) {
+      this.refreshInterstitialCards("Cards are revealed!", 'flip', { leftGlow: false, rightGlow: false });
+      await this.delay(1000);
     }
-    if (pFlipping || eFlipping) await new Promise(r => setTimeout(r, 800));
+
+    // Tie Rule Check
+    if (pCard && eCard) {
+      const pEff = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
+      const eEff = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
+      if (pEff === eEff) {
+        this.controller.addLog(`Tie Rule: ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEff}). Both are destroyed immediately!`);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards(
+            `Tie Rule: Equal effective Power (${pEff}). Both are destroyed!`,
+            'combat',
+            { leftDamageFlash: true, rightDamageFlash: true }
+          );
+          await this.delay(1500);
+        }
+
+        const killer = { cardName: 'Tie Rule', cause: 'ability' as const };
+        this.controller.destroyCard(pCard, false, idx, false, killer);
+        this.controller.destroyCard(eCard, true, idx, false, killer);
+        this.controller.playerBattlefield[idx] = null;
+        this.controller.enemyBattlefield[idx] = null;
+        await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards("Tie Rule resolved.", 'done', { leftDamageFlash: false, rightDamageFlash: false });
+          await this.delay(1000);
+          this.clearInterstitial();
+        } else {
+          await this.delay(1000);
+        }
+        return;
+      }
+    }
 
     // Step B: Flip & Activate Abilities
     this.controller.updateState({ phaseStep: "Step B: Abilities" });
     this.controller.addLog("Processing Abilities...");
-    let pEff = pCard ? pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers : 999;
-    let eEff = eCard ? eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers : 999;
+    let pEff = pCard ? pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers : -999;
+    let eEff = eCard ? eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers : -999;
     
     let executionOrder: ('player' | 'enemy' | 'champion')[] = [];
-    if (pEff < eEff) executionOrder = ['player', 'enemy'];
-    else if (eEff < pEff) executionOrder = ['enemy', 'player'];
+    if (pEff > eEff) executionOrder = ['player', 'enemy'];
+    else if (eEff > pEff) executionOrder = ['enemy', 'player'];
     else {
       executionOrder = preferEnemyFirstWhenFlipPowerTied(pCard, eCard, pFlipping, eFlipping)
         ? ['enemy', 'player']
@@ -257,6 +460,19 @@ export class PhaseManager {
       const isActivate = current.data.hasActivate;
       if (!isFlipping && !isActivate) continue;
 
+      if (hasCards) {
+        const isLeft = !current.data.isEnemy;
+        this.refreshInterstitialCards(
+          `${current.data.name} triggers ability: "${current.data.ability}"`,
+          'ability',
+          {
+            leftGlow: isLeft,
+            rightGlow: !isLeft
+          }
+        );
+        await this.delay(2200);
+      }
+
       // Fallen One Nullify Check
       const nullified = await this.controller.abilityManager.checkNullify(current);
       if (nullified) continue;
@@ -277,14 +493,14 @@ export class PhaseManager {
       }
       
       // Invulnerability
-      if (current.data.ability.toLowerCase().includes("invulnerability") || current.data.name === "Nephilim" || current.data.name === "Greed") {
+      if (current.data.ability.toLowerCase().includes("invulnerability") || current.data.name === "Anakim The Wise" || current.data.name === "Mammon" || current.data.name === "Ulfric Thorne") {
         current.data.isInvincible = true;
         this.controller.addLog(`${current.data.name} gains battle invulnerability this turn`);
       }
 
-      // Wrath: Flip — -1 Weakness on each enemy creature (no allocation)
-      if (current.data.name === "Wrath") {
-        const enemyCreatures = (side === 'player'
+      // Bogva: Flip — -1 Weakness on each enemy creature (no allocation)
+      if (current.data.name === "Bogva") {
+        const enemyCreatures = (!current.data.isEnemy
           ? [...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && c!.data.isEnemy)]
           : [...this.controller.playerBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && !c!.data.isEnemy)]
         ).filter(c => c !== null) as CardEntity[];
@@ -297,33 +513,14 @@ export class PhaseManager {
         this.controller.addLog(`${current.data.name} places a -1 Weakness Marker on each enemy creature.`);
       }
 
-      // Pride: Flip — -3 Weakness on creature across; Action — +2 Power on each adjacent
-      if (current.data.name === "Pride") {
-        if (opponent && !this.controller.abilityManager.isImmuneToAbilities(opponent, current)) {
-          opponent.data.weaknessMarkers += 3;
-          opponent.updateVisualMarkers();
-          this.controller.addLog(`${current.data.name} places -3 Weakness on ${opponent.data.name}.`);
-        }
-        const neighbors = [];
-        if (idx > 0) neighbors.push(side === 'player' ? this.controller.playerBattlefield[idx - 1] : this.controller.enemyBattlefield[idx - 1]);
-        if (idx < 6) neighbors.push(side === 'player' ? this.controller.playerBattlefield[idx + 1] : this.controller.enemyBattlefield[idx + 1]);
-        neighbors.forEach(n => {
-          if (n && !this.controller.abilityManager.isImmuneToAbilities(n, current)) {
-            n.data.powerMarkers += 2;
-            n.updateVisualMarkers();
-          }
-        });
-        this.controller.addLog(`${current.data.name} places +2 Power on each adjacent creature.`);
-      }
-
-      // Nephilim Activate
-      if (isActivate && current.data.name === "Nephilim") {
+      // Anakim The Wise Activate
+      if (isActivate && current.data.name === "Anakim The Wise") {
         current.data.isActivatingAbility = true;
         await (this.controller.abilityManager as any).handleActivateAbility(current, current.data.isEnemy);
         current.data.isActivatingAbility = false;
       }
-      // The Almighty, The Allotter, Saint Michael, The Spinner, Lord, Greed: Activate
-      if (isActivate && (current.data.name === "The Almighty" || current.data.name === "The Allotter" || current.data.name === "Seraphim" || current.data.name === "Saint Michael" || current.data.name === "The Spinner" || current.data.name === "Lord" || current.data.name === "Greed" || current.data.name === "The Destroyer" || current.data.name === "Lilith" || current.data.name === "Death")) {
+      // Activate abilities
+      if (isActivate && (current.data.name === "Calmadious" || current.data.name === "Bella" || current.data.name === "Metatron" || current.data.name === "Coal" || current.data.name === "Dawn" || current.data.name === "Lord Alaric" || current.data.name === "Mammon" || current.data.name === "Skarados" || current.data.name === "Karlyah" || current.data.name === "Nix" || current.data.name === "Ulfric Thorne" || current.data.name === "Varg Fur-back")) {
         current.data.isActivatingAbility = true;
         await (this.controller.abilityManager as any).handleActivateAbility(current, current.data.isEnemy);
         current.data.isActivatingAbility = false;
@@ -332,9 +529,9 @@ export class PhaseManager {
       // The Spinner / Omega / Hades: board-count Power Markers are applied via AbilityManager.syncBoardPresencePowerMarkers
       // after Step B (see below) so Activate passes do not re-stack markers on champions with hasActivate.
 
-      // Herald
-      if (current.data.name === "Herald") {
-        const deck = side === 'player' ? this.controller.playerDeck : this.controller.enemyDeck;
+      // Cassiel Haggis (formerly Herald)
+      if (current.data.name === "Cassiel Haggis") {
+        const deck = !current.data.isEnemy ? this.controller.playerDeck : this.controller.enemyDeck;
         if (deck.length > 0) {
           const topCard = deck[deck.length - 1];
           const markers = topCard.power;
@@ -346,13 +543,13 @@ export class PhaseManager {
         }
       }
 
-      // Thrones
-      if (current.data.name === "Thrones") {
+      // Oriel The bold (formerly Thrones)
+      if (current.data.name === "Oriel The bold") {
         const pAlign = this.controller.state.playerAlignment;
         const eAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
-        const targetAlign = side === 'player' ? pAlign : eAlign;
+        const targetAlign = !current.data.isEnemy ? pAlign : eAlign;
 
-        if (side === 'enemy') {
+        if (current.data.isEnemy) {
           const validSeals = this.controller.seals.filter(s => !s.champion);
           if (validSeals.length > 0) {
             const preferred = validSeals.find(s => s.alignment !== targetAlign) || validSeals[0];
@@ -369,7 +566,7 @@ export class PhaseManager {
           if (hasValid) {
             this.controller.updateState({ 
               currentPhase: Phase.SEAL_TARGETING,
-              instructionText: "Thrones: Select a Seal without a Champion to change its Influence."
+              instructionText: "Oriel The bold: Select a Seal without a Champion to change its Influence."
             });
             this.controller.zoomOut();
             const targetIdx = await new Promise<number>((resolve) => {
@@ -384,7 +581,7 @@ export class PhaseManager {
                   cardName: current.data.name
                 });
               } else {
-                this.controller.addLog(`Thrones cannot change a Seal that already has a Champion.`);
+                this.controller.addLog(`Oriel The bold cannot change a Seal that already has a Champion.`);
               }
             }
           } else {
@@ -394,44 +591,30 @@ export class PhaseManager {
       }
 
       // Beta: Flip invulnerability + Action: +2 Power Marker on any adjacent creature (each adjacent). Only flipped cards are affected.
-      if (current.data.name === "Beta") {
-        const neighbors = [];
-        if (idx > 0) neighbors.push(side === 'player' ? this.controller.playerBattlefield[idx - 1] : this.controller.enemyBattlefield[idx - 1]);
-        if (idx < 6) neighbors.push(side === 'player' ? this.controller.playerBattlefield[idx + 1] : this.controller.enemyBattlefield[idx + 1]);
-        neighbors.forEach(n => {
-          if (n && n.data.faceUp) {
-            n.data.powerMarkers += 2;
-            n.updateVisualMarkers();
-          }
-        });
-        current.data.isInvincible = true;
-        this.controller.addLog(`${current.data.name} buffs adjacent creatures +2 and gains battle invulnerability this turn`);
-      }
-
-      // Delta Activate: mark that Delta can sacrifice at end of round
-      if (isActivate && current.data.name === "Delta") {
+      // Varg Fur-back (formerly Delta) Activate: mark that Varg Fur-back can sacrifice at end of round
+      if (isActivate && current.data.name === "Varg Fur-back") {
         current.data.isActivatingAbility = true;
         current.data.pendingDeltaSacrifice = true;
         this.controller.addLog(`${current.data.name} readies its end-of-round sacrifice.`);
         current.data.isActivatingAbility = false;
       }
 
-      // Lust
-      if (current.data.name === "Lust") {
+      // Desire (formerly Lust)
+      if (current.data.name === "Desire") {
         if (opponent && !this.controller.abilityManager.isImmuneToAbilities(opponent, current)) {
           this.controller.addLog(`${current.data.name} forces mutual sacrifice with ${opponent.data.name}`);
-          this.controller.destroyCard(current, side === 'enemy', idx, false, { cardName: 'Lust', cause: 'ability' });
-          this.controller.destroyCard(opponent, side === 'player', idx, false, { cardName: 'Lust', cause: 'ability' });
+          this.controller.destroyCard(current, current.data.isEnemy, idx, false, { cardName: 'Desire', cause: 'ability' });
+          this.controller.destroyCard(opponent, !current.data.isEnemy, idx, false, { cardName: 'Desire', cause: 'ability' });
           // Effect: After sacrifice, if the Seal has no Champion, you may change the Influence of the seal
           const seal = this.controller.seals[idx];
           if (current.data.hasLustSealEffect && !seal.champion) {
-            if (side === 'enemy') {
+            if (current.data.isEnemy) {
               const validSeals = this.controller.seals.filter(s => s.index === idx && !s.champion);
               if (validSeals.length > 0) {
                 const pAlign = this.controller.state.playerAlignment;
                 const eAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
-                const npcAlign = side === 'enemy' ? eAlign : pAlign;
-                this.controller.addLog(`Lust's effect: Seal ${idx + 1} influence changed to ${npcAlign === Alignment.LIGHT ? 'Light' : 'Dark'}.`);
+                const npcAlign = current.data.isEnemy ? eAlign : pAlign;
+                this.controller.addLog(`Desire's effect: Seal ${idx + 1} influence changed to ${npcAlign === Alignment.LIGHT ? 'Light' : 'Dark'}.`);
                 await this.controller.claimSeal(idx, npcAlign, {
                   type: 'ability',
                   cardName: current.data.name
@@ -442,7 +625,7 @@ export class PhaseManager {
               if (hasValid) {
                 this.controller.updateState({
                   currentPhase: Phase.RESOLUTION,
-                  instructionText: "Lust: Seal has no Champion. Choose new Influence for the Seal (Light or Dark).",
+                  instructionText: "Desire: Seal has no Champion. Choose new Influence for the Seal (Light or Dark).",
                   decisionContext: 'LUST_SEAL_INFLUENCE',
                   sealIndexForChoice: idx
                 });
@@ -451,7 +634,7 @@ export class PhaseManager {
                   (this.controller as any).alignmentChoiceCallback = resolve;
                 });
                 this.controller.updateState({ decisionContext: undefined, sealIndexForChoice: undefined });
-                this.controller.addLog(`Lust's effect: Seal ${idx + 1} influence changed.`);
+                this.controller.addLog(`Desire's effect: Seal ${idx + 1} influence changed.`);
                 await this.controller.claimSeal(idx, chosenAlign, {
                   type: 'ability',
                   cardName: current.data.name
@@ -476,7 +659,7 @@ export class PhaseManager {
         if (typesInPlay.length === 0) {
           this.controller.addLog(`${current.data.name} finds no creatures in play to destroy.`);
         } else {
-          const chosenType = side === 'enemy'
+          const chosenType = current.data.isEnemy
             ? pickDeathCreatureType({
                 typesInPlay,
                 allInPlay,
@@ -518,16 +701,16 @@ export class PhaseManager {
         }
       }
 
-      // Hades: +2 Power per Horseman (tracked via syncBoardPresencePowerMarkers). Secondary: Limbo → deck.
-      if (current.data.name === "Hades" && isFlipping) {
-        const horsemanCount = this.controller.abilityManager.countHorsemenInPlay(current.data.isEnemy);
-        const gain = 2 * horsemanCount;
-        this.controller.addLog(`${current.data.name} gains +2 Power per Horseman (${horsemanCount} in play) = ${gain} Power Marker(s) (updated with board state).`);
+      // Pazoo: +2 Power per Graveborn. Secondary: Limbo → deck.
+      if (current.data.name === "Pazoo" && isFlipping) {
+        const gravebornCount = this.controller.abilityManager.countGravebornInPlay(current.data.isEnemy);
+        const gain = 2 * gravebornCount;
+        this.controller.addLog(`${current.data.name} gains +2 Power per Graveborn (${gravebornCount} in play) = ${gain} Power Marker(s) (updated with board state).`);
         // Secondary: Place any card from Limbo you control on top of your deck
         const limbo = current.data.isEnemy ? this.controller.enemyLimbo : this.controller.playerLimbo;
         if (limbo.length > 0) {
-          if (side === 'enemy') {
-            const pick = pickHadesLimboCard(limbo);
+          if (current.data.isEnemy) {
+            const pick = pickPazooLimboCard(limbo);
             if (pick) {
               const idx = limbo.indexOf(pick);
               limbo.splice(idx, 1);
@@ -540,24 +723,24 @@ export class PhaseManager {
           } else {
             this.controller.updateState({
               currentPhase: Phase.ABILITY_TARGETING,
-              instructionText: "Hades (Secondary): Choose a card from your Limbo to place on top of your deck.",
+              instructionText: "Pazoo (Secondary): Choose a card from your Limbo to place on top of your deck.",
               isSelectingLimboTarget: true
             });
             this.controller.zoomOut();
             await new Promise<void>((resolve) => {
               (this.controller as any).resolutionCallback = resolve;
-              (this.controller as any).pendingAbilityData = { source: current, effect: 'hades_limbo_to_deck' };
+              (this.controller as any).pendingAbilityData = { source: current, effect: 'pazoo_limbo_to_deck' };
             });
           }
           this.controller.abilityManager.syncBoardPresencePowerMarkers();
         }
       }
 
-      // Pestilence: Flip = Place -2 Weakness on all Enemy creatures for each Horseman you have in play. Only flipped cards are affected.
-      if (current.data.name === "Pestilence" && isFlipping) {
-        const horsemanCount = this.controller.abilityManager.countHorsemenForPestilenceFlip(current.data.isEnemy, current);
-        const amount = 2 * horsemanCount;
-        const enemyCreatures = (side === 'player'
+      // Lycandor: Flip = Place -2 Weakness on all Enemy creatures for each Graveborn you have in play. Only flipped cards are affected.
+      if (current.data.name === "Lycandor" && isFlipping) {
+        const gravebornCount = this.controller.abilityManager.countGravebornForLycandorFlip(current.data.isEnemy, current);
+        const amount = 2 * gravebornCount;
+        const enemyCreatures = (!current.data.isEnemy
           ? [...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && c!.data.isEnemy)]
           : [...this.controller.playerBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && !c!.data.isEnemy)]
         ).filter(c => c !== null && (c as CardEntity).data.faceUp) as CardEntity[];
@@ -567,29 +750,34 @@ export class PhaseManager {
             c.updateVisualMarkers();
           }
         });
-        this.controller.addLog(`${current.data.name} places -2 Weakness per Horseman (${horsemanCount}) on each enemy creature (${amount} total per creature).`);
+        this.controller.addLog(`${current.data.name} places -2 Weakness per Graveborn (${gravebornCount}) on each enemy creature (${amount} total per creature).`);
       }
 
       if (current.data.needsAllocation) {
-        await this.controller.allocateCounters(current, side === 'enemy');
+        await this.controller.allocateCounters(current, current.data.isEnemy);
         this.controller.abilityManager.syncBoardPresencePowerMarkers();
       }
       if (current.data.hasTargetedAbility && (isFlipping || !current.data.hasActivate)) {
-        await this.controller.handleTargetedAbility(current, side === 'enemy');
+        await this.controller.handleTargetedAbility(current, current.data.isEnemy);
       }
-      // Sloth Action: after Flip (place weakness), destroy a creature with Weakness Markers
-      if (current.data.name === "Sloth") {
-        await (this.controller.abilityManager as any).handleSlothDestroyAction(current, side === 'enemy');
+      // Bogva Action: after Flip (place weakness), destroy a creature with Weakness Markers
+      if (current.data.name === "Bogva") {
+        await (this.controller.abilityManager as any).handleBogvaDestroyAction(current, current.data.isEnemy);
       }
       if (current.data.hasGlobalAbility) {
         await this.controller.executeGlobalAbility(current);
       }
       if (current.data.hasSealTargetAbility && isFlipping) {
-        await this.controller.handleSealTargetAbility(current, side === 'enemy');
+        await this.controller.handleSealTargetAbility(current, current.data.isEnemy);
       }
       // Re-evaluate board state for next ability step iteration
       pCard = this.controller.playerBattlefield[idx];
       eCard = this.controller.enemyBattlefield[idx];
+
+      if (hasCards) {
+        this.refreshInterstitialCards("Ability resolved.", 'ability', { leftGlow: false, rightGlow: false });
+        await this.delay(1000);
+      }
     }
 
     // After all flip/activate abilities (including global marker changes), enforce that
@@ -609,6 +797,13 @@ export class PhaseManager {
     // Fledgeling: Cannot battle or be battled — skip combat at this seal
     if (pCard?.data.cannotBattleOrBeBattled || eCard?.data.cannotBattleOrBeBattled) {
       this.controller.addLog(`${pCard?.data.cannotBattleOrBeBattled ? pCard?.data.name : eCard?.data.name} cannot battle or be battled.`);
+      if (hasCards) {
+        this.refreshInterstitialCards(
+          `${pCard?.data.cannotBattleOrBeBattled ? pCard?.data.name : eCard?.data.name} cannot battle or be battled. Skipping combat.`,
+          'combat'
+        );
+        await this.delay(1500);
+      }
       pStymied = true;
       eStymied = true;
     } else if (pCard && seal.champion && seal.champion.data.isEnemy) {
@@ -642,19 +837,92 @@ export class PhaseManager {
     if (pStymied || eStymied) {
       this.controller.addLog(`Seal ${idx + 1} remains Neutral due to Stymied combat.`);
       await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+      if (hasCards) {
+        this.refreshInterstitialCards(`Seal ${idx + 1} remains Neutral due to Stymied combat.`, 'done');
+        await this.delay(1500);
+      }
     } else {
-      if (pCard && !pBlocked) await this.controller.handleSiege(idx, pCard, true);
-      else if (eCard && !eBlocked) await this.controller.handleSiege(idx, eCard, false);
+      if (pCard && !pBlocked) {
+        const targetAlign = this.controller.state.playerAlignment;
+        if (hasCards) {
+          this.refreshInterstitialCards(`Siege: Player influences Seal ${idx + 1} towards ${targetAlign}`, 'done');
+          await this.delay(1500);
+        }
+        await this.controller.handleSiege(idx, pCard, true);
+      } else if (eCard && !eBlocked) {
+        const pAlign = this.controller.state.playerAlignment;
+        const targetAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
+        if (hasCards) {
+          this.refreshInterstitialCards(`Siege: Enemy influences Seal ${idx + 1} towards ${targetAlign}`, 'done');
+          await this.delay(1500);
+        }
+        await this.controller.handleSiege(idx, eCard, false);
+      }
     }
 
     // Step E: Ascension
     this.controller.updateState({ phaseStep: "Step E: Ascension" });
     const survivor = this.controller.playerBattlefield[idx] || this.controller.enemyBattlefield[idx];
     if (survivor && survivor.data.isChampion && !seal.champion) {
-      this.controller.ascendToSeal(survivor, idx);
+      // Coal block ascension check
+      const opponentIsEnemy = !survivor.data.isEnemy;
+      const opponentLimbo = opponentIsEnemy ? this.controller.enemyLimbo : this.controller.playerLimbo;
+      const coal = opponentLimbo.find(c => c.data.name === "Coal");
+      let blocked = false;
+
+      if (coal) {
+        if (opponentIsEnemy) {
+          this.controller.addLog(`Enemy uses Coal from Limbo to block ${survivor.data.name}'s ascension!`);
+          this.controller.abilityManager.moveToGraveyard(coal);
+          blocked = true;
+        } else {
+          this.controller.updateState({
+            instructionText: `Use Coal from Limbo to block ${survivor.data.name}'s ascension?`,
+            currentPhase: Phase.ABILITY_TARGETING,
+            decisionContext: 'COAL_BLOCK_ASCENSION',
+            decisionMessage: `Opponent's ${survivor.data.name} is about to ascend to Seal ${idx + 1}. Use Coal from your Limbo to block it? (Coal is moved to your Graveyard.)`
+          });
+          
+          this.controller.zoomOut();
+          
+          const confirmed = await new Promise<boolean>((resolve) => {
+            (this.controller as any).nullifyCallback = resolve;
+          });
+          
+          this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
+          
+          if (confirmed) {
+            this.controller.addLog(`Player uses Coal from Limbo to block ${survivor.data.name}'s ascension!`);
+            this.controller.abilityManager.moveToGraveyard(coal);
+            blocked = true;
+          }
+          if (this.controller.currentResolvingSealIndex !== -1) {
+            this.controller.zoomIn(this.controller.currentResolvingSealIndex);
+          }
+        }
+      }
+
+      if (blocked) {
+        this.controller.addLog(`${survivor.data.name}'s ascension was blocked by Coal.`);
+        if (hasCards) {
+          this.refreshInterstitialCards(`Ascension blocked by Coal.`, 'done');
+          await this.delay(1500);
+        }
+      } else {
+        if (hasCards) {
+          this.refreshInterstitialCards(`${survivor.data.name} ascends to Seal ${idx + 1}!`, 'done');
+          await this.delay(1800);
+        }
+        this.ascendToSeal(survivor, idx);
+      }
     }
 
-    await new Promise(r => setTimeout(r, 1000));
+    if (hasCards) {
+      this.clearInterstitial();
+      await this.delay(600);
+    } else {
+      await this.delay(600);
+    }
   }
 
   public async handleBattle(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean): Promise<boolean> {
@@ -672,6 +940,17 @@ export class PhaseManager {
     const sendToDeckInstead = (loser: CardEntity) => {
       this.controller.abilityManager.returnCreatureToOwnerDeck(loser);
     };
+
+    const isAttackerLeft = !attacker.data.isEnemy;
+    this.refreshInterstitialCards(
+      `Battle: ${attacker.data.name} (Power: ${aPow}) attacks ${defender.data.name} (Power: ${dPow})!`,
+      'combat',
+      {
+        leftGlow: isAttackerLeft,
+        rightGlow: !isAttackerLeft
+      }
+    );
+    await this.delay(1500);
 
     const playCombatSmashWinnerLoser = async (winner: CardEntity, loser: CardEntity): Promise<void> => {
       const w0 = { x: winner.mesh.position.x, y: winner.mesh.position.y, z: winner.mesh.position.z };
@@ -788,44 +1067,98 @@ export class PhaseManager {
       });
     };
 
-    const wrathDefenderCannotBeDestroyedByAttacker = defender.data.name === "Wrath" && attacker.data.weaknessMarkers > 0;
-    const wrathAttackerCannotBeDestroyedByDefender = attacker.data.name === "Wrath" && defender.data.weaknessMarkers > 0;
-
     if (aPow > dPow) {
-      if (wrathDefenderCannotBeDestroyedByAttacker) {
-        this.controller.addLog(`${defender.data.name} cannot be destroyed by ${attacker.data.name} (attacker has Weakness Markers).`);
-        stymied = true;
-      } else if (!defender.data.isInvincible && !isDProtected) {
+      if (!defender.data.isInvincible && !isDProtected) {
+        this.controller.addLog(`Combat: ${attacker.data.name} (Power: ${aPow}) attacks and destroys ${defender.data.name} (Power: ${dPow}) at Seal ${idx + 1}.`);
+        
+        this.refreshInterstitialCards(
+          `${attacker.data.name} defeats and destroys ${defender.data.name}!`,
+          'combat',
+          {
+            leftGlow: false,
+            rightGlow: false,
+            rightDamageFlash: true
+          }
+        );
+
         this.controller.showCombatDamageFloats(attacker, defender, aPow, dPow);
         await playCombatSmashWinnerLoser(attacker, defender);
         this.controller.abilityManager.handleFinalAct(defender, attacker);
         if (elderAttacker) sendToDeckInstead(defender);
         else this.controller.destroyCard(defender, defender.data.isEnemy, idx, isAgainstChamp, { cardName: attacker.data.name, cause: 'combat' });
         await this.controller.abilityManager.handlePostCombat(attacker);
+
+        this.refreshInterstitialCards(
+          `${defender.data.name} is destroyed.`,
+          'combat',
+          { rightDamageFlash: false }
+        );
+        await this.delay(1000);
       } else {
-        this.controller.addLog(`${defender.data.name} is Protected or Invincible. ${attacker.data.name} is stymied.`);
+        this.controller.addLog(`Combat: ${defender.data.name} is Protected or Invincible. ${attacker.data.name}'s attack (Power: ${aPow}) is stymied at Seal ${idx + 1}.`);
+        
+        this.refreshInterstitialCards(
+          `${defender.data.name} is Protected or Invincible! Attack stymied.`,
+          'combat',
+          { leftGlow: false, rightGlow: false }
+        );
+        await this.delay(1200);
         stymied = true;
       }
     } else if (dPow > aPow) {
-      if (wrathAttackerCannotBeDestroyedByDefender) {
-        this.controller.addLog(`${attacker.data.name} cannot be destroyed by ${defender.data.name} (attacker has Weakness Markers).`);
-        stymied = true;
-      } else if (!attacker.data.isInvincible && !isAProtected) {
+      if (!attacker.data.isInvincible && !isAProtected) {
+        this.controller.addLog(`Combat: ${defender.data.name} (Power: ${dPow}) defends and destroys ${attacker.data.name} (Power: ${aPow}) at Seal ${idx + 1}.`);
+        
+        this.refreshInterstitialCards(
+          `${defender.data.name} defends and destroys ${attacker.data.name}!`,
+          'combat',
+          {
+            leftGlow: false,
+            rightGlow: false,
+            leftDamageFlash: true
+          }
+        );
+
         this.controller.showCombatDamageFloats(attacker, defender, aPow, dPow);
         await playCombatSmashWinnerLoser(defender, attacker);
         this.controller.abilityManager.handleFinalAct(attacker, defender);
         if (elderDefender) sendToDeckInstead(attacker);
         else this.controller.destroyCard(attacker, attacker.data.isEnemy, idx, false, { cardName: defender.data.name, cause: 'combat' });
         await this.controller.abilityManager.handlePostCombat(defender);
+
+        this.refreshInterstitialCards(
+          `${attacker.data.name} is destroyed.`,
+          'combat',
+          { leftDamageFlash: false }
+        );
+        await this.delay(1000);
       } else {
-        this.controller.addLog(`${attacker.data.name} is Protected or Invincible. ${defender.data.name} is stymied.`);
+        this.controller.addLog(`Combat: ${attacker.data.name} is Protected or Invincible. ${defender.data.name}'s defense (Power: ${dPow}) is stymied at Seal ${idx + 1}.`);
+        
+        this.refreshInterstitialCards(
+          `${attacker.data.name} is Protected or Invincible! Attack stymied.`,
+          'combat',
+          { leftGlow: false, rightGlow: false }
+        );
+        await this.delay(1200);
         stymied = true;
       }
     } else {
-      this.controller.addLog(`Mutual destruction: ${attacker.data.name} and ${defender.data.name}`);
+      this.controller.addLog(`Combat: Equal effective Power (${aPow} vs ${dPow}) at Seal ${idx + 1} results in mutual destruction between ${attacker.data.name} and ${defender.data.name}.`);
 
-      const attackerWillDie = !wrathAttackerCannotBeDestroyedByDefender && !attacker.data.isInvincible && !isAProtected;
-      const defenderWillDie = !wrathDefenderCannotBeDestroyedByAttacker && !defender.data.isInvincible && !isDProtected;
+      const attackerWillDie = !attacker.data.isInvincible && !isAProtected;
+      const defenderWillDie = !defender.data.isInvincible && !isDProtected;
+
+      this.refreshInterstitialCards(
+        `Mutual destruction between ${attacker.data.name} and ${defender.data.name}!`,
+        'combat',
+        {
+          leftGlow: false,
+          rightGlow: false,
+          leftDamageFlash: attackerWillDie,
+          rightDamageFlash: defenderWillDie
+        }
+      );
 
       if (attackerWillDie || defenderWillDie) {
         this.controller.showCombatDamageFloats(attacker, defender, aPow, dPow);
@@ -834,28 +1167,30 @@ export class PhaseManager {
         else await playCombatSmashMutual(attacker, defender);
       }
 
-      if (wrathAttackerCannotBeDestroyedByDefender) {
-        this.controller.addLog(`${attacker.data.name} cannot be destroyed (${defender.data.name} has Weakness Markers).`);
-        stymied = true;
-      } else if (!attacker.data.isInvincible && !isAProtected) {
+      if (!attacker.data.isInvincible && !isAProtected) {
         this.controller.abilityManager.handleFinalAct(attacker, defender);
         if (elderDefender) sendToDeckInstead(attacker);
         else this.controller.destroyCard(attacker, attacker.data.isEnemy, idx, false, { cardName: defender.data.name, cause: 'combat' });
       } else if (attacker.data.isInvincible) {
         stymied = true;
       }
-      if (wrathDefenderCannotBeDestroyedByAttacker) {
-        this.controller.addLog(`${defender.data.name} cannot be destroyed (${attacker.data.name} has Weakness Markers).`);
-        stymied = true;
-      } else if (!defender.data.isInvincible && !isDProtected) {
+      if (!defender.data.isInvincible && !isDProtected) {
         this.controller.abilityManager.handleFinalAct(defender, attacker);
         if (elderAttacker) sendToDeckInstead(defender);
         else this.controller.destroyCard(defender, defender.data.isEnemy, idx, isAgainstChamp, { cardName: attacker.data.name, cause: 'combat' });
       } else if (defender.data.isInvincible) {
         stymied = true;
       }
+
+      this.refreshInterstitialCards(
+        `Combat finished.`,
+        'combat',
+        { leftDamageFlash: false, rightDamageFlash: false }
+      );
+      await this.delay(1000);
     }
-    // Wild Wolf: Any creature that does battle with Wild Wolf is destroyed at end of the round.
+
+    // Fenris Lightfoot (formerly Wild Wolf): Any creature that does battle with Fenris Lightfoot is destroyed at end of the round.
     const applyWildWolfMark = (wolf: CardEntity, other: CardEntity | null) => {
       if (!other) return;
       // Only mark if the other creature is still in play after combat
@@ -870,18 +1205,81 @@ export class PhaseManager {
       }
     };
 
-    if (attacker.data.name === "Wild Wolf") {
+    if (attacker.data.name === "Fenris Lightfoot") {
       applyWildWolfMark(attacker, defender);
-    } else if (defender.data.name === "Wild Wolf") {
+    } else if (defender.data.name === "Fenris Lightfoot") {
       applyWildWolfMark(defender, attacker);
     }
 
-    await new Promise(r => setTimeout(r, 500));
+    await this.delay(500);
     return stymied;
   }
 
+  private enforceDuplicateRule() {
+    const sides = [false, true]; // false = player, true = enemy
+    for (const isEnemy of sides) {
+      const cardsInPlay: { card: CardEntity; idx: number; isChampion: boolean }[] = [];
+      
+      const bf = isEnemy ? this.controller.enemyBattlefield : this.controller.playerBattlefield;
+      bf.forEach((c, idx) => {
+        if (c !== null) {
+          cardsInPlay.push({ card: c, idx, isChampion: false });
+        }
+      });
+      
+      this.controller.seals.forEach((seal, idx) => {
+        const champ = seal.champion;
+        if (champ && champ.data.isEnemy === isEnemy) {
+          cardsInPlay.push({ card: champ, idx, isChampion: true });
+        }
+      });
+      
+      const groups: Record<string, typeof cardsInPlay> = {};
+      for (const item of cardsInPlay) {
+        const name = item.card.data.name;
+        if (!groups[name]) groups[name] = [];
+        groups[name].push(item);
+      }
+      
+      for (const name in groups) {
+        const group = groups[name];
+        if (group.length > 1) {
+          group.sort((a, b) => {
+            const aPow = a.card.data.power + a.card.data.powerMarkers - a.card.data.weaknessMarkers;
+            const bPow = b.card.data.power + b.card.data.powerMarkers - b.card.data.weaknessMarkers;
+            if (aPow !== bPow) return bPow - aPow;
+            if (a.isChampion !== b.isChampion) return a.isChampion ? -1 : 1;
+            return 0;
+          });
+          
+          const survivor = group[0];
+          this.controller.addLog(`Duplicate Rule: player controls multiple ${name}s. Keeping ${survivor.card.data.name} (Power ${survivor.card.data.power + survivor.card.data.powerMarkers - survivor.card.data.weaknessMarkers}) and sacrificing others.`);
+          
+          for (let i = 1; i < group.length; i++) {
+            const duplicate = group[i];
+            const killedBy = { cardName: 'Duplicate Rule', cause: 'ability' as const };
+            if (duplicate.isChampion) {
+              this.controller.destroyCard(duplicate.card, isEnemy, duplicate.idx, true, killedBy);
+              this.controller.seals[duplicate.idx].champion = null;
+            } else {
+              this.controller.destroyCard(duplicate.card, isEnemy, duplicate.idx, false, killedBy);
+              if (isEnemy) {
+                this.controller.enemyBattlefield[duplicate.idx] = null;
+              } else {
+                this.controller.playerBattlefield[duplicate.idx] = null;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   private async cleanupEndOfRoundEffects() {
-    // Wild Wolf: collect ALL marked cards first (battlefield + champions), then destroy — avoids missing cards that moved (e.g. ascended)
+    // Duplicate Rule
+    this.enforceDuplicateRule();
+
+    // Fenris Lightfoot (Wild Wolf) cleanup
     const wildWolfVictims: { card: CardEntity; isEnemy: boolean; idx: number; isChampion: boolean }[] = [];
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       const pCard = this.controller.playerBattlefield[i];
@@ -894,16 +1292,14 @@ export class PhaseManager {
       if (champ && champ.data.markedByWildWolf) wildWolfVictims.push({ card: champ, isEnemy: champ.data.isEnemy, idx, isChampion: true });
     });
     for (const { card, isEnemy, idx, isChampion } of wildWolfVictims) {
-      this.controller.destroyCard(card, isEnemy, idx, isChampion, { cardName: 'Wild Wolf', cause: 'ability' });
+      this.controller.destroyCard(card, isEnemy, idx, isChampion, { cardName: 'Fenris Lightfoot', cause: 'ability' });
       card.data.markedByWildWolf = false;
     }
 
-    // Resolve Delta's end-of-round sacrifice and buff
-    // Enemy Delta: sacrifice and pick the strongest ally (by effective Power Value) to receive +3.
-    // If Delta is the strongest target, allow it to buff itself.
+    // Resolve Varg Fur-back's (Delta's) end-of-round sacrifice and buff
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       const eCard = this.controller.enemyBattlefield[i];
-      if (eCard && eCard.data.name === "Delta" && eCard.data.pendingDeltaSacrifice) {
+      if (eCard && eCard.data.name === "Varg Fur-back" && eCard.data.pendingDeltaSacrifice) {
         const enemyAllies = [
           ...this.controller.enemyBattlefield,
           ...this.controller.seals.map(s => s.champion)
@@ -913,17 +1309,17 @@ export class PhaseManager {
 
         target.data.powerMarkers += 3;
         target.updateVisualMarkers();
-        this.controller.addLog(`${target.data.name} receives +3 Power Markers from Delta's sacrifice.`);
+        this.controller.addLog(`${target.data.name} receives +3 Power Markers from Varg Fur-back's sacrifice.`);
 
         eCard.data.pendingDeltaSacrifice = false;
         this.controller.destroyCard(eCard, true, i, false);
       }
     }
 
-    // Noble: End of Turn — +2 Power Marker on this creature
+    // Kaelarion (Noble): End of Turn — +2 Power Marker on this creature
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       for (const card of [this.controller.playerBattlefield[i], this.controller.enemyBattlefield[i]]) {
-        if (card && card.data.name === "Noble") {
+        if (card && card.data.name === "Kaelarion") {
           card.data.powerMarkers += 2;
           card.updateVisualMarkers();
           this.controller.addLog(`${card.data.name} gains +2 Power Markers at end of turn.`);
@@ -932,22 +1328,21 @@ export class PhaseManager {
     }
     this.controller.seals.forEach((seal) => {
       const champ = seal.champion;
-      if (champ && champ.data.name === "Noble") {
+      if (champ && champ.data.name === "Kaelarion") {
         champ.data.powerMarkers += 2;
         champ.updateVisualMarkers();
         this.controller.addLog(`${champ.data.name} gains +2 Power Markers at end of turn.`);
       }
     });
 
-    // Final End-of-Round Optional Abilities (player chooses)
-    // Currently supports Delta's end-of-round sacrifice choice.
+    // Player Varg Fur-back (Delta) Choice
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       const pCard = this.controller.playerBattlefield[i];
-      if (pCard && pCard.data.name === "Delta" && pCard.data.pendingDeltaSacrifice) {
+      if (pCard && pCard.data.name === "Varg Fur-back" && pCard.data.pendingDeltaSacrifice) {
         this.controller.updateState({
           decisionContext: 'DELTA_SACRIFICE',
-          instructionText: "Use Delta to sacrifice itself and grant +3 Power Markers to a creature?",
-          decisionMessage: "Delta will be sacrificed. You will then choose one creature to receive +3 Power Markers. Use this ability?"
+          instructionText: "Use Varg Fur-back to sacrifice itself and grant +3 Power Markers to a creature?",
+          decisionMessage: "Varg Fur-back will be sacrificed. You will then choose one creature to receive +3 Power Markers. Use this ability?"
         });
 
         const confirmed = await new Promise<boolean>((resolve) => {
@@ -959,23 +1354,20 @@ export class PhaseManager {
         if (confirmed) {
           this.controller.addLog(`${pCard.data.name} sacrifices itself to empower an ally.`);
 
-          // Enter targeting: reward is applied to the chosen card; then GameController destroys Delta.
           (this.controller as any).pendingDeltaSacrificeSource = pCard;
           (this.controller as any).pendingDeltaSacrificeSourceIdx = i;
 
-          // Zoom out so player can see the board, then wait for them to select a creature for +3
           this.controller.zoomOut();
-          await new Promise(r => setTimeout(r, 1200)); // Let zoom animation complete
+          await this.delay(1200);
           this.controller.updateState({
             currentPhase: Phase.DELTA_BUFF_TARGETING,
-            instructionText: "Select a creature to receive +3 Power Markers from Delta's sacrifice. (Delta can be selected.)"
+            instructionText: "Select a creature to receive +3 Power Markers from Varg Fur-back's sacrifice. (Varg Fur-back can be selected.)"
           });
 
           await new Promise<void>((resolve) => {
             (this.controller as any).resolutionCallback = resolve;
           });
 
-          // If the interaction was skipped/canceled, ensure Delta isn't left pending.
           if ((this.controller as any).pendingDeltaSacrificeSource) {
             (this.controller as any).pendingDeltaSacrificeSource.data.pendingDeltaSacrifice = false;
             (this.controller as any).pendingDeltaSacrificeSource = null;
@@ -987,7 +1379,7 @@ export class PhaseManager {
       }
     }
 
-    // Fledgeling: Sacrifice at end of the turn
+    // Cyprian (Fledgeling): Sacrifice at end of the turn
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       const pCard = this.controller.playerBattlefield[i];
       if (pCard && pCard.data.sacrificeEndOfTurn) {
@@ -1024,21 +1416,18 @@ export class PhaseManager {
     const eCount = this.controller.seals.filter(s => s.alignment === eAlign).length;
     const bothDecksEmpty = this.controller.playerDeck.length === 0 && this.controller.enemyDeck.length === 0;
 
-    if (pCount >= 4 || eCount >= 4 || bothDecksEmpty) {
+    if (pCount === 7 || eCount === 7 || bothDecksEmpty) {
       let winCondition: string;
       if (bothDecksEmpty) {
         winCondition = "Draw (both decks exhausted)";
-      } else if (pCount >= 4 || eCount >= 4) {
-        const winnerCount = pCount > eCount ? pCount : eCount;
-        winCondition = winnerCount === 7 ? "All Seven Seals" : `Majority of Seals (${winnerCount} of 7)`;
       } else {
-        winCondition = "Draw";
+        winCondition = "All Seven Seals";
       }
       this.finalizeGame(winCondition);
     }
   }
 
-  public finalizeGame(winCondition?: string) {
+  public finalizeGame(winCondition?: string, forcedResult?: 'player' | 'enemy' | 'draw') {
     const pAlign = this.controller.state.playerAlignment;
     const eAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
     const pCount = this.controller.seals.filter(s => s.alignment === pAlign).length;
@@ -1047,22 +1436,40 @@ export class PhaseManager {
     let body = "";
     let result: 'player' | 'enemy' | 'draw';
 
-    if (pCount > eCount) {
-      body = pAlign === Alignment.LIGHT 
-        ? "The Seventh Seal is Purified. The cycle of Light begins anew, casting away the shadows of the void."
-        : "The Void has consumed the threshold. The world yields to the eternal rhythm of the Dark.";
-      this.controller.addLog("GAME OVER: Player Victory");
-      result = 'player';
-    } else if (eCount > pCount) {
-      body = pAlign === Alignment.LIGHT
-        ? "The Light has flickered out. The opponent's corruption has claimed the world's essence."
-        : "The Light has unexpectedly pierced the veil. Your dominion of shadow has been repelled.";
-      this.controller.addLog("GAME OVER: Enemy Victory");
-      result = 'enemy';
+    if (forcedResult) {
+      result = forcedResult;
+      if (result === 'player') {
+        body = winCondition === "Attrition" 
+          ? "Victory by Attrition: Opponent has run out of cards to draw."
+          : "Victory in Sudden Death!";
+        this.controller.addLog(`GAME OVER: Player Victory (${winCondition})`);
+      } else if (result === 'enemy') {
+        body = winCondition === "Attrition"
+          ? "Loss by Attrition: You have run out of cards to draw."
+          : "Loss in Sudden Death.";
+        this.controller.addLog(`GAME OVER: Enemy Victory (${winCondition})`);
+      } else {
+        body = "Draw by Attrition: Both sides ran out of cards to draw.";
+        this.controller.addLog("GAME OVER: Draw (Attrition)");
+      }
     } else {
-      body = "The scales remain perfectly balanced. Neither Light nor Shadow can claim the throne of existence.";
-      this.controller.addLog("GAME OVER: Draw");
-      result = 'draw';
+      if (pCount > eCount) {
+        body = pAlign === Alignment.LIGHT 
+          ? "The Seventh Seal is Purified. The cycle of Light begins anew, casting away the shadows of the void."
+          : "The Void has consumed the threshold. The world yields to the eternal rhythm of the Dark.";
+        this.controller.addLog("GAME OVER: Player Victory");
+        result = 'player';
+      } else if (eCount > pCount) {
+        body = pAlign === Alignment.LIGHT
+          ? "The Light has flickered out. The opponent's corruption has claimed the world's essence."
+          : "The Light has unexpectedly pierced the veil. Your dominion of shadow has been repelled.";
+        this.controller.addLog("GAME OVER: Enemy Victory");
+        result = 'enemy';
+      } else {
+        body = "The scales remain perfectly balanced. Neither Light nor Shadow can claim the throne of existence.";
+        this.controller.addLog("GAME OVER: Draw");
+        result = 'draw';
+      }
     }
 
     const gameOverStats = {
@@ -1104,6 +1511,7 @@ export class PhaseManager {
 
   public zoomOut() {
     const phase = this.controller.state.currentPhase;
+    const duration = this.controller.state.slowMode ? 1.2 : 0;
     if (
       phase === Phase.COUNTER_ALLOCATION ||
       phase === Phase.ABILITY_TARGETING ||
@@ -1111,22 +1519,30 @@ export class PhaseManager {
       phase === Phase.DELTA_BUFF_TARGETING
     ) {
       // Orthogonal top-down view centered on the battlefield slots (hides hand at z=22)
-      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 25, z: 0.1, duration: 1.2, ease: "power2.inOut" });
-      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: 0, duration: 1.2, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 25, z: 0.1, duration, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: 0, duration, ease: "power2.inOut" });
     } else {
       // Default perspective view
-      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration: 1.2, ease: "power2.inOut" });
-      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration: 1.2, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration, ease: "power2.inOut" });
+      gsap.to(this.controller.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration, ease: "power2.inOut" });
     }
   }
 
   public zoomIn(idx: number) {
     const seal = this.controller.seals[idx];
-    gsap.to(this.controller.sceneManager.camera.position, { x: seal.mesh.position.x, y: 14, z: 14, duration: 1, ease: "power2.inOut" });
-    gsap.to(this.controller.sceneManager.cameraTarget, { x: seal.mesh.position.x, y: 0, z: 0, duration: 1, ease: "power2.inOut" });
+    const duration = this.controller.state.slowMode ? 1.2 : 0;
+    gsap.to(this.controller.sceneManager.camera.position, { x: seal.mesh.position.x, y: 8, z: 8, duration, ease: "power2.inOut" });
+    gsap.to(this.controller.sceneManager.cameraTarget, { x: seal.mesh.position.x, y: 0, z: 0, duration, ease: "power2.inOut" });
   }
 
   public ascendToSeal(card: CardEntity, idx: number) {
+    if (this.controller.state.currentRound >= 4) {
+      this.controller.addLog(`Sudden Death Victory! ${card.data.name} ascended to a Seal.`);
+      const result = card.data.isEnemy ? 'enemy' : 'player';
+      this.finalizeGame("Sudden Death", result);
+      return;
+    }
+
     if (card.data.isEnemy) this.controller.enemyBattlefield[idx] = null;
     else this.controller.playerBattlefield[idx] = null;
 
@@ -1136,11 +1552,13 @@ export class PhaseManager {
     // Ensure power/weakness marker visuals persist when card moves to seal (e.g. Alpha +2 from destroying enemy)
     card.updateVisualMarkers();
     this.controller.abilityManager.syncBoardPresencePowerMarkers();
+    
+    const duration = this.controller.state.slowMode ? 0.6 : 0;
     gsap.to(card.mesh.position, {
       x: this.controller.seals[idx].mesh.position.x,
       y: 0.6,
       z: 0,
-      duration: 0.6,
+      duration: duration,
       ease: "back.out"
     });
   }

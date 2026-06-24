@@ -171,6 +171,19 @@ function createMockControllerForBattle(): IGameController & {
     selectLimboCardForAbility: vi.fn(),
     isImmuneToAbilities: vi.fn(),
     isProtected: () => false,
+    cardToHoveredInfo: (card: CardEntity) => ({
+      name: card.data?.name || '',
+      faction: card.data?.faction || '',
+      power: card.data?.power || 0,
+      type: card.data?.type || '',
+      isChampion: card.data?.isChampion || false,
+      ability: card.data?.ability || '',
+      powerMarkers: card.data?.powerMarkers || 0,
+      weaknessMarkers: card.data?.weaknessMarkers || 0,
+      faceArtPath: card.data?.faceArtPath || undefined
+    }),
+    realignPlayerHand: vi.fn(),
+    setSlowMode: vi.fn(),
   };
 
   mock.abilityManager = new AbilityManager(mock as IGameController);
@@ -292,6 +305,19 @@ function createMockControllerForAbilities(): IGameController & {
     selectLimboCardForAbility: vi.fn(),
     isImmuneToAbilities: vi.fn(),
     isProtected: () => false,
+    cardToHoveredInfo: (card: CardEntity) => ({
+      name: card.data?.name || '',
+      faction: card.data?.faction || '',
+      power: card.data?.power || 0,
+      type: card.data?.type || '',
+      isChampion: card.data?.isChampion || false,
+      ability: card.data?.ability || '',
+      powerMarkers: card.data?.powerMarkers || 0,
+      weaknessMarkers: card.data?.weaknessMarkers || 0,
+      faceArtPath: card.data?.faceArtPath || undefined
+    }),
+    realignPlayerHand: vi.fn(),
+    setSlowMode: vi.fn(),
   };
 
   mockAbilities.abilityManager = new AbilityManager(mockAbilities as IGameController);
@@ -305,6 +331,7 @@ describe('Combat – card vs card', () => {
   let mock: ReturnType<typeof createMockControllerForBattle>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     mock = createMockControllerForBattle();
     mock.playerBattlefield.fill(null);
     mock.enemyBattlefield.fill(null);
@@ -312,13 +339,23 @@ describe('Combat – card vs card', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function handleBattleWithFakeTimers(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean) {
+    const p = mock.phaseManager.handleBattle(attacker, defender, idx, isAgainstChamp);
+    await vi.runAllTimersAsync();
+    return p;
+  }
+
   it('higher power attacker wins: defender is destroyed, attacker survives', async () => {
     const attacker = createMockCard({ name: 'Alpha', power: 7, powerMarkers: 0, weaknessMarkers: 0, isEnemy: false }) as unknown as CardEntity;
     const defender = createMockCard({ name: 'Noble', power: 4, powerMarkers: 0, weaknessMarkers: 0, isEnemy: true }) as unknown as CardEntity;
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
 
-    const stymied = await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    const stymied = await handleBattleWithFakeTimers(attacker, defender, 0, false);
 
     expect(stymied).toBe(false);
     expect(mock.destroyCard).toHaveBeenCalledWith(
@@ -338,7 +375,7 @@ describe('Combat – card vs card', () => {
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
 
-    const stymied = await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    const stymied = await handleBattleWithFakeTimers(attacker, defender, 0, false);
 
     expect(stymied).toBe(false);
     expect(mock.destroyCard).toHaveBeenCalledWith(
@@ -358,7 +395,7 @@ describe('Combat – card vs card', () => {
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
 
-    const stymied = await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    const stymied = await handleBattleWithFakeTimers(attacker, defender, 0, false);
 
     expect(stymied).toBe(false);
     expect(mock.destroyCard).toHaveBeenCalledWith(attacker, false, 0, false, expect.any(Object));
@@ -367,28 +404,30 @@ describe('Combat – card vs card', () => {
     expect(mock.enemyBattlefield[0]).toBeNull();
   });
 
-  it('Wrath cannot be destroyed by attacker with weakness markers (stymied)', async () => {
-    const attacker = createMockCard({
-      name: 'Pride',
-      power: 8,
-      weaknessMarkers: 1,
-      isEnemy: false,
-    }) as unknown as CardEntity;
-    const defender = createMockCard({
-      name: 'Wrath',
-      power: 5,
-      isEnemy: true,
-    }) as unknown as CardEntity;
-    mock.playerBattlefield[0] = attacker;
-    mock.enemyBattlefield[0] = defender;
+  it('Bogva destroys a creature with a weakness marker', async () => {
+    const bogva = createMockCard({ name: 'Bogva', power: 7, isEnemy: false }) as unknown as CardEntity;
+    const enemy = createMockCard({ name: 'Kaelarion', power: 4, weaknessMarkers: 1, isEnemy: true }) as unknown as CardEntity;
+    mock.playerBattlefield[0] = bogva;
+    mock.enemyBattlefield[0] = enemy;
 
-    const stymied = await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    const actionPromise = mock.abilityManager.handleBogvaDestroyAction(bogva, false);
 
-    expect(stymied).toBe(true);
-    expect(mock.destroyCard).not.toHaveBeenCalled();
-    expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining('Wrath cannot be destroyed')
+    expect(mock.updateState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentPhase: Phase.ABILITY_TARGETING,
+        instructionText: 'Bogva: Choose a creature with Weakness Markers to destroy.',
+      })
     );
+    expect(mock.zoomOut).toHaveBeenCalled();
+
+    // Resolve the promise
+    (mock as unknown as { resolutionCallback: (() => void) | null }).resolutionCallback!();
+    await actionPromise;
+
+    // Simulate resolution
+    mock.abilityManager.applyAbilityEffect(enemy, { source: bogva, effect: 'destroy_creature_with_weakness' });
+    expect(mock.destroyCard).toHaveBeenCalledWith(enemy, true, 0, false, expect.any(Object));
+    expect(mock.enemyBattlefield[0]).toBeNull();
   });
 
   it('Elder sends defeated creature to deck instead of destroying', async () => {
@@ -397,7 +436,7 @@ describe('Combat – card vs card', () => {
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
 
-    await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    await handleBattleWithFakeTimers(attacker, defender, 0, false);
 
     expect(mock.destroyCard).not.toHaveBeenCalled();
     expect(mock.addLog).toHaveBeenCalledWith(
@@ -406,12 +445,12 @@ describe('Combat – card vs card', () => {
   });
 
   it('Wild Wolf marks opponent for destruction at end of round', async () => {
-    const wolf = createMockCard({ name: 'Wild Wolf', power: 1, hasHaste: true, isEnemy: false }) as unknown as CardEntity;
-    const other = createMockCard({ name: 'Noble', power: 4, isEnemy: true }) as unknown as CardEntity;
+    const wolf = createMockCard({ name: 'Fenris Lightfoot', power: 1, hasHaste: true, isEnemy: false }) as unknown as CardEntity;
+    const other = createMockCard({ name: 'Kaelarion', power: 4, isEnemy: true }) as unknown as CardEntity;
     mock.playerBattlefield[0] = wolf;
     mock.enemyBattlefield[0] = other;
 
-    await mock.phaseManager.handleBattle(wolf, other, 0, false);
+    await handleBattleWithFakeTimers(wolf, other, 0, false);
 
     expect(other.data.markedByWildWolf).toBe(true);
     expect(mock.addLog).toHaveBeenCalledWith(
@@ -420,9 +459,9 @@ describe('Combat – card vs card', () => {
   });
 
   it('invincible defender is not destroyed (attacker stymied)', async () => {
-    const attacker = createMockCard({ name: 'War', power: 9, isEnemy: false }) as unknown as CardEntity;
+    const attacker = createMockCard({ name: 'Umbarax', power: 9, isEnemy: false }) as unknown as CardEntity;
     const defender = createMockCard({
-      name: 'Beta',
+      name: 'Ulfric Thorne',
       power: 6,
       isEnemy: true,
       isInvincible: true,
@@ -430,7 +469,7 @@ describe('Combat – card vs card', () => {
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
 
-    const stymied = await mock.phaseManager.handleBattle(attacker, defender, 0, false);
+    const stymied = await handleBattleWithFakeTimers(attacker, defender, 0, false);
 
     expect(stymied).toBe(true);
     expect(mock.destroyCard).not.toHaveBeenCalled();
@@ -449,18 +488,18 @@ describe('Post-combat – War and Alpha', () => {
 
   it('War gains +2 Power per Horseman in play after destroying a creature', async () => {
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       powerMarkers: 0,
       isEnemy: true,
     }) as unknown as CardEntity;
-    const victim = createMockCard({ name: 'Herald', power: 5, isEnemy: false }) as unknown as CardEntity;
+    const victim = createMockCard({ name: 'Cassiel Haggis', power: 5, isEnemy: false }) as unknown as CardEntity;
     const otherHorseman = createMockCard({
-      name: 'Death',
+      name: 'Nix',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
@@ -472,38 +511,38 @@ describe('Post-combat – War and Alpha', () => {
 
     expect(war.data.powerMarkers).toBe(4);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/War gains .* Power Marker.*\+2 per Horseman/)
+      expect.stringMatching(/Umbarax gains .* Power Marker.*\+2 per Graveborn/)
     );
   });
 
   it('Alpha gains +2 Power after destroying an enemy in battle', async () => {
     const alpha = createMockCard({
-      name: 'Alpha',
+      name: 'Lucian Blackwood',
       power: 7,
       hasHaste: true,
       powerMarkers: 0,
       isEnemy: false,
     }) as unknown as CardEntity;
-    const victim = createMockCard({ name: 'Baron', power: 2, isEnemy: true }) as unknown as CardEntity;
+    const victim = createMockCard({ name: 'Valerius Nightshade', power: 2, isEnemy: true }) as unknown as CardEntity;
     mock.playerBattlefield[0] = alpha;
     mock.enemyBattlefield[0] = victim;
 
     await mock.phaseManager.handleBattle(alpha, victim, 0, false);
 
     expect(alpha.data.powerMarkers).toBe(2);
-    expect(mock.addLog).toHaveBeenCalledWith(expect.stringContaining('Alpha gains 2 Power Marker'));
+    expect(mock.addLog).toHaveBeenCalledWith(expect.stringContaining('Lucian Blackwood gains 2 Power Marker'));
   });
 
   it('Alpha power markers persist after ascending to seal (same card reference, markers not reset)', async () => {
     const alpha = createMockCard({
-      name: 'Alpha',
+      name: 'Lucian Blackwood',
       power: 7,
       hasHaste: true,
       powerMarkers: 0,
       isEnemy: false,
       isChampion: true,
     }) as unknown as CardEntity;
-    const victim = createMockCard({ name: 'Baron', power: 2, isEnemy: true }) as unknown as CardEntity;
+    const victim = createMockCard({ name: 'Valerius Nightshade', power: 2, isEnemy: true }) as unknown as CardEntity;
     mock.playerBattlefield[0] = alpha;
     mock.enemyBattlefield[0] = victim;
 
@@ -518,7 +557,7 @@ describe('Post-combat – War and Alpha', () => {
   });
 });
 
-describe('Pestilence – flip weakness by Horseman count', () => {
+describe('Lycandor – flip weakness by Graveborn count', () => {
   let mock: ReturnType<typeof createMockControllerForBattle>;
 
   beforeEach(() => {
@@ -542,9 +581,9 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
   it('only Pestilence flipping still counts itself: -2 weakness per Horseman (1) on each enemy', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -552,7 +591,7 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const enemyCreature = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
@@ -565,15 +604,15 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
     expect(enemyCreature.data.weaknessMarkers).toBe(2);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Pestilence places -2 Weakness per Horseman \(1\).*\(2 total per creature\)/)
+      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(1\).*\(2 total per creature\)/)
     );
   });
 
   it('Pestilence + one other face-up Horseman: 2 Horsemen → -4 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -581,15 +620,15 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyCreature = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
@@ -603,15 +642,15 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
     expect(enemyCreature.data.weaknessMarkers).toBe(4);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Pestilence places -2 Weakness per Horseman \(2\).*\(4 total per creature\)/)
+      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(2\).*\(4 total per creature\)/)
     );
   });
 
   it('Pestilence + two other face-up Horsemen: 3 Horsemen → -6 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -619,23 +658,23 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const death = createMockCard({
-      name: 'Death',
+      name: 'Nix',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyCreature = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 3,
       isEnemy: true,
       faceUp: true,
@@ -650,15 +689,15 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
     expect(enemyCreature.data.weaknessMarkers).toBe(6);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Pestilence places -2 Weakness per Horseman \(3\).*\(6 total per creature\)/)
+      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(3\).*\(6 total per creature\)/)
     );
   });
 
   it('Pestilence + three other face-up Horsemen: 4 Horsemen → -8 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -666,28 +705,28 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const death = createMockCard({
-      name: 'Death',
+      name: 'Nix',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const famine = createMockCard({
-      name: 'Famine',
+      name: 'Golgothane',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyCreature = createMockCard({
-      name: 'Baron',
+      name: 'Valerius Nightshade',
       power: 3,
       isEnemy: true,
       faceUp: true,
@@ -703,15 +742,15 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
     expect(enemyCreature.data.weaknessMarkers).toBe(8);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Pestilence places -2 Weakness per Horseman \(4\).*\(8 total per creature\)/)
+      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(4\).*\(8 total per creature\)/)
     );
   });
 
   it('only face-up enemy creatures receive weakness; face-down enemy is unaffected', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -719,21 +758,21 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const faceUpEnemy = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const faceDownEnemy = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       isEnemy: true,
       faceUp: false,
@@ -752,9 +791,9 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
   it('applies weakness to all enemy creatures on the battlefield (multiple slots)', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -762,28 +801,28 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemy0 = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const enemy1 = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       isEnemy: true,
       faceUp: true,
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const enemy2 = createMockCard({
-      name: 'Baron',
+      name: 'Valerius Nightshade',
       power: 2,
       isEnemy: true,
       faceUp: true,
@@ -804,9 +843,9 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
   it('applies weakness to enemy champions on seals (ascended)', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -814,21 +853,21 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyOnBattlefield = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const enemyChampionOnSeal = createMockCard({
-      name: 'Wrath',
+      name: 'Bogva',
       power: 7,
       isChampion: true,
       isEnemy: true,
@@ -848,9 +887,9 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
   it('applies weakness to enemies on battlefield and on multiple seals', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -858,28 +897,28 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const death = createMockCard({
-      name: 'Death',
+      name: 'Nix',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyOnField = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const championOnSeal0 = createMockCard({
-      name: 'Wrath',
+      name: 'Bogva',
       power: 7,
       isChampion: true,
       isEnemy: true,
@@ -887,7 +926,7 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const championOnSeal3 = createMockCard({
-      name: 'Pride',
+      name: 'Alistar Elren',
       power: 6,
       isChampion: false,
       isEnemy: true,
@@ -911,9 +950,9 @@ describe('Pestilence – flip weakness by Horseman count', () => {
 
   it('Pestilence (Horseman) affects Sloth: immunity only applies to Creature sources', async () => {
     const pestilence = createMockCard({
-      name: 'Pestilence',
+      name: 'Lycandor',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isChampion: true,
       isEnemy: false,
       faceUp: false,
@@ -921,14 +960,14 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       powerMarkers: 0,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
+      name: 'Umbarax',
       power: 9,
-      type: 'Horseman',
+      type: 'Graveborn',
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const sloth = createMockCard({
-      name: 'Sloth',
+      name: 'Belphegor',
       power: 4,
       isEnemy: true,
       faceUp: true,
@@ -937,7 +976,7 @@ describe('Pestilence – flip weakness by Horseman count', () => {
       type: 'Creature',
     }) as unknown as CardEntity;
     const normalEnemy = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: true,
@@ -955,7 +994,7 @@ describe('Pestilence – flip weakness by Horseman count', () => {
   });
 });
 
-describe('Nephilim – temporary invulnerability', () => {
+describe('Anakim The Wise – temporary invulnerability', () => {
   let mock: ReturnType<typeof createMockControllerForBattle>;
 
   beforeEach(() => {
@@ -977,9 +1016,9 @@ describe('Nephilim – temporary invulnerability', () => {
     return p;
   }
 
-  it('grants Nephilim battle invulnerability on the round it flips', async () => {
+  it('grants Anakim The Wise battle invulnerability on the round it flips', async () => {
     const nephilim = createMockCard({
-      name: 'Nephilim',
+      name: 'Anakim The Wise',
       power: 5,
       type: 'Creature',
       isEnemy: false,
@@ -987,7 +1026,7 @@ describe('Nephilim – temporary invulnerability', () => {
       isInvincible: false,
     }) as unknown as CardEntity;
     const opponent = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       type: 'Creature',
       isEnemy: true,
@@ -1000,13 +1039,13 @@ describe('Nephilim – temporary invulnerability', () => {
 
     expect(nephilim.data.isInvincible).toBe(true);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining('Nephilim gains battle invulnerability this turn')
+      expect.stringContaining('Anakim The Wise gains battle invulnerability this turn')
     );
   });
 
-  it('clears Nephilim invulnerability at the start of the next round (prep phase)', async () => {
+  it('clears Anakim The Wise invulnerability at the start of the next round (prep phase)', async () => {
     const nephilim = createMockCard({
-      name: 'Nephilim',
+      name: 'Anakim The Wise',
       power: 5,
       type: 'Creature',
       isEnemy: false,
@@ -1014,7 +1053,7 @@ describe('Nephilim – temporary invulnerability', () => {
       isInvincible: false,
     }) as unknown as CardEntity;
     const opponent = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       type: 'Creature',
       isEnemy: true,
@@ -1023,7 +1062,7 @@ describe('Nephilim – temporary invulnerability', () => {
     mock.playerBattlefield[0] = nephilim;
     mock.enemyBattlefield[0] = opponent;
 
-    // Round where Nephilim flips and gains invulnerability
+    // Round where Anakim The Wise flips and gains invulnerability
     await resolveSealWithFakeTimers(0);
     expect(nephilim.data.isInvincible).toBe(true);
 
@@ -1032,12 +1071,12 @@ describe('Nephilim – temporary invulnerability', () => {
 
     expect(nephilim.data.isInvincible).toBe(false);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining("Nephilim's Invulnerability fades.")
+      expect.stringContaining("Anakim The Wise's Invulnerability fades.")
     );
   });
 });
 
-describe('Delta – NPC end-of-round +3 buff targeting', () => {
+describe('Varg Fur-back – NPC end-of-round +3 buff targeting', () => {
   let mock: ReturnType<typeof createMockControllerForBattle>;
 
   beforeEach(() => {
@@ -1048,9 +1087,9 @@ describe('Delta – NPC end-of-round +3 buff targeting', () => {
     vi.clearAllMocks();
   });
 
-  it('NPC Delta sacrifices and buffs the strongest enemy ally on the battlefield', async () => {
+  it('NPC Varg Fur-back sacrifices and buffs the strongest enemy ally on the battlefield', async () => {
     const delta = createMockCard({
-      name: 'Delta',
+      name: 'Varg Fur-back',
       power: 3,
       type: 'Creature',
       isEnemy: true,
@@ -1080,19 +1119,19 @@ describe('Delta – NPC end-of-round +3 buff targeting', () => {
 
     await (mock.phaseManager as any).cleanupEndOfRoundEffects();
 
-    // Delta should be sacrificed
+    // Varg Fur-back should be sacrificed
     expect(mock.enemyBattlefield[0]).toBeNull();
     // Strongest ally (by effective power) receives +3
     expect(strongerAlly.data.powerMarkers).toBe(4);
     expect(weakerAlly.data.powerMarkers).toBe(0);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining('Stronger Ally receives +3 Power Markers from Delta\'s sacrifice.')
+      expect.stringContaining("Stronger Ally receives +3 Power Markers from Varg Fur-back's sacrifice.")
     );
   });
 
-  it('NPC Delta considers champions on seals and buffs the strongest enemy card overall', async () => {
+  it('NPC Varg Fur-back considers champions on seals and buffs the strongest enemy card overall', async () => {
     const delta = createMockCard({
-      name: 'Delta',
+      name: 'Varg Fur-back',
       power: 3,
       type: 'Creature',
       isEnemy: true,
@@ -1123,19 +1162,19 @@ describe('Delta – NPC end-of-round +3 buff targeting', () => {
 
     await (mock.phaseManager as any).cleanupEndOfRoundEffects();
 
-    // Delta should be sacrificed
+    // Varg Fur-back should be sacrificed
     expect(mock.enemyBattlefield[0]).toBeNull();
     // Strongest ally across battlefield and seals (championAlly) receives +3
     expect(championAlly.data.powerMarkers).toBe(3);
     expect(battlefieldAlly.data.powerMarkers).toBe(0);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining('Seal Champion receives +3 Power Markers from Delta\'s sacrifice.')
+      expect.stringContaining("Seal Champion receives +3 Power Markers from Varg Fur-back's sacrifice.")
     );
   });
 
-  it('NPC Delta can buff itself when it is the only valid target', async () => {
+  it('NPC Varg Fur-back can buff itself when it is the only valid target', async () => {
     const delta = createMockCard({
-      name: 'Delta',
+      name: 'Varg Fur-back',
       power: 3,
       type: 'Creature',
       isEnemy: true,
@@ -1152,7 +1191,7 @@ describe('Delta – NPC end-of-round +3 buff targeting', () => {
     expect(mock.enemyBattlefield[0]).toBeNull();
     expect(delta.data.powerMarkers).toBe(3);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringContaining('Delta receives +3 Power Markers from Delta\'s sacrifice.')
+      expect.stringContaining("Varg Fur-back receives +3 Power Markers from Varg Fur-back's sacrifice.")
     );
   });
 });
@@ -1168,8 +1207,8 @@ describe('AbilityManager – applyAbilityEffect', () => {
   });
 
   it('destroy effect removes target from battlefield', () => {
-    const source = createMockCard({ name: 'Famine', power: 9, isEnemy: true }) as unknown as CardEntity;
-    const target = createMockCard({ name: 'Sentinel', power: 4, isEnemy: false }) as unknown as CardEntity;
+    const source = createMockCard({ name: 'Golgothane', power: 9, isEnemy: true }) as unknown as CardEntity;
+    const target = createMockCard({ name: 'Kaelo', power: 4, isEnemy: false }) as unknown as CardEntity;
     mock.playerBattlefield[2] = target;
 
     mock.abilityManager.applyAbilityEffect(target, { source, effect: 'destroy' });
@@ -1338,7 +1377,7 @@ describe('AbilityManager – applyAbilityEffect', () => {
   it('destroy_marker logs when target has no markers', () => {
     const source = createMockCard({ name: 'The Destroyer', power: 15, isEnemy: false }) as unknown as CardEntity;
     const target = createMockCard({
-      name: 'Baron',
+      name: 'Valerius Nightshade',
       power: 2,
       powerMarkers: 0,
       weaknessMarkers: 0,
@@ -1356,7 +1395,7 @@ describe('AbilityManager – applyAbilityEffect', () => {
   });
 });
 
-describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
+describe('Skarados – handleActivateAbility (player vs NPC)', () => {
   let mock: ReturnType<typeof createMockControllerForAbilities>;
 
   beforeEach(() => {
@@ -1369,14 +1408,14 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
 
   it('when played from player hand (isEnemy: false): shows marker-type dialog then destroys all markers of chosen type', async () => {
     const destroyer = createMockCard({
-      name: 'The Destroyer',
+      name: 'Skarados',
       power: 15,
       isChampion: true,
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const cardWithPower = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       powerMarkers: 2,
       weaknessMarkers: 0,
@@ -1384,7 +1423,7 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyWithPower = createMockCard({
-      name: 'Baron',
+      name: 'Valerius Nightshade',
       power: 2,
       powerMarkers: 1,
       weaknessMarkers: 0,
@@ -1416,14 +1455,14 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
 
   it('when NPC owns the card (isAI: true) and no cards have markers: destroys all of chosen type (0 removed), no UI', async () => {
     const destroyer = createMockCard({
-      name: 'The Destroyer',
+      name: 'Skarados',
       power: 15,
       isChampion: true,
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const enemyCard = createMockCard({
-      name: 'Baron',
+      name: 'Valerius Nightshade',
       power: 2,
       powerMarkers: 0,
       weaknessMarkers: 0,
@@ -1445,14 +1484,14 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
 
   it('when NPC owns the card (isAI: true) and cards have Power Markers: AI destroys all Power markers', async () => {
     const destroyer = createMockCard({
-      name: 'The Destroyer',
+      name: 'Skarados',
       power: 15,
       isChampion: true,
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const targetWithMarkers = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       powerMarkers: 2,
       weaknessMarkers: 0,
@@ -1472,14 +1511,14 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
 
   it('when NPC owns the card (isAI: true) and only Weakness Markers exist: AI destroys all Weakness markers', async () => {
     const destroyer = createMockCard({
-      name: 'The Destroyer',
+      name: 'Skarados',
       power: 15,
       isChampion: true,
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const targetWithWeakness = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       powerMarkers: 0,
       weaknessMarkers: 2,
@@ -1498,7 +1537,7 @@ describe('The Destroyer – handleActivateAbility (player vs NPC)', () => {
   });
 });
 
-describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
+describe('Noble The Great – post-combat ability origin (player vs AI)', () => {
   let mock: ReturnType<typeof createMockControllerForAbilities>;
 
   beforeEach(() => {
@@ -1509,16 +1548,16 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     vi.clearAllMocks();
   });
 
-  it('when player owns The Inevitable (played from player hand): enters ABILITY_TARGETING so human chooses target', async () => {
+  it('when player owns Noble The Great (played from player hand): enters ABILITY_TARGETING so human chooses target', async () => {
     const inevitable = createMockCard({
-      name: 'The Inevitable',
+      name: 'Noble The Great',
       power: 9,
       isChampion: true,
       isEnemy: false,
       faceUp: true,
     }) as unknown as CardEntity;
     const other = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       powerMarkers: 0,
       weaknessMarkers: 0,
@@ -1533,7 +1572,7 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     expect(mock.updateState).toHaveBeenCalledWith(
       expect.objectContaining({
         currentPhase: Phase.ABILITY_TARGETING,
-        instructionText: 'The Inevitable: Select a card or a card with Markers to destroy (card or one Marker).',
+        instructionText: 'Noble The Great: Select a creature or marker type to destroy.',
       })
     );
     expect(mock.zoomOut).toHaveBeenCalled();
@@ -1550,16 +1589,16 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     await postCombatPromise;
   });
 
-  it('when AI owns The Inevitable (played from AI hand): AI picks target immediately, no human prompt', async () => {
+  it('when AI owns Noble The Great (played from AI hand): AI picks target immediately, no human prompt', async () => {
     const inevitable = createMockCard({
-      name: 'The Inevitable',
+      name: 'Noble The Great',
       power: 9,
       isChampion: true,
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const targetWithMarker = createMockCard({
-      name: 'Noble',
+      name: 'Kaelarion',
       power: 4,
       powerMarkers: 2,
       weaknessMarkers: 0,
@@ -1586,16 +1625,16 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     );
   });
 
-  it('when AI owns The Inevitable and target has no markers: AI destroys the card', async () => {
+  it('when AI owns Noble The Great and target has no markers: AI destroys the card', async () => {
     const inevitable = createMockCard({
-      name: 'The Inevitable',
+      name: 'Noble The Great',
       power: 9,
       isChampion: true,
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const targetNoMarkers = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 5,
       powerMarkers: 0,
       weaknessMarkers: 0,
@@ -1616,14 +1655,14 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
       false,
       0,
       false,
-      expect.objectContaining({ cardName: 'The Inevitable', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Noble The Great', cause: 'ability' })
     );
     expect(mock.playerBattlefield[0]).toBeNull();
   });
 
-  it('when player owns The Inevitable, ability source in pendingAbilityData is the winner card', async () => {
+  it('when player owns Noble The Great, ability source in pendingAbilityData is the winner card', async () => {
     const inevitable = createMockCard({
-      name: 'The Inevitable',
+      name: 'Noble The Great',
       power: 9,
       isChampion: true,
       isEnemy: false,
@@ -1631,7 +1670,7 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     }) as unknown as CardEntity;
     mock.playerBattlefield[0] = inevitable;
     mock.playerBattlefield[1] = createMockCard({
-      name: 'Beta',
+      name: 'Ulfric Thorne',
       power: 6,
       isEnemy: false,
       faceUp: true,
@@ -1640,7 +1679,7 @@ describe('The Inevitable – post-combat ability origin (player vs AI)', () => {
     mock.abilityManager.handlePostCombat(inevitable);
     const pending = (mock as unknown as { pendingAbilityData: { source: CardEntity } }).pendingAbilityData;
     expect(pending.source).toBe(inevitable);
-    expect(pending.source.data.name).toBe('The Inevitable');
+    expect(pending.source.data.name).toBe('Noble The Great');
     expect(pending.source.data.isEnemy).toBe(false);
     (mock as unknown as { resolutionCallback: (() => void) | null }).resolutionCallback!();
   });
@@ -1657,72 +1696,72 @@ describe('AbilityManager – immunity and counts', () => {
     vi.clearAllMocks();
   });
 
-  it('isImmuneToAbilities: Sloth is immune to creature abilities', () => {
+  it('isImmuneToAbilities: Belphegor is immune to creature abilities', () => {
     const sloth = createMockCard({
-      name: 'Sloth',
+      name: 'Belphegor',
       abilityImmune: true,
       type: 'Creature',
       isEnemy: false,
     }) as unknown as CardEntity;
-    const source = createMockCard({ name: 'Pride', type: 'Creature', isEnemy: true }) as unknown as CardEntity;
+    const source = createMockCard({ name: 'Alistar Elren', type: 'Creature', isEnemy: true }) as unknown as CardEntity;
 
     expect(mock.abilityManager.isImmuneToAbilities(sloth, source)).toBe(true);
   });
 
-  it('isImmuneToAbilities: non-Sloth creature is not immune by default', () => {
-    const target = createMockCard({ name: 'Noble', type: 'Creature', isEnemy: false }) as unknown as CardEntity;
-    const source = createMockCard({ name: 'Famine', type: 'Horseman', isEnemy: true }) as unknown as CardEntity;
+  it('isImmuneToAbilities: non-Belphegor creature is not immune by default', () => {
+    const target = createMockCard({ name: 'Kaelarion', type: 'Creature', isEnemy: false }) as unknown as CardEntity;
+    const source = createMockCard({ name: 'Golgothane', type: 'Graveborn', isEnemy: true }) as unknown as CardEntity;
 
     expect(mock.abilityManager.isImmuneToAbilities(target, source)).toBe(false);
   });
 
-  it('countHorsemenInPlay counts only flipped Horsemen on owner side', () => {
+  it('countGravebornInPlay counts only flipped Graveborn on owner side', () => {
     const war = createMockCard({
-      name: 'War',
-      type: 'Horseman',
+      name: 'Umbarax',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const death = createMockCard({
-      name: 'Death',
-      type: 'Horseman',
+      name: 'Nix',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     mock.enemyBattlefield[0] = war;
     mock.enemyBattlefield[1] = death;
 
-    const count = mock.abilityManager.countHorsemenInPlay(true);
+    const count = mock.abilityManager.countGravebornInPlay(true);
     expect(count).toBe(2);
   });
 
-  it('countHorsemenForPestilenceFlip counts face-down flipping Pestilence plus face-up Horsemen', () => {
+  it('countGravebornForLycandorFlip counts face-down flipping Lycandor plus face-up Graveborn', () => {
     const pest = createMockCard({
-      name: 'Pestilence',
-      type: 'Horseman',
+      name: 'Lycandor',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: false,
     }) as unknown as CardEntity;
     const war = createMockCard({
-      name: 'War',
-      type: 'Horseman',
+      name: 'Umbarax',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     mock.enemyBattlefield[1] = war;
-    expect(mock.abilityManager.countHorsemenInPlay(true)).toBe(1);
-    expect(mock.abilityManager.countHorsemenForPestilenceFlip(true, pest)).toBe(2);
+    expect(mock.abilityManager.countGravebornInPlay(true)).toBe(1);
+    expect(mock.abilityManager.countGravebornForLycandorFlip(true, pest)).toBe(2);
   });
 
-  it('countHorsemenForPestilenceFlip does not add +1 if source Horseman is already face-up (no double count)', () => {
+  it('countGravebornForLycandorFlip does not add +1 if source Graveborn is already face-up (no double count)', () => {
     const pest = createMockCard({
-      name: 'Pestilence',
-      type: 'Horseman',
+      name: 'Lycandor',
+      type: 'Graveborn',
       isEnemy: true,
       faceUp: true,
     }) as unknown as CardEntity;
     mock.enemyBattlefield[0] = pest;
-    expect(mock.abilityManager.countHorsemenForPestilenceFlip(true, pest)).toBe(1);
+    expect(mock.abilityManager.countGravebornForLycandorFlip(true, pest)).toBe(1);
   });
 });
 
@@ -1968,6 +2007,19 @@ function createMockControllerForLust(chosenAlignment: Alignment): IGameControlle
     selectLimboCardForAbility: vi.fn(),
     isImmuneToAbilities: vi.fn(),
     isProtected: () => false,
+    cardToHoveredInfo: (card: CardEntity) => ({
+      name: card.data?.name || '',
+      faction: card.data?.faction || '',
+      power: card.data?.power || 0,
+      type: card.data?.type || '',
+      isChampion: card.data?.isChampion || false,
+      ability: card.data?.ability || '',
+      powerMarkers: card.data?.powerMarkers || 0,
+      weaknessMarkers: card.data?.weaknessMarkers || 0,
+      faceArtPath: card.data?.faceArtPath || undefined
+    }),
+    realignPlayerHand: vi.fn(),
+    setSlowMode: vi.fn(),
   };
 
   mock.abilityManager = new AbilityManager(mock as IGameController);
@@ -1978,12 +2030,20 @@ function createMockControllerForLust(chosenAlignment: Alignment): IGameControlle
   return mock as ReturnType<typeof createMockControllerForLust>;
 }
 
-describe('Lust – seal influence', () => {
-  it('happy path: player Lust and opponent at same seal, no champion – both sacrificed and claimSeal called with chosen alignment (Dark)', async () => {
+describe('Desire – seal influence', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('happy path: player Desire and opponent at same seal, no champion – both sacrificed and claimSeal called with chosen alignment (Dark)', async () => {
     const mock = createMockControllerForLust(Alignment.DARK);
     mock.state.currentPhase = Phase.RESOLUTION;
     const lust = createMockCard({
-      name: 'Lust',
+      name: 'Desire',
       power: 2,
       hasLustSealEffect: true,
       isEnemy: false,
@@ -1992,7 +2052,7 @@ describe('Lust – seal influence', () => {
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const opponent = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: false,
@@ -2004,22 +2064,24 @@ describe('Lust – seal influence', () => {
     mock.seals[0].champion = null;
     mock.seals[0].alignment = Alignment.NEUTRAL;
 
-    await mock.phaseManager.resolveSeal(0);
+    const p = mock.phaseManager.resolveSeal(0);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(mock.destroyCard).toHaveBeenCalledTimes(2);
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Lust' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Desire' }) }),
       false,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Herald' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Cassiel Haggis' }) }),
       true,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
     expect(mock.updateState).toHaveBeenCalledWith(
       expect.objectContaining({ decisionContext: 'LUST_SEAL_INFLUENCE', sealIndexForChoice: 0 })
@@ -2027,16 +2089,16 @@ describe('Lust – seal influence', () => {
     expect(mock.claimSeal).toHaveBeenCalledWith(
       0,
       Alignment.DARK,
-      expect.objectContaining({ type: 'ability', cardName: 'Lust' })
+      expect.objectContaining({ type: 'ability', cardName: 'Desire' })
     );
   });
 
-  it('NPC Lust: seal influence is set to NPC alignment (no player choice)', async () => {
+  it('NPC Desire: seal influence is set to NPC alignment (no player choice)', async () => {
     const mock = createMockControllerForLust(Alignment.DARK);
     mock.state.currentPhase = Phase.RESOLUTION;
-    // For this test, Lust is controlled by the enemy (NPC)
+    // For this test, Desire is controlled by the enemy (NPC)
     const lust = createMockCard({
-      name: 'Lust',
+      name: 'Desire',
       power: 2,
       hasLustSealEffect: true,
       isEnemy: true,
@@ -2045,7 +2107,7 @@ describe('Lust – seal influence', () => {
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const opponent = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: false,
       faceUp: false,
@@ -2057,26 +2119,28 @@ describe('Lust – seal influence', () => {
     mock.seals[0].champion = null;
     mock.seals[0].alignment = Alignment.NEUTRAL;
 
-    await mock.phaseManager.resolveSeal(0);
+    const p = mock.phaseManager.resolveSeal(0);
+    await vi.runAllTimersAsync();
+    await p;
 
-    // Lust and opponent should both be sacrificed
+    // Desire and opponent should both be sacrificed
     expect(mock.destroyCard).toHaveBeenCalledTimes(2);
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Lust' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Desire' }) }),
       true,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Herald' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Cassiel Haggis' }) }),
       false,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
 
-    // No player choice dialog should be shown for NPC Lust
+    // No player choice dialog should be shown for NPC Desire
     expect(mock.updateState).not.toHaveBeenCalledWith(
       expect.objectContaining({ decisionContext: 'LUST_SEAL_INFLUENCE' })
     );
@@ -2087,15 +2151,15 @@ describe('Lust – seal influence', () => {
     expect(mock.claimSeal).toHaveBeenCalledWith(
       0,
       eAlign,
-      expect.objectContaining({ type: 'ability', cardName: 'Lust' })
+      expect.objectContaining({ type: 'ability', cardName: 'Desire' })
     );
   });
 
-  it('edge case: seal has champion – Lust sacrifices both but does not offer seal influence', async () => {
+  it('edge case: seal has champion – Desire sacrifices both but does not offer seal influence', async () => {
     const mock = createMockControllerForLust(Alignment.DARK);
     mock.state.currentPhase = Phase.RESOLUTION;
     const lust = createMockCard({
-      name: 'Lust',
+      name: 'Desire',
       power: 2,
       hasLustSealEffect: true,
       isEnemy: false,
@@ -2104,7 +2168,7 @@ describe('Lust – seal influence', () => {
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const opponent = createMockCard({
-      name: 'Herald',
+      name: 'Cassiel Haggis',
       power: 3,
       isEnemy: true,
       faceUp: false,
@@ -2112,7 +2176,7 @@ describe('Lust – seal influence', () => {
       weaknessMarkers: 0,
     }) as unknown as CardEntity;
     const champion = createMockCard({
-      name: 'Prophet',
+      name: 'Valtarious',
       power: 9,
       isChampion: true,
       isEnemy: false,
@@ -2123,22 +2187,24 @@ describe('Lust – seal influence', () => {
     mock.seals[0].champion = champion;
     mock.seals[0].alignment = Alignment.LIGHT;
 
-    await mock.phaseManager.resolveSeal(0);
+    const p = mock.phaseManager.resolveSeal(0);
+    await vi.runAllTimersAsync();
+    await p;
 
     expect(mock.destroyCard).toHaveBeenCalledTimes(2);
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Lust' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Desire' }) }),
       false,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
     expect(mock.destroyCard).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ name: 'Herald' }) }),
+      expect.objectContaining({ data: expect.objectContaining({ name: 'Cassiel Haggis' }) }),
       true,
       0,
       false,
-      expect.objectContaining({ cardName: 'Lust', cause: 'ability' })
+      expect.objectContaining({ cardName: 'Desire', cause: 'ability' })
     );
     expect(mock.claimSeal).not.toHaveBeenCalled();
     expect(mock.updateState).not.toHaveBeenCalledWith(

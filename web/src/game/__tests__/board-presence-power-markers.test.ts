@@ -142,18 +142,18 @@ describe('syncBoardPresencePowerMarkers', () => {
 
   it('The Spinner: markers equal face-up cards sharing faction (no double-count on repeated sync)', () => {
     const spinner = card({
-      name: 'The Spinner',
-      faction: 'Light',
+      name: 'Dawn',
+      faction: 'Avatars of light',
       type: 'Avatar',
       power: 9,
       isChampion: true,
       hasActivate: true,
     }) as unknown as CardEntity;
     const ally = card({
-      name: 'Archangel',
-      faction: 'Light',
-      type: 'Creature',
-      power: 2,
+      name: 'Valtarious',
+      faction: 'Avatars of light',
+      type: 'Avatar',
+      power: 9,
       faceUp: true,
     }) as unknown as CardEntity;
     ctrl.seals[0].champion = spinner as unknown as MockCard;
@@ -167,8 +167,8 @@ describe('syncBoardPresencePowerMarkers', () => {
     expect(spinner.data.powerMarkers).toBe(2);
 
     const ally2 = card({
-      name: 'Martyr',
-      faction: 'Light',
+      name: 'Tarkidos',
+      faction: 'Avatars of light',
       type: 'Avatar',
       power: 9,
       faceUp: true,
@@ -181,14 +181,14 @@ describe('syncBoardPresencePowerMarkers', () => {
 
   it('Omega: counts face-up Lycans in play plus all Lycans in either Limbo', () => {
     const omega = card({
-      name: 'Omega',
+      name: 'Garmr',
       faction: 'Lycan',
       type: 'Creature',
       power: 5,
       faceUp: true,
     }) as unknown as CardEntity;
     const wolf = card({
-      name: 'Wild Wolf',
+      name: 'Fenris Lightfoot',
       faction: 'Lycan',
       type: 'Creature',
       power: 1,
@@ -197,7 +197,7 @@ describe('syncBoardPresencePowerMarkers', () => {
     ctrl.playerBattlefield[0] = omega as unknown as MockCard;
     ctrl.enemyBattlefield[1] = wolf as unknown as MockCard;
     const limboLycan = card({
-      name: 'Beta',
+      name: 'Ulfric Thorne',
       faction: 'Lycan',
       type: 'Creature',
       power: 6,
@@ -213,7 +213,7 @@ describe('syncBoardPresencePowerMarkers', () => {
 
   it('Hades: +2 Power per face-up Horseman on that side', () => {
     const hades = card({
-      name: 'Hades',
+      name: 'Pazoo',
       faction: 'Darkness',
       type: 'Avatar',
       power: 9,
@@ -222,9 +222,9 @@ describe('syncBoardPresencePowerMarkers', () => {
       faceUp: true,
     }) as unknown as CardEntity;
     const war = card({
-      name: 'War',
+      name: 'Umbarax',
       faction: 'Darkness',
-      type: 'Horseman',
+      type: 'Graveborn',
       power: 9,
       isEnemy: true,
       faceUp: true,
@@ -236,9 +236,9 @@ describe('syncBoardPresencePowerMarkers', () => {
     expect(hades.data.powerMarkers).toBe(2);
 
     const famine = card({
-      name: 'Famine',
+      name: 'Golgothane',
       faction: 'Darkness',
-      type: 'Horseman',
+      type: 'Graveborn',
       power: 9,
       isEnemy: true,
       faceUp: true,
@@ -250,7 +250,7 @@ describe('syncBoardPresencePowerMarkers', () => {
 
   it('stripBoardPresencePowerFromCard removes tracked portion before leaving play', () => {
     const omega = card({
-      name: 'Omega',
+      name: 'Garmr',
       faction: 'Lycan',
       type: 'Creature',
       power: 5,
@@ -268,16 +268,16 @@ describe('syncBoardPresencePowerMarkers', () => {
 
   it('afterBulkPowerMarkersCleared restores Spinner presence after Greed-style wipe', () => {
     const spinner = card({
-      name: 'The Spinner',
-      faction: 'Light',
+      name: 'Dawn',
+      faction: 'Avatars of light',
       type: 'Avatar',
       power: 9,
       isChampion: true,
       faceUp: true,
     }) as unknown as CardEntity;
     const ally = card({
-      name: 'Prophet',
-      faction: 'Light',
+      name: 'Valtarious',
+      faction: 'Avatars of light',
       type: 'Avatar',
       power: 9,
       faceUp: true,
@@ -303,7 +303,7 @@ describe('Lord Activate (+1 per Vampyre, separate from board-presence sync)', ()
   it('each Activate stacks markers from current Vampyre count; sync does not reset Lord', async () => {
     const ctrl = createCtrl();
     const lord = card({
-      name: 'Lord',
+      name: 'Lord Alaric',
       faction: 'Vampyre',
       type: 'Creature',
       power: 7,
@@ -313,7 +313,7 @@ describe('Lord Activate (+1 per Vampyre, separate from board-presence sync)', ()
       faceUp: true,
     }) as unknown as CardEntity;
     const noble = card({
-      name: 'Noble',
+      name: 'Kaelarion',
       faction: 'Vampyre',
       type: 'Creature',
       power: 4,
@@ -336,16 +336,16 @@ describe('War post-combat (event-based, not board-presence tracked)', () => {
   it('War still gains +2 per Horseman on each win via handlePostCombat', async () => {
     const ctrl = createCtrl();
     const war = card({
-      name: 'War',
-      type: 'Horseman',
+      name: 'Umbarax',
+      type: 'Graveborn',
       faction: 'Darkness',
       power: 9,
       isEnemy: true,
       isChampion: true,
     }) as unknown as CardEntity;
     const other = card({
-      name: 'Death',
-      type: 'Horseman',
+      name: 'Nix',
+      type: 'Graveborn',
       faction: 'Darkness',
       power: 9,
       isEnemy: true,

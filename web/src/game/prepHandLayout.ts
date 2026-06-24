@@ -52,9 +52,26 @@ export function tweenPlayerHandCardToPrepPose(
   const bottomOffset = D * Math.tan(halfFov) * 0.63; // 0.63 offset frames cards nicely above bottom bezel
   const handBaseline = new THREE.Vector3().copy(centerPoint).addScaledVector(up, -bottomOffset);
 
-  // Squeeze spacing on narrower aspect ratios (e.g. portrait) so cards fit within screen width
-  const spacingScale = Math.min(1.0, aspect / 1.55);
-  const targetX = offset * 2.2 * spacingScale;
+  // Calculate exact half-width of the frustum at distance D
+  const frustumHalfWidth = D * Math.tan(halfFov) * aspect;
+
+  // Spacing parameters
+  const maxSpacing = 2.2;
+  const cardWidth = 1.8;
+  const horizontalMargin = 0.4; // Safety margin to keep cards from touching the screen edges
+
+  // Determine spacing dynamically based on screen width and hand size
+  let spacing = maxSpacing;
+  const maxOffset = (handSize - 1) / 2;
+  if (maxOffset > 0) {
+    const availableWidth = frustumHalfWidth - (cardWidth / 2 + horizontalMargin);
+    const requiredWidth = maxOffset * maxSpacing;
+    if (requiredWidth > availableWidth) {
+      spacing = Math.max(0.8, availableWidth / maxOffset); // Floor spacing at 0.8 to prevent complete overlap
+    }
+  }
+
+  const targetX = offset * spacing;
 
   // Local camera right vector to align cards horizontally relative to viewport tilt
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);

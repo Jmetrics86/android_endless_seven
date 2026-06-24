@@ -73,23 +73,4 @@ describe('executePrepUndoEntry', () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(updateState).toHaveBeenCalledWith({});
   });
-
-  it('baron swap undo restores baron on battlefield and limbo card in limbo', () => {
-    const baron = makeCard('Baron');
-    const limboCard = makeCard('Swap');
-    const battle = Array(7).fill(null) as (CardEntity | null)[];
-    battle[1] = limboCard;
-    const limbo: CardEntity[] = [baron];
-    executePrepUndoEntry(slice({ playerBattlefield: battle, playerLimbo: limbo }), {
-      type: 'baron_swap',
-      slotIndex: 1,
-      baron,
-      limboCard,
-    });
-    expect(battle[1]).toBe(baron);
-    expect(limbo).toContain(limboCard);
-    expect(limbo).not.toContain(baron);
-    expect(sync).toHaveBeenCalledTimes(1);
-    expect(updateState).toHaveBeenCalledWith({});
-  });
 });

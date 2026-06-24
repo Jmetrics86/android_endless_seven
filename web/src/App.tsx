@@ -616,6 +616,26 @@ export default function App() {
                           alt={gameState.combatInterstitial.leftCard.name}
                           className="w-full h-full object-cover object-center"
                         />
+                        {/* Tiny Markers & Power Overlay for Interactive Mode */}
+                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-0.5">
+                          <div className="flex flex-col gap-0.5">
+                            {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
+                              <div className="bg-black/95 text-[#00f2ff] text-[0.4rem] font-bold px-0.5 rounded leading-none">
+                                +{gameState.combatInterstitial.leftCard.powerMarkers}
+                              </div>
+                            )}
+                            {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
+                              <div className="bg-black/95 text-[#ff0044] text-[0.4rem] font-bold px-0.5 rounded leading-none">
+                                -{gameState.combatInterstitial.leftCard.weaknessMarkers}
+                              </div>
+                            )}
+                          </div>
+                          {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
+                            <div className="self-end bg-black/95 text-[#00f2ff] text-[0.45rem] font-extrabold px-0.5 rounded leading-none border border-[#00f2ff]/30">
+                              {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                     
@@ -635,6 +655,26 @@ export default function App() {
                           alt={gameState.combatInterstitial.rightCard.name}
                           className="w-full h-full object-cover object-center"
                         />
+                        {/* Tiny Markers & Power Overlay for Interactive Mode */}
+                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-0.5">
+                          <div className="flex flex-col gap-0.5">
+                            {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
+                              <div className="bg-black/95 text-[#00f2ff] text-[0.4rem] font-bold px-0.5 rounded leading-none">
+                                +{gameState.combatInterstitial.rightCard.powerMarkers}
+                              </div>
+                            )}
+                            {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
+                              <div className="bg-black/95 text-[#ff0044] text-[0.4rem] font-bold px-0.5 rounded leading-none">
+                                -{gameState.combatInterstitial.rightCard.weaknessMarkers}
+                              </div>
+                            )}
+                          </div>
+                          {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
+                            <div className="self-end bg-black/95 text-[#00f2ff] text-[0.45rem] font-extrabold px-0.5 rounded leading-none border border-[#00f2ff]/30">
+                              {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -696,6 +736,27 @@ export default function App() {
                       {gameState.combatInterstitial.leftDamageFlash && (
                         <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
                       )}
+                      
+                      {/* Power/Weakness Markers Badges on Left Card */}
+                      <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
+                        {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                            ⚡ +{gameState.combatInterstitial.leftCard.powerMarkers}
+                          </div>
+                        )}
+                        {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                            💀 -{gameState.combatInterstitial.leftCard.weaknessMarkers}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Final Power Badge on Left Card */}
+                      {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
+                        <div className="absolute bottom-2 right-2 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 rounded-lg text-[0.8rem] font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                          {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
@@ -706,9 +767,7 @@ export default function App() {
                   {gameState.combatInterstitial.leftCard && (
                     <div className="text-center min-h-0 flex flex-col items-center gap-1">
                       <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.leftCard.name}</div>
-                      <div className="text-[0.55rem] text-gray-400 max-w-[150px] leading-relaxed">
-                        {gameState.combatInterstitial.leftPowerText || `Power: ${gameState.combatInterstitial.leftCard.power}`}
-                      </div>
+                      <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
                       {/* Mobile Checklist (hidden on desktop) */}
                       <div className="block md:hidden mt-1">
                         <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
@@ -741,6 +800,27 @@ export default function App() {
                       {gameState.combatInterstitial.rightDamageFlash && (
                         <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
                       )}
+
+                      {/* Power/Weakness Markers Badges on Right Card */}
+                      <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
+                        {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                            ⚡ +{gameState.combatInterstitial.rightCard.powerMarkers}
+                          </div>
+                        )}
+                        {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                            💀 -{gameState.combatInterstitial.rightCard.weaknessMarkers}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Final Power Badge on Right Card */}
+                      {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
+                        <div className="absolute bottom-2 right-2 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 rounded-lg text-[0.8rem] font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                          {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
@@ -751,9 +831,7 @@ export default function App() {
                   {gameState.combatInterstitial.rightCard && (
                     <div className="text-center min-h-0 flex flex-col items-center gap-1">
                       <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.rightCard.name}</div>
-                      <div className="text-[0.55rem] text-gray-400 max-w-[150px] leading-relaxed">
-                        {gameState.combatInterstitial.rightPowerText || `Power: ${gameState.combatInterstitial.rightCard.power}`}
-                      </div>
+                      <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
                       {/* Mobile Checklist (hidden on desktop) */}
                       <div className="block md:hidden mt-1">
                         <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
@@ -892,6 +970,57 @@ export default function App() {
           text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
         }
       `}</style>
+    </div>
+  );
+}
+
+function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; overrideText?: string }) {
+  if (card.name === 'Face Down Card') {
+    return (
+      <div className="mt-1 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] font-mono tracking-wide text-gray-400">
+        Power: ?
+      </div>
+    );
+  }
+
+  // If there's an override text that is not a standard formula, we can show it (e.g. custom messages)
+  if (overrideText && !overrideText.includes('Base')) {
+    return (
+      <div className="mt-1 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] font-mono tracking-wide text-[#00f2ff] shadow-[0_0_10px_rgba(0,242,255,0.1)]">
+        {overrideText}
+      </div>
+    );
+  }
+
+  const base = card.power;
+  const buffs = card.powerMarkers || 0;
+  const weakness = card.weaknessMarkers || 0;
+  const total = base + buffs - weakness;
+
+  return (
+    <div className="mt-1 px-2.5 py-1.5 bg-black/60 border border-white/10 rounded-xl text-[0.55rem] font-mono tracking-wide text-gray-300 shadow-md flex flex-col items-center gap-0.5 max-w-[155px]">
+      <div className="flex items-center gap-0.5 flex-wrap justify-center text-gray-400 text-[0.52rem] leading-none">
+        <span>{base}</span>
+        <span className="text-gray-500 text-[0.45rem] mr-1">Base</span>
+        {buffs > 0 && (
+          <>
+            <span className="text-[#00f2ff] font-bold">+</span>
+            <span className="text-[#00f2ff] font-bold">{buffs}</span>
+            <span className="text-[#00f2ff]/70 text-[0.45rem] mr-1">Buff</span>
+          </>
+        )}
+        {weakness > 0 && (
+          <>
+            <span className="text-[#ff0044] font-bold">-</span>
+            <span className="text-[#ff0044] font-bold">{weakness}</span>
+            <span className="text-[#ff0044]/70 text-[0.45rem] mr-1">Weak</span>
+          </>
+        )}
+      </div>
+      <div className="w-full h-[1px] bg-white/10 my-0.5" />
+      <div className="text-[0.6rem] font-bold text-white leading-none">
+        Total: <span className="text-[#00f2ff] font-extrabold text-[0.65rem]">{total}</span> Power
+      </div>
     </div>
   );
 }

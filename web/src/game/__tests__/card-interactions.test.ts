@@ -430,8 +430,8 @@ describe('Combat – card vs card', () => {
     expect(mock.enemyBattlefield[0]).toBeNull();
   });
 
-  it('Elder sends defeated creature to deck instead of destroying', async () => {
-    const attacker = createMockCard({ name: 'Elder', power: 5, hasHaste: true, isEnemy: false }) as unknown as CardEntity;
+  it('Sulvian Vane sends defeated creature to deck instead of destroying', async () => {
+    const attacker = createMockCard({ name: 'Sulvian Vane', power: 5, hasHaste: true, isEnemy: false }) as unknown as CardEntity;
     const defender = createMockCard({ name: 'Fledgeling', power: 1, isEnemy: true }) as unknown as CardEntity;
     mock.playerBattlefield[0] = attacker;
     mock.enemyBattlefield[0] = defender;
@@ -441,6 +441,20 @@ describe('Combat – card vs card', () => {
     expect(mock.destroyCard).not.toHaveBeenCalled();
     expect(mock.addLog).toHaveBeenCalledWith(
       expect.stringContaining('placed on top of its owner\'s deck')
+    );
+  });
+
+  it('Valerius Nightshade nullifies Flip ability of battling card', async () => {
+    const attacker = createMockCard({ name: 'Valerius Nightshade', power: 2, hasHaste: true, isEnemy: false }) as unknown as CardEntity;
+    const defender = createMockCard({ name: 'Fledgeling', power: 1, isEnemy: true }) as unknown as CardEntity;
+    mock.playerBattlefield[0] = attacker;
+    mock.enemyBattlefield[0] = defender;
+
+    await handleBattleWithFakeTimers(attacker, defender, 0, false);
+
+    expect(defender.data.isSuppressed).toBe(true);
+    expect(mock.addLog).toHaveBeenCalledWith(
+      expect.stringContaining('Valerius Nightshade nullifies the Flip ability of Fledgeling')
     );
   });
 

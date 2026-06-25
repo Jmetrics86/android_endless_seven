@@ -940,8 +940,18 @@ export class PhaseManager {
     const isDProtected = this.controller.abilityManager.isProtected(defender);
     let stymied = false;
 
-    const elderAttacker = attacker.data.name === "Elder";
-    const elderDefender = defender.data.name === "Elder";
+    // Valerius Nightshade: Any creature battling Valerius has its Flip ability nullified.
+    if (attacker.data.name === "Valerius Nightshade" && !defender.data.isSuppressed && !this.controller.abilityManager.isImmuneToAbilities(defender, attacker)) {
+      defender.data.isSuppressed = true;
+      this.controller.addLog(`Valerius Nightshade nullifies the Flip ability of ${defender.data.name}.`);
+    }
+    if (defender.data.name === "Valerius Nightshade" && !attacker.data.isSuppressed && !this.controller.abilityManager.isImmuneToAbilities(attacker, defender)) {
+      attacker.data.isSuppressed = true;
+      this.controller.addLog(`Valerius Nightshade nullifies the Flip ability of ${attacker.data.name}.`);
+    }
+
+    const elderAttacker = attacker.data.name === "Sulvian Vane";
+    const elderDefender = defender.data.name === "Sulvian Vane";
     const sendToDeckInstead = (loser: CardEntity) => {
       this.controller.abilityManager.returnCreatureToOwnerDeck(loser);
     };

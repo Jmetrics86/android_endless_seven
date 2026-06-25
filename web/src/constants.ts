@@ -7,7 +7,7 @@ import { CardData } from './types';
 
 export const LIGHT_POOL: CardData[] = [
   // Avatars of Light (Oathbringers / God)
-  { name: "Dawn", faction: "Avatars of light", type: "Avatar", power: 9, isChampion: true, ability: "Champion. Flip: Gain +1 Power Marker for each Oathbringer in play. Activate: If you have 4 Oathbringers in play with at least one Champion controlling a Seal, you win the game.", markerPower: 0, needsAllocation: true, hasActivate: true },
+  { name: "Dawn", faction: "Avatars of light", type: "Avatar", power: 9, isChampion: true, ability: "Champion. Flip: Gain +1 Power Marker for each Oathbringer in play. Activate: If you have 4 Oathbringers in play with at least one Champion controlling a Seal, you win the game.", markerPower: 0, hasActivate: true },
   { name: "Bella", faction: "Avatars of light", type: "Avatar", power: 9, isChampion: true, ability: "Champion. Flip: Destroy any Champion on any Seal. Activate: Destroy one Marker on any creature.", hasTargetedAbility: true, effect: 'destroy_champion_on_seal', targetType: 'champion_on_seal', hasActivate: true },
   { name: "Calmadious", faction: "Avatars of light", type: "God", power: 15, isChampion: true, ability: "Champion. Flip: Purify any Corrupted Seal without a Champion. Activate: Destroy any one Marker type.", hasSealTargetAbility: true, sealEffect: 'LIGHT', hasActivate: true },
   { name: "Coal", faction: "Avatars of light", type: "Avatar", power: 10, isChampion: true, ability: "Champion. Activate: If you control 5 or more Seals with Champions you win the game. Final Act: While in Limbo, you may move this creature into the Graveyard to stop a creature from Championing a Seal.", hasActivate: true, hasLimboAbility: true },

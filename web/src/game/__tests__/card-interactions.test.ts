@@ -2211,4 +2211,59 @@ describe('Desire – seal influence', () => {
       expect.objectContaining({ decisionContext: 'LUST_SEAL_INFLUENCE' })
     );
   });
+
+  describe('Remiel and Varg Fur-back rules and allocation checks', () => {
+    it('Remiel reveals and nullifies face-down opponent when flipping', async () => {
+      const mock = createMockControllerForLust(Alignment.LIGHT);
+      mock.state.currentPhase = Phase.RESOLUTION;
+      const remiel = createMockCard({
+        name: 'Remiel',
+        faction: 'Celestial',
+        power: 2,
+        isEnemy: false,
+        faceUp: false,
+        hasNullify: true
+      }) as unknown as CardEntity;
+      const opponent = createMockCard({
+        name: 'Tarkidos',
+        faction: 'Avatars of light',
+        power: 9,
+        isEnemy: true,
+        faceUp: false
+      }) as unknown as CardEntity;
+
+      mock.playerBattlefield[0] = remiel;
+      mock.enemyBattlefield[0] = opponent;
+
+      const p = mock.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(opponent.data.faceUp).toBe(true);
+      expect(opponent.data.isSuppressed).toBe(true);
+      expect(mock.addLog).toHaveBeenCalledWith(expect.stringContaining('Remiel reveals and nullifies Tarkidos'));
+    });
+
+    it('Varg Fur-back does not trigger allocateCounters when already faceUp (not flipping)', async () => {
+      const mock = createMockControllerForLust(Alignment.LIGHT);
+      mock.state.currentPhase = Phase.RESOLUTION;
+      const varg = createMockCard({
+        name: 'Varg Fur-back',
+        faction: 'Lycan',
+        power: 3,
+        isEnemy: false,
+        faceUp: true,
+        needsAllocation: true,
+        hasActivate: true
+      }) as unknown as CardEntity;
+
+      mock.playerBattlefield[0] = varg;
+
+      const p = mock.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+
+      expect(mock.allocateCounters).not.toHaveBeenCalled();
+    });
+  });
 });

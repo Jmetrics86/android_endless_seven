@@ -441,18 +441,23 @@ export class PhaseManager {
       let opponent: CardEntity | null = null;
       let isFlipping = false;
 
+      let opponentFlipping = false;
+
       if (side === 'player') {
         current = pCard;
         opponent = eCard;
         isFlipping = pFlipping;
+        opponentFlipping = eFlipping;
       } else if (side === 'enemy') {
         current = eCard;
         opponent = pCard;
         isFlipping = eFlipping;
+        opponentFlipping = pFlipping;
       } else {
         current = seal.champion;
         opponent = current?.data.isEnemy ? pCard : eCard;
         isFlipping = false;
+        opponentFlipping = current?.data.isEnemy ? pFlipping : eFlipping;
       }
 
       if (!current || current.data.isSuppressed) continue;
@@ -479,13 +484,13 @@ export class PhaseManager {
 
       // Nullify
       if (current.data.hasNullify) {
-        if (opponent && !opponent.data.faceUp && !this.controller.abilityManager.isImmuneToAbilities(opponent, current)) {
+        if (opponent && opponentFlipping && !this.controller.abilityManager.isImmuneToAbilities(opponent, current)) {
           opponent.data.faceUp = true;
           opponent.data.isSuppressed = true;
           opponent.updateVisualMarkers();
           this.controller.addLog(`${current.data.name} reveals and nullifies ${opponent.data.name}`);
           gsap.to(opponent.mesh.rotation, { x: 0, duration: 0.5 });
-        } else if (opponent && opponent.data.faceUp) {
+        } else if (opponent && !opponentFlipping) {
           this.controller.addLog(`${current.data.name}'s nullify fails: ${opponent.data.name} is already revealed.`);
         } else if (opponent) {
           this.controller.addLog(`${opponent.data.name} is immune to ${current.data.name}'s nullify`);
@@ -753,7 +758,7 @@ export class PhaseManager {
         this.controller.addLog(`${current.data.name} places -2 Weakness per Graveborn (${gravebornCount}) on each enemy creature (${amount} total per creature).`);
       }
 
-      if (current.data.needsAllocation) {
+      if (current.data.needsAllocation && isFlipping) {
         await this.controller.allocateCounters(current, current.data.isEnemy);
         this.controller.abilityManager.syncBoardPresencePowerMarkers();
       }

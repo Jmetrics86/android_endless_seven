@@ -116,6 +116,9 @@ export class SceneManager {
 
   public dispose() {
     window.removeEventListener('resize', this.onResizeBound);
+    if (this.renderer.domElement.parentNode) {
+      this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+    }
     this.renderer.dispose();
   }
 }

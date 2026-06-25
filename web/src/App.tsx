@@ -32,7 +32,6 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
-  const [isSlowMode, setIsSlowMode] = useState(false);
 
   const LOG_RECENT_COUNT = 30;
   const displayLogs =
@@ -53,14 +52,18 @@ export default function App() {
   }, [displayLogs.length, isDrawerOpen]);
 
   useEffect(() => {
+    let gameInstance: GameController | null = null;
     if (containerRef.current && !gameRef.current) {
-      const game = new GameController(containerRef.current);
-      game.onStateChange = (state) => setGameState({ ...state });
-      gameRef.current = game;
+      gameInstance = new GameController(containerRef.current);
+      gameInstance.onStateChange = (state) => setGameState({ ...state });
+      gameRef.current = gameInstance;
     }
 
     return () => {
-      gameRef.current?.dispose();
+      if (gameInstance) {
+        gameInstance.dispose();
+        gameRef.current = null;
+      }
     };
   }, []);
 
@@ -68,10 +71,6 @@ export default function App() {
     document.documentElement.dataset.theme = environmentTheme;
     gameRef.current?.setEnvironmentTheme(environmentTheme);
   }, [environmentTheme]);
-
-  useEffect(() => {
-    gameRef.current?.setSlowMode(isSlowMode);
-  }, [isSlowMode]);
 
   const toggleEnvironmentTheme = () => {
     setEnvironmentTheme((prev) => {
@@ -263,21 +262,24 @@ export default function App() {
       {/* Flyout Drawer */}
       <AnimatePresence>
         {isDrawerOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-[2px]"
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,75vw)] bg-[#0a0a0c]/f5 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
-            >
+          <motion.div
+            key="drawer-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsDrawerOpen(false)}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-[2px]"
+          />
+        )}
+        {isDrawerOpen && (
+          <motion.div
+            key="drawer-content"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,75vw)] bg-[#0a0a0c]/f5 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
+          >
               <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-1.5">
                   <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">COMMAND CENTER</h2>
@@ -422,18 +424,10 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Theme Toggle & Slow Mode in Drawer Footer */}
+                {/* Theme Toggle & Version in Drawer Footer */}
                 <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-2">
                    <div className="flex items-center justify-between">
-                     <label className="flex items-center gap-1.5 cursor-pointer text-[0.6rem] text-gray-500 hover:text-white transition-colors">
-                       <input
-                         type="checkbox"
-                         checked={isSlowMode}
-                         onChange={(e) => setIsSlowMode(e.target.checked)}
-                         className="rounded border-white/20 bg-black/50 text-[#00f2ff] focus:ring-0 focus:ring-offset-0 w-3 h-3"
-                       />
-                       <span>🐢 Slow Play Mode</span>
-                     </label>
+                     <span className="text-[0.6rem] text-gray-500 font-medium">🐢 Slow Play Mode Active</span>
                      <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
                    </div>
                    <div className="flex items-center justify-between">
@@ -444,7 +438,6 @@ export default function App() {
                 </div>
               </div>
             </motion.div>
-          </>
         )}
       </AnimatePresence>
 
@@ -452,6 +445,7 @@ export default function App() {
       <AnimatePresence>
         {showSelection && (
           <motion.div
+            key="selection-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -486,6 +480,7 @@ export default function App() {
       <AnimatePresence>
         {(gameState?.draggingCard || (gameState?.hoveredCard && !isDrawerOpen)) && (
           <motion.div
+            key="hover-drag-preview"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
@@ -500,6 +495,7 @@ export default function App() {
       <AnimatePresence>
         {gameState?.currentPhase === Phase.GAME_OVER && (
           <motion.div
+            key="game-over-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="fixed inset-0 z-[200] flex flex-col bg-black/95 backdrop-blur-md p-6 overflow-y-auto"
@@ -548,6 +544,7 @@ export default function App() {
       <AnimatePresence>
         {gameState && zoneSearchModal && (
           <ZoneSearchModal
+            key="zone-search-modal"
             zone={zoneSearchModal}
             playerCards={
               zoneSearchModal === 'limbo' ? (gameState.playerLimboCards ?? [])
@@ -571,20 +568,15 @@ export default function App() {
 
       {/* Combat/Interaction Interstitial Overlay */}
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && (() => {
-          const isInteractive = !!(
-            gameState.currentPhase === Phase.COUNTER_ALLOCATION ||
-            gameState.currentPhase === Phase.ABILITY_TARGETING ||
-            gameState.currentPhase === Phase.SEAL_TARGETING ||
-            gameState.currentPhase === Phase.DELTA_BUFF_TARGETING ||
-            gameState.decisionContext
-          );
-
-          if (isInteractive) {
-            // Interactive mode: compact, floating, non-blocking top panel
-            return (
-              <motion.div
-                initial={{ opacity: 0, y: -50 }}
+        {gameState?.combatInterstitial?.active && (
+          (gameState.currentPhase === Phase.COUNTER_ALLOCATION ||
+           gameState.currentPhase === Phase.ABILITY_TARGETING ||
+           gameState.currentPhase === Phase.SEAL_TARGETING ||
+           gameState.currentPhase === Phase.DELTA_BUFF_TARGETING ||
+           gameState.decisionContext) ? (
+            <motion.div
+              key="combat-interstitial-interactive"
+              initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -50 }}
                 className="fixed top-4 left-4 right-4 z-[150] pointer-events-none flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[#00f2ff]/30 bg-black/90 backdrop-blur-sm text-white font-cinzel shadow-[0_0_20px_rgba(0,242,255,0.25)]"
@@ -687,12 +679,9 @@ export default function App() {
                   </button>
                 </div>
               </motion.div>
-            );
-          }
-
-          // Full-screen automatic resolution showcase mode
-          return (
+          ) : (
             <motion.div
+              key="combat-interstitial-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -869,8 +858,8 @@ export default function App() {
                 </button>
               </div>
             </motion.div>
-          );
-        })()}
+          )
+        )}
       </AnimatePresence>
 
       <style>{`
@@ -1111,6 +1100,7 @@ function ZoneSearchModal({
   onClose,
   onSelectLimboCard
 }: {
+  key?: string;
   zone: 'limbo' | 'graveyard' | 'deck';
   playerCards: HoveredCardInfo[];
   enemyCards: HoveredCardInfo[];

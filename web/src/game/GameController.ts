@@ -152,7 +152,7 @@ export class GameController implements IGameController {
       playerDeckCards: [],
       enemyDeckCards: [],
       combatInterstitial: null,
-      slowMode: false
+      slowMode: true
     };
 
     this.uiManager = new UIManager(initialState, (s) => {

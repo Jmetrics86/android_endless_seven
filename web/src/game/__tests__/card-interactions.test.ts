@@ -2280,4 +2280,137 @@ describe('Desire – seal influence', () => {
       expect(mock.allocateCounters).not.toHaveBeenCalled();
     });
   });
+
+  describe('Haste reveal and Flip ability trigger precedence', () => {
+    it('sets faceUp to true on defender during Haste Strike reveal', async () => {
+      const mockCtrl = createMockControllerForLust(Alignment.LIGHT);
+      mockCtrl.state.currentPhase = Phase.RESOLUTION;
+      
+      const attacker = createMockCard({
+        name: 'Samyaza',
+        power: 6,
+        hasHaste: true,
+        isEnemy: false,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      const defender = createMockCard({
+        name: 'Bogva',
+        power: 2,
+        isEnemy: true,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      mockCtrl.playerBattlefield[0] = attacker;
+      mockCtrl.enemyBattlefield[0] = defender;
+      
+      // Override handleBattle on mockCtrl to assert faceUp state before battle executes
+      mockCtrl.handleBattle = vi.fn((a, d, idx, isAgainstChamp) => {
+        expect(d.data.faceUp).toBe(true);
+        // Simulate battle destruction of defender
+        mockCtrl.destroyCard(d, true, idx, false, { cardName: a.data.name, cause: 'combat' });
+        return Promise.resolve(false);
+      });
+      
+      const p = mockCtrl.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+      
+      expect(mockCtrl.handleBattle).toHaveBeenCalled();
+      expect(mockCtrl.enemyBattlefield[0]).toBeNull(); // Bogva should be destroyed
+    });
+
+    it('triggers defender Flip ability if defender survives Haste Strike', async () => {
+      const mockCtrl = createMockControllerForLust(Alignment.LIGHT);
+      mockCtrl.state.currentPhase = Phase.RESOLUTION;
+      
+      const attacker = createMockCard({
+        name: 'Valerius Nightshade', // Haste
+        power: 2,
+        hasHaste: true,
+        isEnemy: false,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      const defender = createMockCard({
+        name: 'Bogva', // Flip: -1 Weakness on enemy creatures
+        power: 6,
+        isEnemy: true,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      const helperAlly = createMockCard({
+        name: 'Fledgeling',
+        power: 1,
+        isEnemy: false,
+        faceUp: true,
+        weaknessMarkers: 0
+      }) as unknown as CardEntity;
+      
+      mockCtrl.playerBattlefield[0] = attacker;
+      mockCtrl.playerBattlefield[1] = helperAlly;
+      mockCtrl.enemyBattlefield[0] = defender;
+      
+      mockCtrl.handleBattle = vi.fn((a, d, idx, isAgainstChamp) => {
+        // Attacker power 2 < defender power 6, attacker is destroyed, defender survives
+        mockCtrl.destroyCard(a, false, idx, false, { cardName: d.data.name, cause: 'combat' });
+        return Promise.resolve(false);
+      });
+      
+      const p = mockCtrl.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+      
+      expect(mockCtrl.playerBattlefield[0]).toBeNull(); // Attacker destroyed
+      expect(mockCtrl.enemyBattlefield[0]).toBe(defender); // Defender Bogva survived
+      // Bogva's Flip ability should trigger and place 1 weakness marker on helperAlly
+      expect(helperAlly.data.weaknessMarkers).toBe(1);
+    });
+
+    it('does not trigger defender Flip ability if defender is destroyed by Haste Strike', async () => {
+      const mockCtrl = createMockControllerForLust(Alignment.LIGHT);
+      mockCtrl.state.currentPhase = Phase.RESOLUTION;
+      
+      const attacker = createMockCard({
+        name: 'Samyaza',
+        power: 6,
+        hasHaste: true,
+        isEnemy: false,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      const defender = createMockCard({
+        name: 'Bogva', // Flip: -1 Weakness
+        power: 2,
+        isEnemy: true,
+        faceUp: false
+      }) as unknown as CardEntity;
+      
+      const helperAlly = createMockCard({
+        name: 'Fledgeling',
+        power: 1,
+        isEnemy: false,
+        faceUp: true,
+        weaknessMarkers: 0
+      }) as unknown as CardEntity;
+      
+      mockCtrl.playerBattlefield[0] = attacker;
+      mockCtrl.playerBattlefield[1] = helperAlly;
+      mockCtrl.enemyBattlefield[0] = defender;
+      
+      mockCtrl.handleBattle = vi.fn((a, d, idx, isAgainstChamp) => {
+        // Attacker power 6 > defender power 2, defender is destroyed
+        mockCtrl.destroyCard(d, true, idx, false, { cardName: a.data.name, cause: 'combat' });
+        return Promise.resolve(false);
+      });
+      
+      const p = mockCtrl.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+      
+      expect(mockCtrl.enemyBattlefield[0]).toBeNull(); // Defender Bogva destroyed
+      // Bogva's Flip ability should NOT trigger, so helperAlly has 0 weakness markers
+      expect(helperAlly.data.weaknessMarkers).toBe(0);
+    });
+  });
 });

@@ -307,6 +307,9 @@ export class PhaseManager {
     const rightCard = eCard || seal.champion;
     const hasCards = !!pCard || !!rightCard;
 
+    const pWasFaceDown = !!pCard && !pCard.data.faceUp;
+    const eWasFaceDown = !!eCard && !eCard.data.faceUp;
+
     if (hasCards) {
       this.refreshInterstitialCards(`Resolving Seal ${idx + 1}...`, 'idle');
       await this.delay(1200);
@@ -334,7 +337,11 @@ export class PhaseManager {
       const revealForCombat = async (...cards: (CardEntity | null | undefined)[]) => {
         const toReveal = cards.filter((c): c is CardEntity => !!c && !c.data.faceUp);
         if (toReveal.length === 0) return;
-        toReveal.forEach((c) => gsap.to(c.mesh.rotation, { x: 0, duration: 0.35 }));
+        toReveal.forEach((c) => {
+          gsap.to(c.mesh.rotation, { x: 0, duration: 0.35 });
+          c.data.faceUp = true;
+          c.updateVisualMarkers();
+        });
         await this.delay(420);
       };
 
@@ -359,29 +366,35 @@ export class PhaseManager {
 
     // Step A: The Flip
     this.controller.updateState({ phaseStep: "Step A: The Flip" });
-    const pFlipping = pCard && !pCard.data.faceUp;
-    const eFlipping = eCard && !eCard.data.faceUp;
+    const pNeedsFlipAnim = pCard && !pCard.data.faceUp;
+    const eNeedsFlipAnim = eCard && !eCard.data.faceUp;
     
-    if (pFlipping || eFlipping) {
+    if (pNeedsFlipAnim || eNeedsFlipAnim) {
       if (hasCards) {
         this.refreshInterstitialCards(
-          `Revealing face-down cards: ${pFlipping ? pCard.data.name : ''}${pFlipping && eFlipping ? ' and ' : ''}${eFlipping ? eCard.data.name : ''}.`,
+          `Revealing face-down cards: ${pNeedsFlipAnim ? pCard.data.name : ''}${pNeedsFlipAnim && eNeedsFlipAnim ? ' and ' : ''}${eNeedsFlipAnim ? eCard.data.name : ''}.`,
           'flip',
           {
-            leftGlow: pFlipping,
-            rightGlow: eFlipping
+            leftGlow: !!pNeedsFlipAnim,
+            rightGlow: !!eNeedsFlipAnim
           }
         );
       }
-      if (pFlipping) gsap.to(pCard.mesh.rotation, { x: 0, duration: 0.5 });
-      if (eFlipping) gsap.to(eCard.mesh.rotation, { x: 0, duration: 0.5 });
+      if (pNeedsFlipAnim) gsap.to(pCard.mesh.rotation, { x: 0, duration: 0.5 });
+      if (eNeedsFlipAnim) gsap.to(eCard.mesh.rotation, { x: 0, duration: 0.5 });
       await this.delay(1200);
     }
 
-    if (pCard) pCard.data.faceUp = true;
-    if (eCard) eCard.data.faceUp = true;
+    if (pCard) {
+      pCard.data.faceUp = true;
+      pCard.updateVisualMarkers();
+    }
+    if (eCard) {
+      eCard.data.faceUp = true;
+      eCard.updateVisualMarkers();
+    }
 
-    if (hasCards && (pFlipping || eFlipping)) {
+    if (hasCards && (pNeedsFlipAnim || eNeedsFlipAnim)) {
       this.refreshInterstitialCards("Cards are revealed!", 'flip', { leftGlow: false, rightGlow: false });
       await this.delay(1000);
     }
@@ -430,7 +443,7 @@ export class PhaseManager {
     if (pEff > eEff) executionOrder = ['player', 'enemy'];
     else if (eEff > pEff) executionOrder = ['enemy', 'player'];
     else {
-      executionOrder = preferEnemyFirstWhenFlipPowerTied(pCard, eCard, pFlipping, eFlipping)
+      executionOrder = preferEnemyFirstWhenFlipPowerTied(pCard, eCard, pWasFaceDown, eWasFaceDown)
         ? ['enemy', 'player']
         : ['player', 'enemy'];
     }
@@ -447,18 +460,18 @@ export class PhaseManager {
       if (side === 'player') {
         current = pCard;
         opponent = eCard;
-        isFlipping = pFlipping;
-        opponentFlipping = eFlipping;
+        isFlipping = pWasFaceDown;
+        opponentFlipping = eWasFaceDown;
       } else if (side === 'enemy') {
         current = eCard;
         opponent = pCard;
-        isFlipping = eFlipping;
-        opponentFlipping = pFlipping;
+        isFlipping = eWasFaceDown;
+        opponentFlipping = pWasFaceDown;
       } else {
         current = seal.champion;
         opponent = current?.data.isEnemy ? pCard : eCard;
         isFlipping = false;
-        opponentFlipping = current?.data.isEnemy ? pFlipping : eFlipping;
+        opponentFlipping = current?.data.isEnemy ? pWasFaceDown : eWasFaceDown;
       }
 
       if (!current || current.data.isSuppressed) continue;

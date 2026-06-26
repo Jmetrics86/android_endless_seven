@@ -86,9 +86,7 @@ export function pickBestEnemyWeaknessTarget(candidates: CardEntity[], seals: Sea
 export function pickChampionForLordAlaric(source: CardEntity, champions: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = champions.filter((c) => c.data.isEnemy !== source.data.isEnemy);
   if (foes.length > 0) return pickBestHarmTarget(source, foes, seals);
-  const allies = champions.filter((c) => c.data.isEnemy === source.data.isEnemy);
-  if (allies.length === 0) return null;
-  return allies.reduce((a, b) => (effectivePower(a) <= effectivePower(b) ? a : b));
+  return null;
 }
 
 // Sentinel -> Kaelo
@@ -100,35 +98,28 @@ export function pickLimboForKaelo(cards: CardEntity[]): CardEntity | null {
 // Sloth -> Bogva (has the destroy weakness target action now)
 export function pickBogvaDestroyTarget(source: CardEntity, validTargets: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = validTargets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-  const pool = foes.length > 0 ? foes : validTargets;
-  return pickBestHarmTarget(source, pool, seals);
+  if (foes.length === 0) return null;
+  return pickBestHarmTarget(source, foes, seals);
 }
 
 // Inevitable -> Noble The Great
 export function pickNobleTheGreatFollowUp(winner: CardEntity, board: CardEntity[], seals: SealEntity[]): CardEntity | null {
   const foes = board.filter((c) => c.data.isEnemy !== winner.data.isEnemy);
-  const pool = foes.length > 0 ? foes : board;
-  return pickBestHarmTarget(winner, pool, seals);
+  if (foes.length === 0) return null;
+  return pickBestHarmTarget(winner, foes, seals);
 }
 
 // Allotter -> Bella
 export function pickBellaTarget(source: CardEntity, withMarkers: CardEntity[], seals: SealEntity[]): CardEntity | null {
-  if (withMarkers.length === 0) return null;
-  const score = (t: CardEntity) => {
-    const vsOpponent = t.data.isEnemy !== source.data.isEnemy;
-    const markers = t.data.powerMarkers + t.data.weaknessMarkers;
-    return (vsOpponent ? 500 : 0) + markers * 20 + harmTargetScore(source, t, seals);
-  };
-  let best = withMarkers[0];
-  let bestS = score(best);
-  for (let i = 1; i < withMarkers.length; i++) {
-    const s = score(withMarkers[i]);
-    if (s > bestS) {
-      bestS = s;
-      best = withMarkers[i];
-    }
+  const alliesWithWeakness = withMarkers.filter(c => c.data.isEnemy === source.data.isEnemy && c.data.weaknessMarkers > 0);
+  if (alliesWithWeakness.length > 0) {
+    return alliesWithWeakness.reduce((a, b) => (allyPowerBuffScore(a, seals) >= allyPowerBuffScore(b, seals) ? a : b));
   }
-  return best;
+  const foesWithPower = withMarkers.filter(c => c.data.isEnemy !== source.data.isEnemy && c.data.powerMarkers > 0);
+  if (foesWithPower.length > 0) {
+    return foesWithPower.reduce((a, b) => (harmTargetScore(source, a, seals) >= harmTargetScore(source, b, seals) ? a : b));
+  }
+  return null;
 }
 
 export function pickSealForEnemySealAbility(

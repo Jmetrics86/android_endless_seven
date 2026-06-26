@@ -89,6 +89,7 @@ export class PhaseManager {
   }
 
   public async startPrepPhase() {
+    this.controller.currentResolvingSealIndex = -1;
     if (this.controller.isProcessing) return;
     
     // Attrition check

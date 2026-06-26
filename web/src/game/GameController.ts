@@ -698,8 +698,9 @@ export class GameController implements IGameController {
       (this as any).creatureTypeCallback = null;
     }
 
-    if (this.state.currentPhase !== Phase.PREP && this.state.currentPhase !== Phase.GAME_OVER) {
-      this.updateState({ currentPhase: Phase.RESOLUTION, instructionText: '' });
+    if (this.state.currentPhase !== Phase.GAME_OVER) {
+      const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+      this.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });
       if (this.currentResolvingSealIndex !== -1) this.zoomIn(this.currentResolvingSealIndex);
     }
 
@@ -1332,7 +1333,8 @@ export class GameController implements IGameController {
           this.abilityManager.applyAbilityEffect(card, this.pendingAbilityData);
           const phaseAfterEffect = this.state.currentPhase as Phase;
           if (phaseAfterEffect !== Phase.GAME_OVER) {
-            this.updateState({ currentPhase: Phase.RESOLUTION, instructionText: '', isSelectingLimboTarget: false });
+            const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+            this.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });
             if (this.currentResolvingSealIndex !== -1) this.zoomIn(this.currentResolvingSealIndex);
           }
           this.pendingAbilityData = null;
@@ -1350,7 +1352,8 @@ export class GameController implements IGameController {
           if (this.sealSelectionCallback) {
             this.sealSelectionCallback(seal.index);
             this.sealSelectionCallback = null;
-            this.updateState({ currentPhase: Phase.RESOLUTION });
+            const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+            this.updateState({ currentPhase: nextPhase });
             return;
           }
           if (!seal.champion) {
@@ -1364,7 +1367,8 @@ export class GameController implements IGameController {
             });
             const phaseAfterClaim = this.state.currentPhase as Phase;
             if (phaseAfterClaim !== Phase.GAME_OVER) {
-              this.updateState({ currentPhase: Phase.RESOLUTION, instructionText: '' });
+              const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+              this.updateState({ currentPhase: nextPhase, instructionText: '' });
               if (this.currentResolvingSealIndex !== -1) this.zoomIn(this.currentResolvingSealIndex);
             }
             if (this.resolutionCallback) this.resolutionCallback();

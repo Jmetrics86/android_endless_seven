@@ -33,7 +33,8 @@ import {
   pickBestEnemyWeaknessTarget,
   pickBestHarmTarget,
   harmTargetScore,
-  enemyWeaknessScore
+  enemyWeaknessScore,
+  allyPowerBuffScore
 } from './EnemyEasyAI';
 import gsap from 'gsap';
 
@@ -796,11 +797,12 @@ export class AbilityManager {
       const targets = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)]
         .filter(c => c !== null && (c as CardEntity).data.faceUp && (c as CardEntity).data.isChampion) as CardEntity[];
       if (isAI) {
-        if (targets.length > 0) {
-          const target = pickChampionForLordAlaric(source, targets, this.controller.seals);
+        const foes = targets.filter(t => t.data.isEnemy !== source.data.isEnemy);
+        if (foes.length > 0) {
+          const target = pickChampionForLordAlaric(source, foes, this.controller.seals);
           if (target) this.applyAbilityEffect(target, { source, effect: data.effect });
         } else {
-          this.controller.addLog(`${source.data.name} finds no Champion in play to place on deck.`);
+          this.controller.addLog(`${source.data.name} finds no Enemy Champion in play to place on deck.`);
         }
         return Promise.resolve();
       }
@@ -819,11 +821,12 @@ export class AbilityManager {
     if (data.targetType === 'champion_on_seal') {
       const targets = this.controller.seals.map(s => s.champion).filter(c => c !== null) as CardEntity[];
       if (isAI) {
-        if (targets.length > 0) {
-          const target = pickBestHarmTarget(source, targets, this.controller.seals);
+        const foes = targets.filter(t => t.data.isEnemy !== source.data.isEnemy);
+        if (foes.length > 0) {
+          const target = pickBestHarmTarget(source, foes, this.controller.seals);
           if (target) this.applyAbilityEffect(target, { source, effect: data.effect });
         } else {
-          this.controller.addLog(`${source.data.name} finds no Champion on a Seal to destroy.`);
+          this.controller.addLog(`${source.data.name} finds no Enemy Champion on a Seal to destroy.`);
         }
         return Promise.resolve();
       }
@@ -872,21 +875,20 @@ export class AbilityManager {
         return p >= sourcePower && !this.isImmuneToAbilities(c, source);
       });
       if (isAI) {
-        if (validTargets.length > 0) {
-          const foes = validTargets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-          const pool = foes.length > 0 ? foes : validTargets;
-          let target = pool[0];
+        const foes = validTargets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
+        if (foes.length > 0) {
+          let target = foes[0];
           let best = enemyWeaknessScore(target, this.controller.seals);
-          for (let i = 1; i < pool.length; i++) {
-            const sc = enemyWeaknessScore(pool[i], this.controller.seals);
+          for (let i = 1; i < foes.length; i++) {
+            const sc = enemyWeaknessScore(foes[i], this.controller.seals);
             if (sc > best) {
               best = sc;
-              target = pool[i];
+              target = foes[i];
             }
           }
           this.applyAbilityEffect(target, { source, effect: data.effect, markerWeakness: data.markerWeakness ?? 3 });
         } else {
-          this.controller.addLog(`${source.data.name} finds no creature with Power Value ≥ its own to affect.`);
+          this.controller.addLog(`${source.data.name} finds no enemy creature with Power Value ≥ its own to affect.`);
         }
         return Promise.resolve();
       }
@@ -920,27 +922,26 @@ export class AbilityManager {
           target = pickBestAllyPowerTarget(pool, seals);
         } else if (eff === 'place_weakness' || eff === 'destroy' || eff === 'return') {
           const foes = targets.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-          const pool = foes.length > 0 ? foes : targets;
-          target = pickBestHarmTarget(source, pool, seals);
+          if (foes.length > 0) {
+            target = pickBestHarmTarget(source, foes, seals);
+          }
         } else if (eff === 'destroy_marker') {
-          const withPm = targets.filter((t) => t.data.powerMarkers > 0);
-          const withWm = targets.filter((t) => t.data.weaknessMarkers > 0);
-          const foePm = withPm.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-          const foeWm = withWm.filter((t) => t.data.isEnemy !== source.data.isEnemy);
-          if (foePm.length > 0) {
-            target = foePm.reduce((a, b) => (harmTargetScore(source, a, seals) + a.data.powerMarkers * 5 >= harmTargetScore(source, b, seals) + b.data.powerMarkers * 5 ? a : b));
-          } else if (foeWm.length > 0) {
-            target = foeWm.reduce((a, b) => (a.data.weaknessMarkers >= b.data.weaknessMarkers ? a : b));
-          } else if (withPm.length > 0) {
-            target = withPm.reduce((a, b) => (a.data.powerMarkers >= b.data.powerMarkers ? a : b));
-          } else if (withWm.length > 0) {
-            target = withWm[0];
+          const alliesWithWm = targets.filter(t => t.data.isEnemy === source.data.isEnemy && t.data.weaknessMarkers > 0);
+          const foesWithPm = targets.filter(t => t.data.isEnemy !== source.data.isEnemy && t.data.powerMarkers > 0);
+          if (alliesWithWm.length > 0) {
+            target = alliesWithWm.reduce((a, b) => (allyPowerBuffScore(a, seals) >= allyPowerBuffScore(b, seals) ? a : b));
+          } else if (foesWithPm.length > 0) {
+            target = foesWithPm.reduce((a, b) => (harmTargetScore(source, a, seals) >= harmTargetScore(source, b, seals) ? a : b));
           }
         } else {
           target = targets[0];
         }
         if (target) {
           this.applyAbilityEffect(target, { source, effect: data.effect, markerWeakness: source.data.markerWeakness });
+        } else if (eff === 'place_weakness' || eff === 'destroy' || eff === 'return') {
+          this.controller.addLog(`${source.data.name} finds no valid enemy target to ${eff}.`);
+        } else if (eff === 'destroy_marker') {
+          this.controller.addLog(`${source.data.name} finds no markers to destroy logically.`);
         }
       } else if (data.effect === 'place_weakness') {
         this.controller.addLog(`${source.data.name} finds no valid creature to place Weakness on.`);

@@ -11,6 +11,7 @@ import type { CardData } from '../../types';
 import { AbilityManager } from '../AbilityManager';
 import type { CardEntity } from '../../entities/CardEntity';
 import type { IGameController } from '../interfaces';
+import { pickBellaTarget } from '../EnemyEasyAI';
 
 vi.mock('gsap', () => ({
   default: {
@@ -234,12 +235,76 @@ describe('Enemy AI ownership', () => {
     });
     const playerHigh = card({ name: 'PlayerLimboBig', power: 9, isEnemy: false });
     const enemyLow = card({ name: 'EnemyLimboSmall', power: 2, isEnemy: true });
-    ctrl.playerLimbo.push(playerHigh);
-    ctrl.enemyLimbo.push(enemyLow);
+    ctrl.playerLimbo.push(playerHigh as unknown as CardEntity);
+    ctrl.enemyLimbo.push(enemyLow as unknown as CardEntity);
 
     await ctrl.abilityManager.handleTargetedAbility(sentinel as unknown as CardEntity, true);
 
     expect(sentinel.data.powerMarkers).toBe(2);
+  });
+
+  it('Lord Alaric AI does not target own champion if no enemy champion exists', async () => {
+    const alaric = card({
+      name: 'Lord Alaric',
+      power: 7,
+      isEnemy: true,
+      isChampion: true,
+      hasTargetedAbility: true,
+      effect: 'return',
+      targetType: 'champion',
+    });
+    ctrl.seals[0].champion = alaric as unknown as CardEntity;
+
+    await ctrl.abilityManager.handleTargetedAbility(alaric as unknown as CardEntity, true);
+
+    expect(ctrl.seals[0].champion).toBe(alaric);
+  });
+
+  it('Zelus AI does not target own allies if no enemy meeting power criteria exists', async () => {
+    const zelus = card({
+      name: 'Zelus',
+      power: 3,
+      isEnemy: true,
+      hasTargetedAbility: true,
+      effect: 'place_weakness',
+      targetType: 'creature_power_gte',
+      markerWeakness: 3,
+    });
+    const ally = card({ name: 'AllyBig', power: 6, isEnemy: true });
+    ctrl.enemyBattlefield[0] = ally as unknown as CardEntity;
+
+    await ctrl.abilityManager.handleTargetedAbility(zelus as unknown as CardEntity, true);
+
+    expect(ally.data.weaknessMarkers).toBe(0);
+  });
+
+  it('Bella AI only destroys beneficial markers on foes or harmful markers on allies', async () => {
+    const bella = card({
+      name: 'Bella',
+      power: 9,
+      isEnemy: true,
+      isChampion: true,
+    });
+    const allyWithPower = card({ name: 'AllyPower', power: 5, isEnemy: true, powerMarkers: 2 });
+    const allyWithWeakness = card({ name: 'AllyWeakness', power: 5, isEnemy: true, weaknessMarkers: 2 });
+    const foeWithPower = card({ name: 'FoePower', power: 5, isEnemy: false, powerMarkers: 2 });
+    const foeWithWeakness = card({ name: 'FoeWeakness', power: 5, isEnemy: false, weaknessMarkers: 2 });
+
+    const withMarkers = [allyWithPower, allyWithWeakness, foeWithPower, foeWithWeakness] as unknown as CardEntity[];
+
+    // Priority 1: Should choose ally with weakness to help them
+    const t1 = pickBellaTarget(bella as unknown as CardEntity, withMarkers, ctrl.seals as any);
+    expect(t1).toBe(allyWithWeakness);
+
+    // Priority 2: If no allies with weakness, should choose foe with power to weaken them
+    const withMarkers2 = [allyWithPower, foeWithPower, foeWithWeakness] as unknown as CardEntity[];
+    const t2 = pickBellaTarget(bella as unknown as CardEntity, withMarkers2, ctrl.seals as any);
+    expect(t2).toBe(foeWithPower);
+
+    // If only bad options (ally with power, foe with weakness), should return null (do nothing)
+    const withMarkers3 = [allyWithPower, foeWithWeakness] as unknown as CardEntity[];
+    const t3 = pickBellaTarget(bella as unknown as CardEntity, withMarkers3, ctrl.seals as any);
+    expect(t3).toBeNull();
   });
 });
 

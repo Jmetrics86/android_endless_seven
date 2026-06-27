@@ -495,148 +495,164 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-3 md:p-8 text-white font-cinzel overflow-y-auto"
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md p-3 md:p-8 text-white font-cinzel overflow-y-auto"
           >
-            {/* Header with Seal Index and Step Status */}
-            <div className="text-center mb-2 max-w-2xl px-4">
+            {/* Header with Seal Index and Step Status (Fixed Height to avoid layout shifts) */}
+            <div className="text-center mb-2 max-w-2xl px-4 select-none shrink-0 h-14 md:h-20 flex flex-col justify-center items-center">
               <h2 className="text-[#00f2ff] text-[0.65rem] sm:text-xs md:text-base tracking-[0.25em] md:tracking-[0.3em] font-bold uppercase mb-0.5 md:mb-1">
                 SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION
               </h2>
-              <div className="h-0.5 w-24 md:w-48 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-1.5 md:mb-2" />
-              <p className="text-[0.65rem] sm:text-sm md:text-lg font-semibold tracking-wider text-gray-100 min-h-[1.5rem] md:min-h-[2rem] animate-pulse">
+              <div className="h-0.5 w-24 md:w-48 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-1 md:mb-1.5" />
+              <p className="text-[0.6rem] sm:text-sm md:text-lg font-semibold tracking-wider text-gray-100 truncate w-full animate-pulse leading-none">
                 {gameState.combatInterstitial.description}
               </p>
             </div>
 
-            {/* Side-by-Side Cards Display */}
-            <div className="flex flex-row items-center justify-center gap-2 sm:gap-4 md:gap-10 my-2 md:my-4 w-full max-w-5xl md:max-w-7xl px-2 md:px-8">
+            {/* Main Content Area (Side-by-Side Player vs Rival) */}
+            <div className="flex flex-row items-stretch justify-center gap-1.5 sm:gap-4 md:gap-10 my-2 w-full max-w-5xl px-2">
               
-              {/* Left Card Checklist (Desktop Only) */}
-              <div className="hidden md:block">
+              {/* Left Column (Player Side) */}
+              <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0 max-w-[160px] sm:max-w-[200px] md:max-w-none">
+                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold shrink-0">Player</div>
+                
+                {/* Left Card Container */}
+                <div className="shrink-0 flex items-center justify-center h-28 sm:h-36 md:h-[21rem]">
+                  {gameState.combatInterstitial.leftCard ? (
+                    <div
+                      className={`w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl shrink-0
+                        ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                        ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
+                        ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
+                      `}
+                    >
+                      <img
+                        src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
+                        alt={gameState.combatInterstitial.leftCard.name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                      {gameState.combatInterstitial.leftDamageFlash && (
+                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
+                      )}
+                      
+                      {/* Power/Weakness Markers Badges on Left Card */}
+                      <div className="absolute top-0.5 left-0.5 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
+                        {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
+                            ⚡+{gameState.combatInterstitial.leftCard.powerMarkers}
+                          </div>
+                        )}
+                        {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse leading-none">
+                            💀-{gameState.combatInterstitial.leftCard.weaknessMarkers}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Final Power Badge on Left Card */}
+                      {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
+                        <div className="absolute bottom-0.5 right-0.5 md:bottom-3 md:right-3 z-20 bg-black/95 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1 py-0.2 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.55rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono leading-none">
+                          {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.45rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest shrink-0">
+                      No Card
+                    </div>
+                  )}
+                </div>
+
+                {/* Left Card Info Header (Fixed Height to prevent shifts) */}
+                <div className="w-full text-center h-12 sm:h-16 flex flex-col justify-center items-center overflow-hidden select-none shrink-0">
+                  {gameState.combatInterstitial.leftCard && (
+                    <>
+                      <div className="text-[0.48rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate w-full px-1">
+                        {gameState.combatInterstitial.leftCard.name}
+                      </div>
+                      <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
+                    </>
+                  )}
+                </div>
+
+                {/* Left Rules Checklist (Visible on all screens now!) */}
                 <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
               </div>
 
-              {/* Left Card (Player Card) */}
-              <div className="flex flex-col items-center gap-1 md:gap-2">
-                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player</div>
-                {gameState.combatInterstitial.leftCard ? (
-                  <div
-                    className={`w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
-                      ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                      ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
-                      ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
-                    `}
-                  >
-                    <img
-                      src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
-                      alt={gameState.combatInterstitial.leftCard.name}
-                      className="w-full h-full object-cover object-center"
-                    />
-                    {gameState.combatInterstitial.leftDamageFlash && (
-                      <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
-                    )}
-                    
-                    {/* Power/Weakness Markers Badges on Left Card */}
-                    <div className="absolute top-1 left-1 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 md:gap-1 pointer-events-none">
-                      {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
-                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
-                          ⚡ +{gameState.combatInterstitial.leftCard.powerMarkers}
-                        </div>
+              {/* Center VS Column (Fixed Width & Height) */}
+              <div className="flex flex-col items-center justify-center shrink-0 self-center">
+                <span className="text-xs sm:text-base md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none">
+                  VS
+                </span>
+              </div>
+
+              {/* Right Column (Rival Side) */}
+              <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0 max-w-[160px] sm:max-w-[200px] md:max-w-none">
+                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold shrink-0">Rival</div>
+                
+                {/* Right Card Container */}
+                <div className="shrink-0 flex items-center justify-center h-28 sm:h-36 md:h-[21rem]">
+                  {gameState.combatInterstitial.rightCard ? (
+                    <div
+                      className={`w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl shrink-0
+                        ${(gameState.combatInterstitial.rightCard.name === 'Face Down Card') ? '' : ''}
+                        ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                        ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
+                        ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
+                      `}
+                    >
+                      <img
+                        src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
+                        alt={gameState.combatInterstitial.rightCard.name}
+                        className="w-full h-full object-cover object-center"
+                      />
+                      {gameState.combatInterstitial.rightDamageFlash && (
+                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
                       )}
-                      {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
-                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
-                          💀 -{gameState.combatInterstitial.leftCard.weaknessMarkers}
+                      
+                      {/* Power/Weakness Markers Badges on Right Card */}
+                      <div className="absolute top-0.5 left-0.5 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
+                        {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
+                            ⚡+{gameState.combatInterstitial.rightCard.powerMarkers}
+                          </div>
+                        )}
+                        {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
+                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse leading-none">
+                            💀-{gameState.combatInterstitial.rightCard.weaknessMarkers}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Final Power Badge on Right Card */}
+                      {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
+                        <div className="absolute bottom-0.5 right-0.5 md:bottom-3 md:right-3 z-20 bg-black/95 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1 py-0.2 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.55rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono leading-none">
+                          {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
                         </div>
                       )}
                     </div>
-
-                    {/* Final Power Badge on Left Card */}
-                    {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
-                      <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1.5 py-0.2 sm:px-2 sm:py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.6rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
-                        {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.5rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
-                    No Card
-                  </div>
-                )}
-                
-                {/* Name & Math/Power text under Left Card */}
-                {gameState.combatInterstitial.leftCard && (
-                  <div className="text-center min-h-0 flex flex-col items-center gap-0.5">
-                    <div className="text-[0.55rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate max-w-[100px] sm:max-w-[150px]">{gameState.combatInterstitial.leftCard.name}</div>
-                    <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
-                  </div>
-                )}
-              </div>
-
-              {/* Versus Divider */}
-              <div className="text-sm sm:text-base md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none">
-                VS
-              </div>
-
-              {/* Right Card (Enemy Card / Seal Champion) */}
-              <div className="flex flex-col items-center gap-1 md:gap-2">
-                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival</div>
-                {gameState.combatInterstitial.rightCard ? (
-                  <div
-                    className={`w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
-                      ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                      ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
-                      ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
-                    `}
-                  >
-                    <img
-                      src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
-                      alt={gameState.combatInterstitial.rightCard.name}
-                      className="w-full h-full object-cover object-center"
-                    />
-                    {gameState.combatInterstitial.rightDamageFlash && (
-                      <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
-                    )}
-
-                    {/* Power/Weakness Markers Badges on Right Card */}
-                    <div className="absolute top-1 left-1 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 md:gap-1 pointer-events-none">
-                      {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
-                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
-                          ⚡ +{gameState.combatInterstitial.rightCard.powerMarkers}
-                        </div>
-                      )}
-                      {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
-                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
-                          💀 -{gameState.combatInterstitial.rightCard.weaknessMarkers}
-                        </div>
-                      )}
+                  ) : (
+                    <div className="w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.45rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest shrink-0">
+                      No Card
                     </div>
+                  )}
+                </div>
 
-                    {/* Final Power Badge on Right Card */}
-                    {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
-                      <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1.5 py-0.2 sm:px-2 sm:py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.6rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
-                        {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
+                {/* Right Card Info Header (Fixed Height to prevent shifts) */}
+                <div className="w-full text-center h-12 sm:h-16 flex flex-col justify-center items-center overflow-hidden select-none shrink-0">
+                  {gameState.combatInterstitial.rightCard && (
+                    <>
+                      <div className="text-[0.48rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate w-full px-1">
+                        {gameState.combatInterstitial.rightCard.name}
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.5rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
-                    No Card
-                  </div>
-                )}
-                
-                {/* Name & Math/Power text under Right Card */}
-                {gameState.combatInterstitial.rightCard && (
-                  <div className="text-center min-h-0 flex flex-col items-center gap-0.5">
-                    <div className="text-[0.55rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate max-w-[100px] sm:max-w-[150px]">{gameState.combatInterstitial.rightCard.name}</div>
-                    <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
-                  </div>
-                )}
-              </div>
+                      <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
+                    </>
+                  )}
+                </div>
 
-              {/* Right Card Checklist (Desktop Only) */}
-              <div className="hidden md:block">
+                {/* Right Rules Checklist (Visible on all screens now!) */}
                 <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
               </div>
+
             </div>
 
             {/* Step Indicators */}
@@ -901,58 +917,60 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
   };
 
   return (
-    <div className="flex flex-col gap-1.5 md:gap-2 p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm w-36 md:w-52 font-mono text-[0.5rem] md:text-xs uppercase tracking-wider text-left">
-      <div className="text-[0.52rem] md:text-xs font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5">
+    <div className="flex flex-col gap-1 p-1.5 md:p-3 bg-white/5 border border-white/10 rounded-lg md:rounded-xl backdrop-blur-sm w-full md:w-52 h-[105px] md:h-auto font-mono text-[0.45rem] md:text-xs uppercase tracking-wider text-left select-none shrink-0">
+      <div className="text-[0.48rem] md:text-xs font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5 shrink-0">
         {isLeft ? 'Player Rules' : 'Rival Rules'}
       </div>
-      {items.map((item) => {
-        let status: 'pending' | 'active' | 'done' | 'na' = 'pending';
-        if (step === item.activeStep) {
-          status = 'active';
-        } else if (item.prevSteps.includes(step)) {
-          status = 'done';
-        }
+      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 scrollbar-none">
+        {items.map((item) => {
+          let status: 'pending' | 'active' | 'done' | 'na' = 'pending';
+          if (step === item.activeStep) {
+            status = 'active';
+          } else if (item.prevSteps.includes(step)) {
+            status = 'done';
+          }
 
-        const hasHaste = card.ability?.toLowerCase().includes('haste') || card.hasHaste;
-        const hasFlip = card.ability?.toLowerCase().includes('flip') || card.hasNullify || card.hasLustSealEffect;
-        const hasActivate = card.ability?.toLowerCase().includes('activate') || card.hasActivate;
-        const cannotBattle = card.cannotBattleOrBeBattled;
+          const hasHaste = card.ability?.toLowerCase().includes('haste') || card.hasHaste;
+          const hasFlip = card.ability?.toLowerCase().includes('flip') || card.hasNullify || card.hasLustSealEffect;
+          const hasActivate = card.ability?.toLowerCase().includes('activate') || card.hasActivate;
+          const cannotBattle = card.cannotBattleOrBeBattled;
 
-        if (item.id === 'haste' && !hasHaste && status !== 'done') status = 'na';
-        if (item.id === 'flip' && !hasFlip && status !== 'done') status = 'na';
-        if (item.id === 'ability' && !hasActivate && status !== 'done') status = 'na';
-        if (item.id === 'combat' && cannotBattle && status !== 'done') status = 'na';
+          if (item.id === 'haste' && !hasHaste && status !== 'done') status = 'na';
+          if (item.id === 'flip' && !hasFlip && status !== 'done') status = 'na';
+          if (item.id === 'ability' && !hasActivate && status !== 'done') status = 'na';
+          if (item.id === 'combat' && cannotBattle && status !== 'done') status = 'na';
 
-        let icon = '○';
-        let textClass = 'text-gray-600';
-        if (status === 'active') {
-          icon = '●';
-          textClass = isLeft ? 'text-[#00f2ff] font-bold shadow-pulse' : 'text-[#ff0044] font-bold shadow-pulse';
-        } else if (status === 'done') {
-          icon = '✓';
-          textClass = 'text-green-500';
-        } else if (status === 'na') {
-          icon = '—';
-          textClass = 'line-through text-gray-700';
-        }
+          let icon = '○';
+          let textClass = 'text-gray-600';
+          if (status === 'active') {
+            icon = '●';
+            textClass = isLeft ? 'text-[#00f2ff] font-bold shadow-pulse' : 'text-[#ff0044] font-bold shadow-pulse';
+          } else if (status === 'done') {
+            icon = '✓';
+            textClass = 'text-green-500';
+          } else if (status === 'na') {
+            icon = '—';
+            textClass = 'line-through text-gray-700';
+          }
 
-        const detail = getStepDetail(card, item.id);
-        const isCurrentActive = status === 'active';
+          const detail = getStepDetail(card, item.id);
+          const isCurrentActive = status === 'active';
 
-        return (
-          <div key={item.id} className="flex flex-col gap-0.5">
-            <div className={`flex items-center gap-1 leading-none ${textClass}`}>
-              <span className="text-[0.55rem] md:text-xs font-bold w-2.5 md:w-3">{icon}</span>
-              <span>{item.label}</span>
-            </div>
-            {detail && isCurrentActive && (
-              <div className={`pl-3.5 md:pl-4 text-[0.45rem] md:text-[0.6rem] leading-tight font-sans normal-case ${isLeft ? 'text-[#00f2ff]/80' : 'text-[#ff0044]/80'}`}>
-                {detail}
+          return (
+            <div key={item.id} className="flex flex-col gap-0.5 shrink-0">
+              <div className={`flex items-center gap-1 leading-none ${textClass}`}>
+                <span className="text-[0.5rem] md:text-xs font-bold w-2 md:w-3">{icon}</span>
+                <span>{item.label}</span>
               </div>
-            )}
-          </div>
-        );
-      })}
+              {detail && isCurrentActive && (
+                <div className={`pl-2.5 md:pl-4 text-[0.43rem] md:text-[0.6rem] leading-tight font-sans normal-case ${isLeft ? 'text-[#00f2ff]/80' : 'text-[#ff0044]/80'}`}>
+                  {detail}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

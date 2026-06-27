@@ -13,8 +13,8 @@ android {
         applicationId = "com.endlessseven.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 23
-        versionName = "0.0.23"
+        versionCode = 24
+        versionName = "0.0.24"
     }
 
     buildTypes {

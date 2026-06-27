@@ -2258,6 +2258,48 @@ describe('Desire – seal influence', () => {
       expect(mock.addLog).toHaveBeenCalledWith(expect.stringContaining('Remiel reveals and nullifies Tarkidos'));
     });
 
+    it('Remiel nullifies higher power opponent (e.g. Duke Aren Drakos) before that opponent triggers its flip ability', async () => {
+      const mock = createMockControllerForLust(Alignment.LIGHT);
+      mock.state.currentPhase = Phase.RESOLUTION;
+      
+      const remiel = createMockCard({
+        name: 'Remiel',
+        faction: 'Celestial',
+        power: 2,
+        isEnemy: false,
+        faceUp: false,
+        hasNullify: true
+      }) as unknown as CardEntity;
+      
+      const duke = createMockCard({
+        name: 'Duke Aren Drakos',
+        faction: 'Vampyre',
+        power: 6,
+        isEnemy: true,
+        faceUp: false,
+        hasTargetedAbility: true,
+        effect: 'return',
+        targetType: 'creature'
+      }) as unknown as CardEntity;
+
+      mock.playerBattlefield[0] = remiel;
+      mock.enemyBattlefield[0] = duke;
+
+      const p = mock.phaseManager.resolveSeal(0);
+      await vi.runAllTimersAsync();
+      await p;
+
+      // Duke should be suppressed before his flip triggers, meaning he does not activate his ability
+      expect(duke.data.faceUp).toBe(true);
+      expect(duke.data.isSuppressed).toBe(true);
+      expect(mock.addLog).toHaveBeenCalledWith(expect.stringContaining('Remiel reveals and nullifies Duke Aren Drakos'));
+      
+      // Duke's targeted return ability should NOT have been called
+      expect(mock.handleTargetedAbility).not.toHaveBeenCalled();
+      // Remiel should still be on the battlefield
+      expect(mock.playerBattlefield[0]).toBe(remiel);
+    });
+
     it('Varg Fur-back does not trigger allocateCounters when already faceUp (not flipping)', async () => {
       const mock = createMockControllerForLust(Alignment.LIGHT);
       mock.state.currentPhase = Phase.RESOLUTION;

@@ -440,9 +440,19 @@ export class PhaseManager {
     let eEff = eCard ? eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers : -999;
     
     let executionOrder: ('player' | 'enemy' | 'champion')[] = [];
-    if (pEff > eEff) executionOrder = ['player', 'enemy'];
-    else if (eEff > pEff) executionOrder = ['enemy', 'player'];
-    else {
+    
+    const pHasNullifyFlip = pCard && pWasFaceDown && pCard.data.hasNullify && !pCard.data.isSuppressed;
+    const eHasNullifyFlip = eCard && eWasFaceDown && eCard.data.hasNullify && !eCard.data.isSuppressed;
+
+    if (pHasNullifyFlip && !eHasNullifyFlip) {
+      executionOrder = ['player', 'enemy'];
+    } else if (eHasNullifyFlip && !pHasNullifyFlip) {
+      executionOrder = ['enemy', 'player'];
+    } else if (pEff > eEff) {
+      executionOrder = ['player', 'enemy'];
+    } else if (eEff > pEff) {
+      executionOrder = ['enemy', 'player'];
+    } else {
       executionOrder = preferEnemyFirstWhenFlipPowerTied(pCard, eCard, pWasFaceDown, eWasFaceDown)
         ? ['enemy', 'player']
         : ['player', 'enemy'];

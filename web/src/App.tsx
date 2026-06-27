@@ -141,9 +141,9 @@ export default function App() {
 
       {/* Top Center Prompt / Instructions & Direct Actions */}
       {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-full max-w-md px-4 text-center">
+        <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-full max-w-md md:max-w-xl px-4 text-center">
           <div className="glass-panel px-4 py-2.5 rounded-xl border border-[#00f2ff]/30 bg-black/85 backdrop-blur-md shadow-[0_0_25px_rgba(0,242,255,0.2)] pointer-events-auto transition-all">
-            <p className="text-xs text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
+            <p className="text-xs md:text-sm text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
               {gameState.instructionText}
             </p>
 
@@ -278,7 +278,7 @@ export default function App() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,75vw)] bg-[#0a0a0c]/f5 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
+            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,75vw)] md:w-[340px] bg-[#0a0a0c]/f5 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
           >
               <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
                 <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-1.5">
@@ -579,14 +579,14 @@ export default function App() {
               initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -50 }}
-                className="fixed top-4 left-4 right-4 z-[150] pointer-events-none flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[#00f2ff]/30 bg-black/90 backdrop-blur-sm text-white font-cinzel shadow-[0_0_20px_rgba(0,242,255,0.25)]"
+                className="fixed top-4 left-4 right-4 md:top-6 md:left-8 md:right-8 z-[150] pointer-events-none flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-5 rounded-2xl border border-[#00f2ff]/30 bg-black/90 backdrop-blur-sm text-white font-cinzel shadow-[0_0_20px_rgba(0,242,255,0.25)]"
               >
                 {/* Floating Content (left side: text, right side: compact card view) */}
                 <div className="flex-1 pointer-events-auto">
-                  <h2 className="text-[#00f2ff] text-[0.65rem] tracking-[0.2em] font-bold uppercase mb-1">
+                  <h2 className="text-[#00f2ff] text-[0.65rem] md:text-xs tracking-[0.2em] font-bold uppercase mb-1">
                     SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION · ACTION REQUIRED
                   </h2>
-                  <p className="text-[0.75rem] font-semibold text-gray-200 leading-snug">
+                  <p className="text-[0.75rem] md:text-sm font-semibold text-gray-200 leading-snug">
                     {gameState.combatInterstitial.description}
                   </p>
                 </div>
@@ -597,7 +597,7 @@ export default function App() {
                     {/* Left Card */}
                     {gameState.combatInterstitial.leftCard && (
                       <div
-                        className={`w-12 h-18 rounded border border-white/20 overflow-hidden relative flex flex-col
+                        className={`w-12 h-18 md:w-16 md:h-24 rounded border border-white/20 overflow-hidden relative flex flex-col
                           ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
                           ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
                           ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
@@ -631,12 +631,12 @@ export default function App() {
                       </div>
                     )}
                     
-                    <span className="text-[0.55rem] text-gray-500 font-bold">VS</span>
+                    <span className="text-[0.55rem] md:text-xs text-gray-500 font-bold">VS</span>
 
                     {/* Right Card */}
                     {gameState.combatInterstitial.rightCard && (
                       <div
-                        className={`w-12 h-18 rounded border border-white/20 overflow-hidden relative flex flex-col
+                        className={`w-12 h-18 md:w-16 md:h-24 rounded border border-white/20 overflow-hidden relative flex flex-col
                           ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
                           ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
                           ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
@@ -673,7 +673,7 @@ export default function App() {
 
                   <button
                     onClick={handleForceSkip}
-                    className="px-3 py-1.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.55rem] uppercase tracking-wider hover:bg-[#ff0044]/10 transition-all font-bold pointer-events-auto"
+                    className="px-3 py-1.5 md:px-4 md:py-2 border border-[#ff0044]/30 text-[#ff0044] text-[0.55rem] md:text-xs uppercase tracking-wider hover:bg-[#ff0044]/10 transition-all font-bold pointer-events-auto"
                   >
                     Skip
                   </button>
@@ -685,21 +685,21 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 text-white font-cinzel"
+              className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-8 text-white font-cinzel"
             >
               {/* Header with Seal Index and Step Status */}
               <div className="text-center mb-3 max-w-2xl px-4">
-                <h2 className="text-[#00f2ff] text-xs tracking-[0.3em] font-bold uppercase mb-1">
+                <h2 className="text-[#00f2ff] text-xs md:text-base tracking-[0.3em] font-bold uppercase mb-1">
                   SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION
                 </h2>
-                <div className="h-0.5 w-32 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-2" />
-                <p className="text-sm font-semibold tracking-wider text-gray-100 min-h-[2rem] animate-pulse">
+                <div className="h-0.5 w-32 md:w-48 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-2" />
+                <p className="text-sm md:text-lg font-semibold tracking-wider text-gray-100 min-h-[2rem] animate-pulse">
                   {gameState.combatInterstitial.description}
                 </p>
               </div>
 
               {/* Side-by-Side Cards Display */}
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 my-2 w-full max-w-5xl px-4">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 my-2 md:my-4 w-full max-w-5xl md:max-w-7xl px-4 md:px-8">
                 
                 {/* Left Card Checklist (Desktop) */}
                 <div className="hidden md:block">
@@ -708,10 +708,10 @@ export default function App() {
 
                 {/* Left Card (Player Card) */}
                 <div className="flex flex-col items-center gap-2">
-                  <div className="text-[0.55rem] uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player Seal Guardian</div>
+                  <div className="text-[0.55rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player Seal Guardian</div>
                   {gameState.combatInterstitial.leftCard ? (
                     <div
-                      className={`w-36 h-54 rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                      className={`w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
                         ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
                         ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
                         ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
@@ -729,12 +729,12 @@ export default function App() {
                       {/* Power/Weakness Markers Badges on Left Card */}
                       <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
                         {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
                             ⚡ +{gameState.combatInterstitial.leftCard.powerMarkers}
                           </div>
                         )}
                         {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
                             💀 -{gameState.combatInterstitial.leftCard.weaknessMarkers}
                           </div>
                         )}
@@ -742,20 +742,20 @@ export default function App() {
 
                       {/* Final Power Badge on Left Card */}
                       {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-2 right-2 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 rounded-lg text-[0.8rem] font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                        <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 md:px-3 md:py-1 rounded-lg text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
                           {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
+                    <div className="w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
                       No Card
                     </div>
                   )}
                   {/* Math/Power text & Checklist under Left Card */}
                   {gameState.combatInterstitial.leftCard && (
                     <div className="text-center min-h-0 flex flex-col items-center gap-1">
-                      <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.leftCard.name}</div>
+                      <div className="text-[0.65rem] md:text-sm font-bold text-white tracking-widest">{gameState.combatInterstitial.leftCard.name}</div>
                       <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
                       {/* Mobile Checklist (hidden on desktop) */}
                       <div className="block md:hidden mt-1">
@@ -766,16 +766,16 @@ export default function App() {
                 </div>
 
                 {/* Versus Divider */}
-                <div className="text-lg font-bold italic text-gray-500 tracking-wider font-cinzel select-none md:my-0 my-1">
+                <div className="text-lg md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none md:my-0 my-1">
                   VS
                 </div>
 
                 {/* Right Card (Enemy Card / Seal Champion) */}
                 <div className="flex flex-col items-center gap-2">
-                  <div className="text-[0.55rem] uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival / Seal Champion</div>
+                  <div className="text-[0.55rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival / Seal Champion</div>
                   {gameState.combatInterstitial.rightCard ? (
                     <div
-                      className={`w-36 h-54 rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                      className={`w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
                         ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
                         ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
                         ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
@@ -793,12 +793,12 @@ export default function App() {
                       {/* Power/Weakness Markers Badges on Right Card */}
                       <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
                         {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
                             ⚡ +{gameState.combatInterstitial.rightCard.powerMarkers}
                           </div>
                         )}
                         {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
                             💀 -{gameState.combatInterstitial.rightCard.weaknessMarkers}
                           </div>
                         )}
@@ -806,20 +806,20 @@ export default function App() {
 
                       {/* Final Power Badge on Right Card */}
                       {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-2 right-2 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 rounded-lg text-[0.8rem] font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                        <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 md:px-3 md:py-1 rounded-lg text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
                           {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="w-36 h-54 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs text-gray-600 bg-white/5 uppercase tracking-widest">
+                    <div className="w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
                       No Card
                     </div>
                   )}
                   {/* Math/Power text & Checklist under Right Card */}
                   {gameState.combatInterstitial.rightCard && (
                     <div className="text-center min-h-0 flex flex-col items-center gap-1">
-                      <div className="text-[0.65rem] font-bold text-white tracking-widest">{gameState.combatInterstitial.rightCard.name}</div>
+                      <div className="text-[0.65rem] md:text-sm font-bold text-white tracking-widest">{gameState.combatInterstitial.rightCard.name}</div>
                       <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
                       {/* Mobile Checklist (hidden on desktop) */}
                       <div className="block md:hidden mt-1">
@@ -836,7 +836,7 @@ export default function App() {
               </div>
 
               {/* Step Indicators */}
-              <div className="flex items-center justify-center gap-2 my-3 text-[0.5rem] uppercase tracking-wider text-gray-500 font-mono">
+              <div className="flex items-center justify-center gap-2 md:gap-4 my-3 md:my-5 text-[0.5rem] md:text-xs uppercase tracking-wider text-gray-500 font-mono">
                 <span className={gameState.combatInterstitial.step === 'haste' ? 'text-[#ff5000] font-bold shadow-pulse' : ''}>Haste Step</span>
                 <span>•</span>
                 <span className={gameState.combatInterstitial.step === 'flip' ? 'text-[#00f2ff] font-bold shadow-pulse' : ''}>Flip Step</span>
@@ -852,7 +852,7 @@ export default function App() {
               <div className="flex gap-2">
                 <button
                   onClick={handleForceSkip}
-                  className="px-4 py-1.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.6rem] uppercase tracking-widest hover:bg-[#ff0044]/10 transition-all font-bold"
+                  className="px-4 py-1.5 md:px-6 md:py-2.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.6rem] md:text-sm uppercase tracking-widest hover:bg-[#ff0044]/10 transition-all font-bold"
                 >
                   Skip Interaction
                 </button>
@@ -966,7 +966,7 @@ export default function App() {
 function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; overrideText?: string }) {
   if (card.name === 'Face Down Card') {
     return (
-      <div className="mt-1 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] font-mono tracking-wide text-gray-400">
+      <div className="mt-1 px-3 py-1 md:px-4 md:py-1.5 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] md:text-xs font-mono tracking-wide text-gray-400">
         Power: ?
       </div>
     );
@@ -975,7 +975,7 @@ function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; ov
   // If there's an override text that is not a standard formula, we can show it (e.g. custom messages)
   if (overrideText && !overrideText.includes('Base')) {
     return (
-      <div className="mt-1 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] font-mono tracking-wide text-[#00f2ff] shadow-[0_0_10px_rgba(0,242,255,0.1)]">
+      <div className="mt-1 px-3 py-1 md:px-4 md:py-1.5 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] md:text-xs font-mono tracking-wide text-[#00f2ff] shadow-[0_0_10px_rgba(0,242,255,0.1)]">
         {overrideText}
       </div>
     );
@@ -987,7 +987,7 @@ function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; ov
   const total = base + buffs - weakness;
 
   return (
-    <div className="mt-1 px-2.5 py-1.5 bg-black/60 border border-white/10 rounded-xl text-[0.55rem] font-mono tracking-wide text-gray-300 shadow-md flex flex-col items-center gap-0.5 max-w-[155px]">
+    <div className="mt-1 px-2.5 py-1.5 md:px-3 md:py-2 bg-black/60 border border-white/10 rounded-xl text-[0.55rem] md:text-xs font-mono tracking-wide text-gray-300 shadow-md flex flex-col items-center gap-0.5 max-w-[155px] md:max-w-[220px]">
       <div className="flex items-center gap-0.5 flex-wrap justify-center text-gray-400 text-[0.52rem] leading-none">
         <span>{base}</span>
         <span className="text-gray-500 text-[0.45rem] mr-1">Base</span>
@@ -1007,8 +1007,8 @@ function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; ov
         )}
       </div>
       <div className="w-full h-[1px] bg-white/10 my-0.5" />
-      <div className="text-[0.6rem] font-bold text-white leading-none">
-        Total: <span className="text-[#00f2ff] font-extrabold text-[0.65rem]">{total}</span> Power
+      <div className="text-[0.6rem] md:text-sm font-bold text-white leading-none">
+        Total: <span className="text-[#00f2ff] font-extrabold text-[0.65rem] md:text-base">{total}</span> Power
       </div>
     </div>
   );
@@ -1025,9 +1025,81 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
     { id: 'done', label: 'Post-Combat / Ascension', activeStep: 'done', prevSteps: [] }
   ];
 
+  const getStepDetail = (card: any, itemId: string): string | null => {
+    const name = card.name;
+    const ability = card.ability || '';
+    const abilityLower = ability.toLowerCase();
+    
+    if (name === 'Face Down Card') return null;
+
+    switch (itemId) {
+      case 'haste':
+        if (abilityLower.includes('haste') || card.hasHaste || name === 'Fenris Lightfoot' || name === 'Zelus' || name === 'Lucian Blackwood' || name === 'Samyaza') {
+          if (name === 'Fenris Lightfoot') {
+            return '⚡ Fenris: Strikes immediately. Battles targets are destroyed at round end.';
+          }
+          return '⚡ Haste: Strikes immediately in Step 0 before Flip phase.';
+        }
+        return null;
+      case 'flip':
+        if (abilityLower.includes('flip:')) {
+          const flipIdx = abilityLower.indexOf('flip:');
+          const text = flipIdx !== -1 ? ability.slice(flipIdx + 5).trim() : ability;
+          return `✦ Flip: ${text}`;
+        }
+        if (card.hasNullify || name === 'Fallen One') {
+          return `✦ Flip: Nullifies opponent's Flip ability.`;
+        }
+        return null;
+      case 'ability':
+        if (abilityLower.includes('activate:')) {
+          const actIdx = abilityLower.indexOf('activate:');
+          const text = actIdx !== -1 ? ability.slice(actIdx + 9).trim() : ability;
+          return `✸ Activate: ${text}`;
+        }
+        return null;
+      case 'combat':
+        if (name === 'Sulvian Vane') {
+          return '⇄ Sulvian: Battled target is placed on top of owner\'s deck.';
+        }
+        if (name === 'Valerius Nightshade') {
+          return '⚡ Valerius: Steals 1 Power from opponent before damage calculation.';
+        }
+        if (name === 'Noble The Great') {
+          return '⚔ Noble: After winning battle, destroy another card or marker.';
+        }
+        if (card.cannotBattleOrBeBattled) {
+          return 'Cannot battle or be battled.';
+        }
+        return null;
+      case 'done':
+        if (name === 'Coal') {
+          return 'Graveyard: Discard from Limbo to block opponent ascension.';
+        }
+        if (name === 'Karlyah') {
+          return 'Graveyard: Discard from Limbo to give killer +3 Weakness.';
+        }
+        if (name === 'Tarkidos') {
+          return 'Graveyard: Discard from Limbo to Purify a Seal.';
+        }
+        if (name === 'Lucian Blackwood') {
+          return 'Gains +2 Power Markers on victory.';
+        }
+        if (name === 'Umbarax') {
+          return 'Gains +2 Power Markers per Graveborn on victory.';
+        }
+        if (card.isChampion || abilityLower.includes('champion.')) {
+          return '👑 Champion: Eligible to ascend and claim the Seal.';
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-1 p-2 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm w-36 font-mono text-[0.5rem] uppercase tracking-wider text-left">
-      <div className="text-[0.52rem] font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5">
+    <div className="flex flex-col gap-1.5 md:gap-2 p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm w-36 md:w-52 font-mono text-[0.5rem] md:text-xs uppercase tracking-wider text-left">
+      <div className="text-[0.52rem] md:text-xs font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5">
         {isLeft ? 'Player Rules' : 'Rival Rules'}
       </div>
       {items.map((item) => {
@@ -1061,10 +1133,20 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
           textClass = 'line-through text-gray-700';
         }
 
+        const detail = getStepDetail(card, item.id);
+        const isCurrentActive = status === 'active';
+
         return (
-          <div key={item.id} className={`flex items-center gap-1 leading-none ${textClass}`}>
-            <span className="text-[0.55rem] font-bold w-2.5">{icon}</span>
-            <span>{item.label}</span>
+          <div key={item.id} className="flex flex-col gap-0.5">
+            <div className={`flex items-center gap-1 leading-none ${textClass}`}>
+              <span className="text-[0.55rem] md:text-xs font-bold w-2.5 md:w-3">{icon}</span>
+              <span>{item.label}</span>
+            </div>
+            {detail && isCurrentActive && (
+              <div className={`pl-3.5 md:pl-4 text-[0.45rem] md:text-[0.6rem] leading-tight font-sans normal-case ${isLeft ? 'text-[#00f2ff]/80' : 'text-[#ff0044]/80'}`}>
+                {detail}
+              </div>
+            )}
           </div>
         );
       })}
@@ -1075,8 +1157,8 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
 function CardPreview({ card, size = 'large' }: { card: HoveredCardInfo, size?: 'small' | 'large' }) {
   const faceSrc = card.faceArtPath ? cardArtUrl(card.faceArtPath) : undefined;
 
-  const width = size === 'large' ? 'w-56' : 'w-44';
-  const height = size === 'large' ? 'h-84' : 'h-66';
+  const width = size === 'large' ? 'w-56 md:w-72' : 'w-44 md:w-56';
+  const height = size === 'large' ? 'h-84 md:h-[27rem]' : 'h-66 md:h-84';
 
   return (
     <div className={`${width} ${height} rounded-2xl overflow-hidden border-2 border-white/30 bg-black shadow-[0_0_25px_rgba(0,0,0,0.8),0_0_15px_rgba(0,242,255,0.15)] relative flex flex-col`}>

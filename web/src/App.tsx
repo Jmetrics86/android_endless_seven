@@ -124,14 +124,14 @@ export default function App() {
       {/* Three.js Container */}
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Drawer Toggle Button */}
+      {/* Tactical Control Toggle Button (Left Side) */}
       {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
         <button
           onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          className={`fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 min-w-12 rounded-full glass-panel border flex items-center justify-center transition-all active:scale-90 ${
+          className={`fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] z-[110] min-h-12 min-w-12 rounded-full glass-panel border flex items-center justify-center transition-all active:scale-90 ${
             isActionRequired && !isDrawerOpen ? 'border-[#00f2ff] shadow-[0_0_15px_rgba(0,242,255,0.5)] animate-pulse' : 'border-white/20 hover:border-[#00f2ff]/60'
           }`}
-          aria-label="Toggle Menu"
+          aria-label="Toggle Tactical Menu"
         >
           <span className={`text-2xl ${isActionRequired && !isDrawerOpen ? 'text-[#00f2ff]' : 'text-white'}`}>
             {isDrawerOpen ? '✕' : isActionRequired ? '!' : '☰'}
@@ -139,127 +139,7 @@ export default function App() {
         </button>
       )}
 
-      {/* Top Center Prompt / Instructions & Direct Actions */}
-      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-full max-w-md md:max-w-xl px-4 text-center">
-          <div className="glass-panel px-4 py-2.5 rounded-xl border border-[#00f2ff]/30 bg-black/85 backdrop-blur-md shadow-[0_0_25px_rgba(0,242,255,0.2)] pointer-events-auto transition-all">
-            <p className="text-xs md:text-sm text-[#00f2ff] font-semibold tracking-wide drop-shadow-md">
-              {gameState.instructionText}
-            </p>
-
-            {/* Preparation Actions */}
-            {gameState.currentPhase === Phase.PREP && (
-              <div className="flex gap-2 justify-center mt-2">
-                <button
-                  onClick={handlePrepBack}
-                  disabled={!gameRef.current?.canUndoPrep()}
-                  className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded disabled:opacity-30 disabled:pointer-events-none"
-                >
-                  Undo
-                </button>
-                <button
-                  onClick={handleEndPrep}
-                  className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/30 transition-all rounded shadow-[0_0_10px_rgba(0,242,255,0.15)]"
-                >
-                  End Prep
-                </button>
-              </div>
-            )}
-
-            {/* Counter Allocation Actions */}
-            {gameState.currentPhase === Phase.COUNTER_ALLOCATION && (
-              <div className="mt-2.5 flex flex-col gap-1.5 items-center">
-                <div className="flex gap-4 text-[0.55rem] uppercase tracking-wider font-mono">
-                  <span className="text-[#00f2ff] font-bold">Power Left: {gameState.powerPool}</span>
-                  <span className="text-[#ff0044] font-bold">Weakness Left: {gameState.weaknessPool}</span>
-                </div>
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={handleFinishCounters}
-                    className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded"
-                  >
-                    Skip / Reset
-                  </button>
-                  <button
-                    onClick={handleFinishCounters}
-                    className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/30 transition-all rounded shadow-[0_0_10px_rgba(0,242,255,0.15)]"
-                  >
-                    Confirm
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Decision Actions */}
-            {gameState.decisionContext && (
-              <div className="flex gap-2 justify-center mt-2.5">
-                {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
-                  <>
-                    <button
-                      onClick={() => handleMarkerTypeChoice('power')}
-                      className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/35 transition-all rounded"
-                    >
-                      Power (+1)
-                    </button>
-                    <button
-                      onClick={() => handleMarkerTypeChoice('weakness')}
-                      className="px-3 py-1 bg-[#ff0044]/20 border border-[#ff0044]/50 text-[#ff0044] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#ff0044]/35 transition-all rounded"
-                    >
-                      Weakness (-1)
-                    </button>
-                  </>
-                ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
-                  <>
-                    <button
-                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)}
-                      className="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-amber-500/35 transition-all rounded"
-                    >
-                      Light
-                    </button>
-                    <button
-                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)}
-                      className="px-3 py-1 bg-purple-500/20 border border-purple-500/50 text-purple-300 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-purple-500/35 transition-all rounded"
-                    >
-                      Dark
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => handleDecision(true)}
-                      className="px-3 py-1 bg-[#00f2ff]/20 border border-[#00f2ff]/50 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-wider hover:bg-[#00f2ff]/35 transition-all rounded"
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => handleDecision(false)}
-                      className="px-3 py-1 bg-white/5 border border-white/10 text-gray-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-white/10 transition-all rounded"
-                    >
-                      Skip
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Targeting Phase Actions */}
-            {(gameState.currentPhase === Phase.ABILITY_TARGETING ||
-              gameState.currentPhase === Phase.SEAL_TARGETING ||
-              gameState.currentPhase === Phase.DELTA_BUFF_TARGETING) && (
-              <div className="flex justify-center mt-2">
-                <button
-                  onClick={handleForceSkip}
-                  className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[0.55rem] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all rounded"
-                >
-                  Pass / Skip Action
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Flyout Drawer */}
+      {/* Tactical Control Left Drawer */}
       <AnimatePresence>
         {isDrawerOpen && (
           <motion.div
@@ -274,170 +154,213 @@ export default function App() {
         {isDrawerOpen && (
           <motion.div
             key="drawer-content"
-            initial={{ x: '100%' }}
+            initial={{ x: '-100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,75vw)] md:w-[340px] bg-[#0a0a0c]/f5 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
+            className="fixed left-0 top-0 bottom-0 z-[105] w-[min(280px,75vw)] md:w-[340px] bg-[#0a0a0c]/95 border-r border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
           >
-              <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
-                <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-1.5">
-                  <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">COMMAND CENTER</h2>
-                  <button onClick={() => setIsDrawerOpen(false)} className="text-white/60 hover:text-white p-1">✕</button>
-                </div>
+            <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-1.5">
+                <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">TACTICAL CONTROL</h2>
+                <button onClick={() => setIsDrawerOpen(false)} className="text-white/60 hover:text-white p-1">✕</button>
+              </div>
 
-                {/* Active Controls Section */}
-                <div className="mb-3 space-y-2">
-                  <div className="text-[0.5rem] text-gray-500 uppercase tracking-widest px-1">Tactical Status</div>
+              {/* Active Instructions / Objective */}
+              {isActionRequired && (
+                <div className="mb-3 glass-panel p-2.5 border border-[#00f2ff]/30 bg-[#00f2ff]/5 rounded-xl text-center space-y-1.5 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
+                  <div className="text-[0.5rem] text-[#00f2ff] font-extrabold uppercase tracking-widest animate-pulse">Tactical Objective</div>
+                  <div className="text-[0.6rem] text-gray-200 leading-normal font-sans">
+                    {gameState?.decisionMessage ?? gameState?.instructionText}
+                  </div>
 
-                  {/* Phase Control: Prep */}
-                  {gameState?.currentPhase === Phase.PREP && (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        onClick={handlePrepBack}
-                        disabled={!gameRef.current?.canUndoPrep()}
-                        className="drawer-btn-secondary py-1 text-[0.55rem] disabled:opacity-30"
-                      >
-                        Undo
-                      </button>
-                      <button onClick={handleEndPrep} className="drawer-btn-primary py-1 text-[0.55rem]">
-                        End Prep
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Phase Control: Counter Allocation */}
-                  {gameState?.currentPhase === Phase.COUNTER_ALLOCATION && (
-                    <div className="glass-panel p-2 border border-[#00f2ff]/30 space-y-2">
-                      <div className="flex justify-around items-center">
-                        <div className="text-center">
-                          <div className="text-[0.45rem] text-gray-500 uppercase">Power</div>
-                          <div className="text-base font-bold text-[#00f2ff]">{gameState.powerPool}</div>
+                  {/* Compact Combat Preview inside Action Box if combat is active */}
+                  {gameState?.combatInterstitial?.active && (
+                    <div className="flex items-center justify-center gap-1.5 bg-black/50 p-1.5 rounded-lg border border-white/5 mt-1 select-none">
+                      {/* Compact Left Card */}
+                      {gameState.combatInterstitial.leftCard && (
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-12 rounded border border-white/10 overflow-hidden relative">
+                            <img
+                              src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
+                              alt={gameState.combatInterstitial.leftCard.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="text-[0.4rem] text-gray-400 font-bold truncate max-w-[50px] leading-none mt-0.5">{gameState.combatInterstitial.leftCard.name}</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-[0.45rem] text-gray-500 uppercase">Weakness</div>
-                          <div className="text-base font-bold text-[#ff0044]">{gameState.weaknessPool}</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button onClick={handleFinishCounters} className="drawer-btn-secondary py-1 text-[0.55rem]">
-                          Skip
-                        </button>
-                        <button onClick={handleFinishCounters} className="drawer-btn-primary py-1 text-[0.55rem] font-bold">
-                          Confirm
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Decision Controls */}
-                  {gameState?.decisionContext && (
-                    <div className="glass-panel p-2 border border-amber-500/30 space-y-1.5 text-center">
-                      <div className="text-[0.5rem] text-amber-500 font-bold uppercase tracking-widest">
-                        {gameState.decisionContext.replace('_', ' ')}
-                      </div>
-                      <div className="text-[0.55rem] text-gray-300 leading-tight">
-                        {gameState.decisionMessage ?? gameState.instructionText}
-                      </div>
-
-                      {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
-                        <div className="flex gap-1">
-                           <button onClick={() => handleMarkerTypeChoice('power')} className="drawer-btn border-[#00f2ff] text-[#00f2ff] py-1 text-[0.5rem]">Power</button>
-                           <button onClick={() => handleMarkerTypeChoice('weakness')} className="drawer-btn border-[#ff0044] text-[#ff4466] py-1 text-[0.5rem]">Weakness</button>
-                        </div>
-                      ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
-                        <div className="flex gap-1">
-                           <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)} className="drawer-btn border-amber-400 text-amber-300 py-1 text-[0.5rem]">Light</button>
-                           <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)} className="drawer-btn border-purple-400 text-purple-300 py-1 text-[0.5rem]">Dark</button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-1">
-                           <button onClick={() => handleDecision(true)} className="drawer-btn border-[#00f2ff] text-[#00f2ff] py-1 text-[0.5rem]">Yes</button>
-                           <button onClick={() => handleDecision(false)} className="drawer-btn border-white/20 text-gray-400 py-1 text-[0.5rem]">Skip</button>
+                      )}
+                      <span className="text-[0.4rem] text-gray-600 font-bold">VS</span>
+                      {/* Compact Right Card */}
+                      {gameState.combatInterstitial.rightCard && (
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-12 rounded border border-white/10 overflow-hidden relative">
+                            <img
+                              src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
+                              alt={gameState.combatInterstitial.rightCard.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="text-[0.4rem] text-gray-400 font-bold truncate max-w-[50px] leading-none mt-0.5">{gameState.combatInterstitial.rightCard.name}</div>
                         </div>
                       )}
                     </div>
                   )}
-
-                  {/* Pass Button for Targeting Phases */}
-                  {(gameState?.currentPhase === Phase.ABILITY_TARGETING ||
-                    gameState?.currentPhase === Phase.SEAL_TARGETING ||
-                    gameState?.currentPhase === Phase.DELTA_BUFF_TARGETING) && (
-                    <button
-                      onClick={handleForceSkip}
-                      className="w-full py-1.5 border border-amber-500/20 bg-amber-500/5 text-amber-400 text-[0.55rem] uppercase tracking-widest font-bold rounded hover:bg-amber-500/10 transition-all"
-                    >
-                      Pass / Skip Action
-                    </button>
-                  )}
-
-                  {!isActionRequired && (
-                    <div className="text-center p-1.5 glass-panel border-white/5 italic text-[0.55rem] text-gray-500">
-                      Waiting for sequence...
-                    </div>
-                  )}
                 </div>
+              )}
 
-                {/* Scores & Details */}
-                <div className="space-y-1.5 mb-3">
+              {/* Active Controls Section */}
+              <div className="mb-3 space-y-2">
+                <div className="text-[0.5rem] text-gray-500 uppercase tracking-widest px-1">Tactical Status</div>
+
+                {/* Phase Control: Prep */}
+                {gameState?.currentPhase === Phase.PREP && (
                   <div className="grid grid-cols-2 gap-1.5">
-                    <div className="glass-panel px-2 py-1 border-l-2 border-[#ff0044] bg-white/[0.02]">
-                      <div className="text-[0.4rem] text-gray-500 uppercase">Enemy</div>
-                      <div className="text-sm font-bold leading-none">{gameState?.enemyScore} / 7</div>
-                    </div>
-                    <div className="glass-panel px-2 py-1 border-l-2 border-[#00f2ff] bg-white/[0.02]">
-                      <div className="text-[0.4rem] text-gray-500 uppercase">You</div>
-                      <div className="text-sm font-bold leading-none">{gameState?.playerScore} / 7</div>
-                    </div>
+                    <button
+                      onClick={handlePrepBack}
+                      disabled={!gameRef.current?.canUndoPrep()}
+                      className="drawer-btn-secondary py-1 text-[0.55rem] disabled:opacity-30"
+                    >
+                      Undo
+                    </button>
+                    <button onClick={handleEndPrep} className="drawer-btn-primary py-1 text-[0.55rem]">
+                      End Prep
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between px-2 py-1 glass-panel border-white/5 bg-white/[0.01]">
-                    <div className="text-center mr-2 border-r border-white/10 pr-2">
-                      <div className="text-[0.4rem] text-gray-500 uppercase leading-none">Rnd</div>
-                      <div className="text-xs font-bold text-white leading-none">{gameState?.currentRound}</div>
-                    </div>
-                    <div className="flex-1 min-w-0 overflow-hidden">
-                      <div className="text-[0.5rem] font-bold text-white uppercase truncate">{gameState?.currentPhase.replace('_', ' ')}</div>
-                      <div className="text-[0.4rem] text-[#00f2ff] uppercase truncate">{gameState?.phaseStep}</div>
-                    </div>
-                  </div>
-                </div>
+                )}
 
-                {/* Search Buttons */}
-                <div className="grid grid-cols-3 gap-1.5 mb-3">
-                   <button onClick={() => setZoneSearchModal('limbo')} className="drawer-btn-icon py-1" title="Limbo">L</button>
-                   <button onClick={() => setZoneSearchModal('graveyard')} className="drawer-btn-icon py-1" title="Graveyard">G</button>
-                   <button onClick={() => setZoneSearchModal('deck')} className="drawer-btn-icon py-1" title="Deck">D</button>
-                </div>
-
-                {/* Log */}
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="text-[0.5rem] text-gray-500 uppercase tracking-widest mb-1 px-1">Intel Log</div>
-                  <div ref={logScrollRef} className="flex-1 overflow-y-auto space-y-1 p-1.5 bg-black/30 rounded border border-white/5 font-mono text-[0.5rem] scrollbar-thin">
-                    {displayLogs.map((log, i) => (
-                      <div key={i} className="text-gray-400 border-l border-white/10 pl-1.5 leading-tight mb-1">
-                        <span className="text-[#00f2ff] mr-1">»</span>{log}
+                {/* Phase Control: Counter Allocation */}
+                {gameState?.currentPhase === Phase.COUNTER_ALLOCATION && (
+                  <div className="glass-panel p-2 border border-[#00f2ff]/30 space-y-2">
+                    <div className="flex justify-around items-center">
+                      <div className="text-center">
+                        <div className="text-[0.45rem] text-gray-500 uppercase">Power</div>
+                        <div className="text-base font-bold text-[#00f2ff]">{gameState.powerPool}</div>
                       </div>
-                    ))}
+                      <div className="text-center">
+                        <div className="text-[0.45rem] text-gray-500 uppercase">Weakness</div>
+                        <div className="text-base font-bold text-[#ff0044]">{gameState.weaknessPool}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button onClick={handleFinishCounters} className="drawer-btn-secondary py-1 text-[0.55rem]">
+                        Skip
+                      </button>
+                      <button onClick={handleFinishCounters} className="drawer-btn-primary py-1 text-[0.55rem] font-bold">
+                        Confirm
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={handleForceSkip} className="mt-2 w-full py-1 border border-[#ff0044]/30 text-[#ff0044] text-[0.5rem] uppercase tracking-tighter hover:bg-[#ff0044]/10 transition-all">
-                    Skip Current Interaction
-                  </button>
-                </div>
+                )}
 
-                {/* Theme Toggle & Version in Drawer Footer */}
-                <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-2">
-                   <div className="flex items-center justify-between">
-                     <span className="text-[0.6rem] text-gray-500 font-medium">🐢 Slow Play Mode Active</span>
-                     <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
-                   </div>
-                   <div className="flex items-center justify-between">
-                     <button onClick={toggleEnvironmentTheme} className="text-[0.6rem] text-gray-500 uppercase hover:text-white transition-colors">
-                       {environmentTheme === 'dark' ? '☀ Light Mode' : '☽ Dark Mode'}
-                     </button>
-                   </div>
+                {/* Decision Controls */}
+                {gameState?.decisionContext && (
+                  <div className="glass-panel p-2 border border-amber-500/30 space-y-1.5 text-center">
+                    <div className="text-[0.5rem] text-amber-500 font-bold uppercase tracking-widest">
+                      {gameState.decisionContext.replace('_', ' ')}
+                    </div>
+                    <div className="text-[0.55rem] text-gray-300 leading-tight">
+                      {gameState.decisionMessage ?? gameState.instructionText}
+                    </div>
+
+                    {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
+                      <div className="flex gap-1">
+                         <button onClick={() => handleMarkerTypeChoice('power')} className="drawer-btn border-[#00f2ff] text-[#00f2ff] py-1 text-[0.5rem]">Power</button>
+                         <button onClick={() => handleMarkerTypeChoice('weakness')} className="drawer-btn border-[#ff0044] text-[#ff4466] py-1 text-[0.5rem]">Weakness</button>
+                      </div>
+                    ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
+                      <div className="flex gap-1">
+                         <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)} className="drawer-btn border-amber-400 text-amber-300 py-1 text-[0.5rem]">Light</button>
+                         <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)} className="drawer-btn border-purple-400 text-purple-300 py-1 text-[0.5rem]">Dark</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                         <button onClick={() => handleDecision(true)} className="drawer-btn border-[#00f2ff] text-[#00f2ff] py-1 text-[0.5rem]">Yes</button>
+                         <button onClick={() => handleDecision(false)} className="drawer-btn border-white/20 text-gray-400 py-1 text-[0.5rem]">Skip</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pass Button for Targeting Phases */}
+                {(gameState?.currentPhase === Phase.ABILITY_TARGETING ||
+                  gameState?.currentPhase === Phase.SEAL_TARGETING ||
+                  gameState?.currentPhase === Phase.DELTA_BUFF_TARGETING) && (
+                  <button
+                    onClick={handleForceSkip}
+                    className="w-full py-1.5 border border-amber-500/20 bg-amber-500/5 text-amber-400 text-[0.55rem] uppercase tracking-widest font-bold rounded hover:bg-amber-500/10 transition-all"
+                  >
+                    Pass / Skip Action
+                  </button>
+                )}
+
+                {!isActionRequired && (
+                  <div className="text-center p-1.5 glass-panel border-white/5 italic text-[0.55rem] text-gray-500">
+                    Waiting for sequence...
+                  </div>
+                )}
+              </div>
+
+              {/* Scores & Details */}
+              <div className="space-y-1.5 mb-3">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="glass-panel px-2 py-1 border-l-2 border-[#ff0044] bg-white/[0.02]">
+                    <div className="text-[0.4rem] text-gray-500 uppercase">Enemy</div>
+                    <div className="text-sm font-bold leading-none">{gameState?.enemyScore} / 7</div>
+                  </div>
+                  <div className="glass-panel px-2 py-1 border-l-2 border-[#00f2ff] bg-white/[0.02]">
+                    <div className="text-[0.4rem] text-gray-500 uppercase">You</div>
+                    <div className="text-sm font-bold leading-none">{gameState?.playerScore} / 7</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 glass-panel border-white/5 bg-white/[0.01]">
+                  <div className="text-center mr-2 border-r border-white/10 pr-2">
+                    <div className="text-[0.4rem] text-gray-500 uppercase leading-none">Rnd</div>
+                    <div className="text-xs font-bold text-white leading-none">{gameState?.currentRound}</div>
+                  </div>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="text-[0.5rem] font-bold text-white uppercase truncate">{gameState?.currentPhase.replace('_', ' ')}</div>
+                    <div className="text-[0.4rem] text-[#00f2ff] uppercase truncate">{gameState?.phaseStep}</div>
+                  </div>
                 </div>
               </div>
-            </motion.div>
+
+              {/* Search Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 mb-3">
+                 <button onClick={() => setZoneSearchModal('limbo')} className="drawer-btn-icon py-1" title="Limbo">L</button>
+                 <button onClick={() => setZoneSearchModal('graveyard')} className="drawer-btn-icon py-1" title="Graveyard">G</button>
+                 <button onClick={() => setZoneSearchModal('deck')} className="drawer-btn-icon py-1" title="Deck">D</button>
+              </div>
+
+              {/* Log */}
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="text-[0.5rem] text-gray-500 uppercase tracking-widest mb-1 px-1">Intel Log</div>
+                <div ref={logScrollRef} className="flex-1 overflow-y-auto space-y-1 p-1.5 bg-black/30 rounded border border-white/5 font-mono text-[0.5rem] scrollbar-thin">
+                  {displayLogs.map((log, i) => (
+                    <div key={i} className="text-gray-400 border-l border-white/10 pl-1.5 leading-tight mb-1">
+                      <span className="text-[#00f2ff] mr-1">»</span>{log}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={handleForceSkip} className="mt-2 w-full py-1 border border-[#ff0044]/30 text-[#ff0044] text-[0.5rem] uppercase tracking-tighter hover:bg-[#ff0044]/10 transition-all">
+                  Skip Current Interaction
+                </button>
+              </div>
+
+              {/* Theme Toggle & Version in Drawer Footer */}
+              <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-2">
+                 <div className="flex items-center justify-between">
+                   <span className="text-[0.6rem] text-[#00f2ff] font-medium animate-pulse-subtle">🐢 Slow Play Mode Active</span>
+                   <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <button onClick={toggleEnvironmentTheme} className="text-[0.6rem] text-gray-500 uppercase hover:text-white transition-colors">
+                     {environmentTheme === 'dark' ? '☀ Light Mode' : '☽ Dark Mode'}
+                   </button>
+                 </div>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -559,306 +482,186 @@ export default function App() {
             isSelectingTarget={gameState.isSelectingLimboTarget === true && zoneSearchModal === 'limbo'}
             onClose={() => setZoneSearchModal(null)}
             onSelectLimboCard={(zone, index) => {
-              gameRef.current?.selectLimboCardForAbility(zone, index);
+gameRef.current?.selectLimboCardForAbility(zone, index);
               setZoneSearchModal(null);
             }}
           />
         )}
       </AnimatePresence>
-
-      {/* Combat/Interaction Interstitial Overlay */}
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && (
-          (gameState.currentPhase === Phase.COUNTER_ALLOCATION ||
-           gameState.currentPhase === Phase.ABILITY_TARGETING ||
-           gameState.currentPhase === Phase.SEAL_TARGETING ||
-           gameState.currentPhase === Phase.DELTA_BUFF_TARGETING ||
-           gameState.decisionContext) ? (
-            <motion.div
-              key="combat-interstitial-interactive"
-              initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -50 }}
-                className="fixed top-4 left-4 right-4 md:top-6 md:left-8 md:right-8 z-[150] pointer-events-none flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-5 rounded-2xl border border-[#00f2ff]/30 bg-black/90 backdrop-blur-sm text-white font-cinzel shadow-[0_0_20px_rgba(0,242,255,0.25)]"
-              >
-                {/* Floating Content (left side: text, right side: compact card view) */}
-                <div className="flex-1 pointer-events-auto">
-                  <h2 className="text-[#00f2ff] text-[0.65rem] md:text-xs tracking-[0.2em] font-bold uppercase mb-1">
-                    SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION · ACTION REQUIRED
-                  </h2>
-                  <p className="text-[0.75rem] md:text-sm font-semibold text-gray-200 leading-snug">
-                    {gameState.combatInterstitial.description}
-                  </p>
-                </div>
+        {gameState?.combatInterstitial?.active && !isActionRequired && (
+          <motion.div
+            key="combat-interstitial-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-3 md:p-8 text-white font-cinzel overflow-y-auto"
+          >
+            {/* Header with Seal Index and Step Status */}
+            <div className="text-center mb-2 max-w-2xl px-4">
+              <h2 className="text-[#00f2ff] text-[0.65rem] sm:text-xs md:text-base tracking-[0.25em] md:tracking-[0.3em] font-bold uppercase mb-0.5 md:mb-1">
+                SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION
+              </h2>
+              <div className="h-0.5 w-24 md:w-48 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-1.5 md:mb-2" />
+              <p className="text-[0.65rem] sm:text-sm md:text-lg font-semibold tracking-wider text-gray-100 min-h-[1.5rem] md:min-h-[2rem] animate-pulse">
+                {gameState.combatInterstitial.description}
+              </p>
+            </div>
 
-                <div className="flex items-center gap-4 pointer-events-auto">
-                  {/* Compact Side-by-Side Card Preview */}
-                  <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
-                    {/* Left Card */}
-                    {gameState.combatInterstitial.leftCard && (
-                      <div
-                        className={`w-12 h-18 md:w-16 md:h-24 rounded border border-white/20 overflow-hidden relative flex flex-col
-                          ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                          ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
-                          ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
-                        `}
-                      >
-                        <img
-                          src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
-                          alt={gameState.combatInterstitial.leftCard.name}
-                          className="w-full h-full object-cover object-center"
-                        />
-                        {/* Tiny Markers & Power Overlay for Interactive Mode */}
-                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-0.5">
-                          <div className="flex flex-col gap-0.5">
-                            {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
-                              <div className="bg-black/95 text-[#00f2ff] text-[0.4rem] font-bold px-0.5 rounded leading-none">
-                                +{gameState.combatInterstitial.leftCard.powerMarkers}
-                              </div>
-                            )}
-                            {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
-                              <div className="bg-black/95 text-[#ff0044] text-[0.4rem] font-bold px-0.5 rounded leading-none">
-                                -{gameState.combatInterstitial.leftCard.weaknessMarkers}
-                              </div>
-                            )}
-                          </div>
-                          {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
-                            <div className="self-end bg-black/95 text-[#00f2ff] text-[0.45rem] font-extrabold px-0.5 rounded leading-none border border-[#00f2ff]/30">
-                              {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+            {/* Side-by-Side Cards Display */}
+            <div className="flex flex-row items-center justify-center gap-2 sm:gap-4 md:gap-10 my-2 md:my-4 w-full max-w-5xl md:max-w-7xl px-2 md:px-8">
+              
+              {/* Left Card Checklist (Desktop Only) */}
+              <div className="hidden md:block">
+                <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
+              </div>
+
+              {/* Left Card (Player Card) */}
+              <div className="flex flex-col items-center gap-1 md:gap-2">
+                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player</div>
+                {gameState.combatInterstitial.leftCard ? (
+                  <div
+                    className={`w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                      ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                      ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
+                      ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
+                    `}
+                  >
+                    <img
+                      src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
+                      alt={gameState.combatInterstitial.leftCard.name}
+                      className="w-full h-full object-cover object-center"
+                    />
+                    {gameState.combatInterstitial.leftDamageFlash && (
+                      <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
                     )}
                     
-                    <span className="text-[0.55rem] md:text-xs text-gray-500 font-bold">VS</span>
-
-                    {/* Right Card */}
-                    {gameState.combatInterstitial.rightCard && (
-                      <div
-                        className={`w-12 h-18 md:w-16 md:h-24 rounded border border-white/20 overflow-hidden relative flex flex-col
-                          ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                          ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
-                          ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
-                        `}
-                      >
-                        <img
-                          src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
-                          alt={gameState.combatInterstitial.rightCard.name}
-                          className="w-full h-full object-cover object-center"
-                        />
-                        {/* Tiny Markers & Power Overlay for Interactive Mode */}
-                        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-0.5">
-                          <div className="flex flex-col gap-0.5">
-                            {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
-                              <div className="bg-black/95 text-[#00f2ff] text-[0.4rem] font-bold px-0.5 rounded leading-none">
-                                +{gameState.combatInterstitial.rightCard.powerMarkers}
-                              </div>
-                            )}
-                            {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
-                              <div className="bg-black/95 text-[#ff0044] text-[0.4rem] font-bold px-0.5 rounded leading-none">
-                                -{gameState.combatInterstitial.rightCard.weaknessMarkers}
-                              </div>
-                            )}
-                          </div>
-                          {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
-                            <div className="self-end bg-black/95 text-[#00f2ff] text-[0.45rem] font-extrabold px-0.5 rounded leading-none border border-[#00f2ff]/30">
-                              {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
-                            </div>
-                          )}
+                    {/* Power/Weakness Markers Badges on Left Card */}
+                    <div className="absolute top-1 left-1 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 md:gap-1 pointer-events-none">
+                      {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
+                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                          ⚡ +{gameState.combatInterstitial.leftCard.powerMarkers}
                         </div>
+                      )}
+                      {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
+                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                          💀 -{gameState.combatInterstitial.leftCard.weaknessMarkers}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Final Power Badge on Left Card */}
+                    {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
+                      <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1.5 py-0.2 sm:px-2 sm:py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.6rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                        {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
                       </div>
                     )}
                   </div>
-
-                  <button
-                    onClick={handleForceSkip}
-                    className="px-3 py-1.5 md:px-4 md:py-2 border border-[#ff0044]/30 text-[#ff0044] text-[0.55rem] md:text-xs uppercase tracking-wider hover:bg-[#ff0044]/10 transition-all font-bold pointer-events-auto"
-                  >
-                    Skip
-                  </button>
-                </div>
-              </motion.div>
-          ) : (
-            <motion.div
-              key="combat-interstitial-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 md:p-8 text-white font-cinzel"
-            >
-              {/* Header with Seal Index and Step Status */}
-              <div className="text-center mb-3 max-w-2xl px-4">
-                <h2 className="text-[#00f2ff] text-xs md:text-base tracking-[0.3em] font-bold uppercase mb-1">
-                  SEAL {gameState.combatInterstitial.sealIndex + 1} RESOLUTION
-                </h2>
-                <div className="h-0.5 w-32 md:w-48 bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent mx-auto mb-2" />
-                <p className="text-sm md:text-lg font-semibold tracking-wider text-gray-100 min-h-[2rem] animate-pulse">
-                  {gameState.combatInterstitial.description}
-                </p>
-              </div>
-
-              {/* Side-by-Side Cards Display */}
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 my-2 md:my-4 w-full max-w-5xl md:max-w-7xl px-4 md:px-8">
+                ) : (
+                  <div className="w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.5rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
+                    No Card
+                  </div>
+                )}
                 
-                {/* Left Card Checklist (Desktop) */}
-                <div className="hidden md:block">
-                  <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
-                </div>
+                {/* Name & Math/Power text under Left Card */}
+                {gameState.combatInterstitial.leftCard && (
+                  <div className="text-center min-h-0 flex flex-col items-center gap-0.5">
+                    <div className="text-[0.55rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate max-w-[100px] sm:max-w-[150px]">{gameState.combatInterstitial.leftCard.name}</div>
+                    <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
+                  </div>
+                )}
+              </div>
 
-                {/* Left Card (Player Card) */}
-                <div className="flex flex-col items-center gap-2">
-                  <div className="text-[0.55rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold">Player Seal Guardian</div>
-                  {gameState.combatInterstitial.leftCard ? (
-                    <div
-                      className={`w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
-                        ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                        ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
-                        ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
-                      `}
-                    >
-                      <img
-                        src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
-                        alt={gameState.combatInterstitial.leftCard.name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                      {gameState.combatInterstitial.leftDamageFlash && (
-                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
+              {/* Versus Divider */}
+              <div className="text-sm sm:text-base md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none">
+                VS
+              </div>
+
+              {/* Right Card (Enemy Card / Seal Champion) */}
+              <div className="flex flex-col items-center gap-1 md:gap-2">
+                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival</div>
+                {gameState.combatInterstitial.rightCard ? (
+                  <div
+                    className={`w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
+                      ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
+                      ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
+                      ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
+                    `}
+                  >
+                    <img
+                      src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
+                      alt={gameState.combatInterstitial.rightCard.name}
+                      className="w-full h-full object-cover object-center"
+                    />
+                    {gameState.combatInterstitial.rightDamageFlash && (
+                      <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
+                    )}
+
+                    {/* Power/Weakness Markers Badges on Right Card */}
+                    <div className="absolute top-1 left-1 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 md:gap-1 pointer-events-none">
+                      {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
+                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
+                          ⚡ +{gameState.combatInterstitial.rightCard.powerMarkers}
+                        </div>
                       )}
-                      
-                      {/* Power/Weakness Markers Badges on Left Card */}
-                      <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
-                        {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
-                            ⚡ +{gameState.combatInterstitial.leftCard.powerMarkers}
-                          </div>
-                        )}
-                        {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
-                            💀 -{gameState.combatInterstitial.leftCard.weaknessMarkers}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Final Power Badge on Left Card */}
-                      {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 md:px-3 md:py-1 rounded-lg text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
-                          {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
+                      {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
+                        <div className="flex items-center gap-0.5 bg-black/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.45rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
+                          💀 -{gameState.combatInterstitial.rightCard.weaknessMarkers}
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
-                      No Card
-                    </div>
-                  )}
-                  {/* Math/Power text & Checklist under Left Card */}
-                  {gameState.combatInterstitial.leftCard && (
-                    <div className="text-center min-h-0 flex flex-col items-center gap-1">
-                      <div className="text-[0.65rem] md:text-sm font-bold text-white tracking-widest">{gameState.combatInterstitial.leftCard.name}</div>
-                      <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
-                      {/* Mobile Checklist (hidden on desktop) */}
-                      <div className="block md:hidden mt-1">
-                        <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
+
+                    {/* Final Power Badge on Right Card */}
+                    {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
+                      <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1.5 py-0.2 sm:px-2 sm:py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.6rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
+                        {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Versus Divider */}
-                <div className="text-lg md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none md:my-0 my-1">
-                  VS
-                </div>
-
-                {/* Right Card (Enemy Card / Seal Champion) */}
-                <div className="flex flex-col items-center gap-2">
-                  <div className="text-[0.55rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold font-cinzel">Rival / Seal Champion</div>
-                  {gameState.combatInterstitial.rightCard ? (
-                    <div
-                      className={`w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl overflow-hidden border-2 border-white/20 bg-black relative flex flex-col transition-all duration-300 shadow-2xl
-                        ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                        ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
-                        ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
-                      `}
-                    >
-                      <img
-                        src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
-                        alt={gameState.combatInterstitial.rightCard.name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                      {gameState.combatInterstitial.rightDamageFlash && (
-                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-2xl" />
-                      )}
-
-                      {/* Power/Weakness Markers Badges on Right Card */}
-                      <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
-                        {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse">
-                            ⚡ +{gameState.combatInterstitial.rightCard.powerMarkers}
-                          </div>
-                        )}
-                        {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/80 px-1.5 py-0.5 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse">
-                            💀 -{gameState.combatInterstitial.rightCard.weaknessMarkers}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Final Power Badge on Right Card */}
-                      {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 z-20 bg-black/90 border-2 border-[#00f2ff] text-[#00f2ff] px-2 py-0.5 md:px-3 md:py-1 rounded-lg text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono">
-                          {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-36 h-54 md:w-56 md:h-[21rem] rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
-                      No Card
-                    </div>
-                  )}
-                  {/* Math/Power text & Checklist under Right Card */}
-                  {gameState.combatInterstitial.rightCard && (
-                    <div className="text-center min-h-0 flex flex-col items-center gap-1">
-                      <div className="text-[0.65rem] md:text-sm font-bold text-white tracking-widest">{gameState.combatInterstitial.rightCard.name}</div>
-                      <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
-                      {/* Mobile Checklist (hidden on desktop) */}
-                      <div className="block md:hidden mt-1">
-                        <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Card Checklist (Desktop) */}
-                <div className="hidden md:block">
-                  <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-24 h-36 sm:w-36 sm:h-54 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.5rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest">
+                    No Card
+                  </div>
+                )}
+                
+                {/* Name & Math/Power text under Right Card */}
+                {gameState.combatInterstitial.rightCard && (
+                  <div className="text-center min-h-0 flex flex-col items-center gap-0.5">
+                    <div className="text-[0.55rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate max-w-[100px] sm:max-w-[150px]">{gameState.combatInterstitial.rightCard.name}</div>
+                    <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
+                  </div>
+                )}
               </div>
 
-              {/* Step Indicators */}
-              <div className="flex items-center justify-center gap-2 md:gap-4 my-3 md:my-5 text-[0.5rem] md:text-xs uppercase tracking-wider text-gray-500 font-mono">
-                <span className={gameState.combatInterstitial.step === 'haste' ? 'text-[#ff5000] font-bold shadow-pulse' : ''}>Haste Step</span>
-                <span>•</span>
-                <span className={gameState.combatInterstitial.step === 'flip' ? 'text-[#00f2ff] font-bold shadow-pulse' : ''}>Flip Step</span>
-                <span>•</span>
-                <span className={gameState.combatInterstitial.step === 'ability' ? 'text-purple-400 font-bold shadow-pulse' : ''}>Ability Step</span>
-                <span>•</span>
-                <span className={gameState.combatInterstitial.step === 'combat' ? 'text-red-500 font-bold shadow-pulse' : ''}>Combat Step</span>
-                <span>•</span>
-                <span className={gameState.combatInterstitial.step === 'done' ? 'text-green-400 font-bold shadow-pulse' : ''}>Resolved</span>
+              {/* Right Card Checklist (Desktop Only) */}
+              <div className="hidden md:block">
+                <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
               </div>
+            </div>
 
-              {/* Controls */}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleForceSkip}
-                  className="px-4 py-1.5 md:px-6 md:py-2.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.6rem] md:text-sm uppercase tracking-widest hover:bg-[#ff0044]/10 transition-all font-bold"
-                >
-                  Skip Interaction
-                </button>
-              </div>
-            </motion.div>
-          )
+            {/* Step Indicators */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-4 my-2 md:my-5 text-[0.45rem] sm:text-[0.55rem] md:text-xs uppercase tracking-wider text-gray-500 font-mono">
+              <span className={gameState.combatInterstitial.step === 'haste' ? 'text-[#ff5000] font-bold shadow-pulse' : ''}>Haste Step</span>
+              <span>•</span>
+              <span className={gameState.combatInterstitial.step === 'flip' ? 'text-[#00f2ff] font-bold shadow-pulse' : ''}>Flip Step</span>
+              <span>•</span>
+              <span className={gameState.combatInterstitial.step === 'ability' ? 'text-purple-400 font-bold shadow-pulse' : ''}>Ability Step</span>
+              <span>•</span>
+              <span className={gameState.combatInterstitial.step === 'combat' ? 'text-red-500 font-bold shadow-pulse' : ''}>Combat Step</span>
+              <span>•</span>
+              <span className={gameState.combatInterstitial.step === 'done' ? 'text-green-400 font-bold shadow-pulse' : ''}>Resolved</span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex gap-2 mt-1 md:mt-3">
+              <button
+                onClick={handleForceSkip}
+                className="px-3 py-1 sm:px-4 sm:py-1.5 md:px-6 md:py-2.5 border border-[#ff0044]/30 text-[#ff0044] text-[0.5rem] sm:text-[0.6rem] md:text-sm uppercase tracking-widest hover:bg-[#ff0044]/10 transition-all font-bold"
+              >
+                Skip Interaction
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

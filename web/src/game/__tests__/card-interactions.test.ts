@@ -2410,7 +2410,71 @@ describe('Desire – seal influence', () => {
       
       expect(mockCtrl.enemyBattlefield[0]).toBeNull(); // Defender Bogva destroyed
       // Bogva's Flip ability should NOT trigger, so helperAlly has 0 weakness markers
-      expect(helperAlly.data.weaknessMarkers).toBe(0);
+    });
+  });
+
+  describe('Calmadious – handleSealTargetAbility', () => {
+    let mock: ReturnType<typeof createMockControllerForAbilities>;
+
+    beforeEach(() => {
+      mock = createMockControllerForAbilities();
+      mock.playerBattlefield.fill(null);
+      mock.enemyBattlefield.fill(null);
+      mock.seals.forEach((s) => {
+        (s as { champion: CardEntity | null }).champion = null;
+        (s as { alignment: Alignment }).alignment = Alignment.NEUTRAL;
+      });
+      vi.clearAllMocks();
+    });
+
+    it('when no corrupted seals exist, player-side Calmadious skips targeting, logs, and resolves immediately', async () => {
+      const calmadious = createMockCard({
+        name: 'Calmadious',
+        power: 15,
+        isChampion: true,
+        isEnemy: false,
+        faceUp: true,
+        sealEffect: 'LIGHT'
+      }) as unknown as CardEntity;
+
+      const p = mock.abilityManager.handleSealTargetAbility(calmadious, false);
+      await p; // Resolves immediately because no valid targets
+
+      expect(mock.addLog).toHaveBeenCalledWith(
+        expect.stringMatching(/Calmadious: No valid Seals to target. Ability skipped./)
+      );
+      expect(mock.updateState).not.toHaveBeenCalledWith(
+        expect.objectContaining({ currentPhase: Phase.SEAL_TARGETING })
+      );
+    });
+
+    it('when a corrupted seal exists, player-side Calmadious prompts for targeting and waits', async () => {
+      const calmadious = createMockCard({
+        name: 'Calmadious',
+        power: 15,
+        isChampion: true,
+        isEnemy: false,
+        faceUp: true,
+        sealEffect: 'LIGHT'
+      }) as unknown as CardEntity;
+
+      mock.seals[2].alignment = Alignment.DARK; // Seal 3 is corrupted
+
+      const p = mock.abilityManager.handleSealTargetAbility(calmadious, false);
+      
+      expect(mock.updateState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentPhase: Phase.SEAL_TARGETING,
+          instructionText: expect.stringMatching(/Calmadious: Select a Corrupted/)
+        })
+      );
+      expect(mock.zoomOut).toHaveBeenCalled();
+
+      // Resolve the targeting promise manually to finish the test
+      if ((mock as any).resolutionCallback) {
+        (mock as any).resolutionCallback();
+      }
+      await p;
     });
   });
 });

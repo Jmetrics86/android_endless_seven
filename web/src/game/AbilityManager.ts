@@ -1272,6 +1272,19 @@ export class AbilityManager {
       }
       return Promise.resolve();
     } else {
+      const targetAlign = effect === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
+      let validSeals = this.controller.seals.filter(s => !s.champion && (s.alignment === targetAlign || s.alignment === Alignment.NEUTRAL));
+      if (corruptOnly && effect === Alignment.LIGHT) {
+        validSeals = validSeals.filter(s => s.alignment === Alignment.DARK);
+      } else if (source.data.name === "Elowen Thornver") {
+        validSeals = this.controller.seals.filter(s => !s.champion);
+      }
+
+      if (validSeals.length === 0) {
+        this.controller.addLog(`${source.data.name}: No valid Seals to target. Ability skipped.`);
+        return Promise.resolve();
+      }
+
       this.controller.updateState({
         currentPhase: Phase.SEAL_TARGETING,
         instructionText: source.data.name === "Elowen Thornver"

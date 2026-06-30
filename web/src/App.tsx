@@ -509,73 +509,19 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
             </div>
 
             {/* Main Content Area (Side-by-Side Player vs Rival) */}
-            <div className="flex flex-row items-stretch justify-center gap-1.5 sm:gap-4 md:gap-10 my-2 w-full max-w-5xl px-2">
+            <div className="flex flex-row items-center justify-center gap-1.5 sm:gap-4 md:gap-10 my-2 w-full max-w-5xl px-2">
               
               {/* Left Column (Player Side) */}
-              <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0 max-w-[160px] sm:max-w-[200px] md:max-w-none">
-                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#00f2ff]/80 font-bold shrink-0">Player</div>
-                
-                {/* Left Card Container */}
-                <div className="shrink-0 flex items-center justify-center h-28 sm:h-36 md:h-[21rem]">
-                  {gameState.combatInterstitial.leftCard ? (
-                    <div
-                      className={`w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl shrink-0
-                        ${(gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                        ${gameState.combatInterstitial.leftGlow ? 'flip-glow-active' : ''}
-                        ${gameState.combatInterstitial.leftDamageFlash ? 'card-shake-active' : ''}
-                      `}
-                    >
-                      <img
-                        src={cardArtUrl(gameState.combatInterstitial.leftCard.faceArtPath || CARD_BACK_PATH)}
-                        alt={gameState.combatInterstitial.leftCard.name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                      {gameState.combatInterstitial.leftDamageFlash && (
-                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
-                      )}
-                      
-                      {/* Power/Weakness Markers Badges on Left Card */}
-                      <div className="absolute top-0.5 left-0.5 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
-                        {gameState.combatInterstitial.leftCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
-                            ⚡+{gameState.combatInterstitial.leftCard.powerMarkers}
-                          </div>
-                        )}
-                        {gameState.combatInterstitial.leftCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse leading-none">
-                            💀-{gameState.combatInterstitial.leftCard.weaknessMarkers}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Final Power Badge on Left Card */}
-                      {gameState.combatInterstitial.leftCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-0.5 right-0.5 md:bottom-3 md:right-3 z-20 bg-black/95 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1 py-0.2 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.55rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono leading-none">
-                          {gameState.combatInterstitial.leftCard.power + gameState.combatInterstitial.leftCard.powerMarkers - gameState.combatInterstitial.leftCard.weaknessMarkers}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.45rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest shrink-0">
-                      No Card
-                    </div>
-                  )}
-                </div>
-
-                {/* Left Card Info Header (Fixed Height to prevent shifts) */}
-                <div className="w-full text-center h-12 sm:h-16 flex flex-col justify-center items-center overflow-hidden select-none shrink-0">
-                  {gameState.combatInterstitial.leftCard && (
-                    <>
-                      <div className="text-[0.48rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate w-full px-1">
-                        {gameState.combatInterstitial.leftCard.name}
-                      </div>
-                      <PowerFormulaDisplay card={gameState.combatInterstitial.leftCard} overrideText={gameState.combatInterstitial.leftPowerText} />
-                    </>
-                  )}
-                </div>
-
-                {/* Left Rules Checklist (Visible on all screens now!) */}
-                <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={true} card={gameState.combatInterstitial.leftCard} />
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <CombatResolutionCard
+                  card={gameState.combatInterstitial.leftCard}
+                  isLeft={true}
+                  step={gameState.combatInterstitial.step}
+                  hasteActive={gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both'}
+                  glowActive={!!gameState.combatInterstitial.leftGlow}
+                  damageFlash={!!gameState.combatInterstitial.leftDamageFlash}
+                  powerText={gameState.combatInterstitial.leftPowerText}
+                />
               </div>
 
               {/* Center VS Column (Fixed Width & Height) */}
@@ -586,73 +532,17 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
               </div>
 
               {/* Right Column (Rival Side) */}
-              <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0 max-w-[160px] sm:max-w-[200px] md:max-w-none">
-                <div className="text-[0.45rem] md:text-xs uppercase tracking-widest text-[#ff0044]/80 font-bold shrink-0">Rival</div>
-                
-                {/* Right Card Container */}
-                <div className="shrink-0 flex items-center justify-center h-28 sm:h-36 md:h-[21rem]">
-                  {gameState.combatInterstitial.rightCard ? (
-                    <div
-                      className={`w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-black relative flex flex-col transition-all duration-300 shadow-2xl shrink-0
-                        ${(gameState.combatInterstitial.rightCard.name === 'Face Down Card') ? '' : ''}
-                        ${(gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both') ? 'haste-glow-active' : ''}
-                        ${gameState.combatInterstitial.rightGlow ? 'flip-glow-active' : ''}
-                        ${gameState.combatInterstitial.rightDamageFlash ? 'card-shake-active' : ''}
-                      `}
-                    >
-                      <img
-                        src={gameState.combatInterstitial.rightCard.faceArtPath ? cardArtUrl(gameState.combatInterstitial.rightCard.faceArtPath) : cardArtUrl(CARD_BACK_PATH)}
-                        alt={gameState.combatInterstitial.rightCard.name}
-                        className="w-full h-full object-cover object-center"
-                      />
-                      {gameState.combatInterstitial.rightDamageFlash && (
-                        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
-                      )}
-                      
-                      {/* Power/Weakness Markers Badges on Right Card */}
-                      <div className="absolute top-0.5 left-0.5 md:top-2 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
-                        {gameState.combatInterstitial.rightCard.powerMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
-                            ⚡+{gameState.combatInterstitial.rightCard.powerMarkers}
-                          </div>
-                        )}
-                        {gameState.combatInterstitial.rightCard.weaknessMarkers > 0 && (
-                          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.4rem] sm:text-[0.55rem] md:text-xs font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse leading-none">
-                            💀-{gameState.combatInterstitial.rightCard.weaknessMarkers}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Final Power Badge on Right Card */}
-                      {gameState.combatInterstitial.rightCard.name !== 'Face Down Card' && (
-                        <div className="absolute bottom-0.5 right-0.5 md:bottom-3 md:right-3 z-20 bg-black/95 border border-[#00f2ff] md:border-2 text-[#00f2ff] px-1 py-0.2 md:px-3 md:py-1 rounded-md md:rounded-lg text-[0.55rem] sm:text-[0.8rem] md:text-lg font-extrabold shadow-[0_0_12px_rgba(0,242,255,0.6)] tracking-wider font-mono leading-none">
-                          {gameState.combatInterstitial.rightCard.power + gameState.combatInterstitial.rightCard.powerMarkers - gameState.combatInterstitial.rightCard.weaknessMarkers}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-18 h-27 sm:w-24 sm:h-36 md:w-56 md:h-[21rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.45rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest shrink-0">
-                      No Card
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Card Info Header (Fixed Height to prevent shifts) */}
-                <div className="w-full text-center h-12 sm:h-16 flex flex-col justify-center items-center overflow-hidden select-none shrink-0">
-                  {gameState.combatInterstitial.rightCard && (
-                    <>
-                      <div className="text-[0.48rem] sm:text-xs md:text-sm font-bold text-white tracking-widest truncate w-full px-1">
-                        {gameState.combatInterstitial.rightCard.name}
-                      </div>
-                      <PowerFormulaDisplay card={gameState.combatInterstitial.rightCard} overrideText={gameState.combatInterstitial.rightPowerText} />
-                    </>
-                  )}
-                </div>
-
-                {/* Right Rules Checklist (Visible on all screens now!) */}
-                <CardResolutionChecklist step={gameState.combatInterstitial.step} isLeft={false} card={gameState.combatInterstitial.rightCard} />
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <CombatResolutionCard
+                  card={gameState.combatInterstitial.rightCard}
+                  isLeft={false}
+                  step={gameState.combatInterstitial.step}
+                  hasteActive={gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both'}
+                  glowActive={!!gameState.combatInterstitial.rightGlow}
+                  damageFlash={!!gameState.combatInterstitial.rightDamageFlash}
+                  powerText={gameState.combatInterstitial.rightPowerText}
+                />
               </div>
-
             </div>
 
             {/* Step Indicators */}
@@ -782,63 +672,42 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
   );
 }
 
-function PowerFormulaDisplay({ card, overrideText }: { card: HoveredCardInfo; overrideText?: string }) {
-  if (card.name === 'Face Down Card') {
+function CombatResolutionCard({
+  card,
+  isLeft,
+  step,
+  hasteActive,
+  glowActive,
+  damageFlash,
+  powerText
+}: {
+  card: any;
+  isLeft: boolean;
+  step: string;
+  hasteActive: boolean;
+  glowActive: boolean;
+  damageFlash: boolean;
+  powerText?: string;
+}) {
+  if (!card) {
     return (
-      <div className="mt-1 px-3 py-1 md:px-4 md:py-1.5 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] md:text-xs font-mono tracking-wide text-gray-400">
-        Power: ?
+      <div className="w-28 h-42 sm:w-36 sm:h-54 md:w-64 md:h-[24rem] rounded-lg sm:rounded-2xl border border-dashed border-white/10 md:border-2 flex items-center justify-center text-[0.45rem] sm:text-xs md:text-sm text-gray-600 bg-white/5 uppercase tracking-widest shrink-0 select-none">
+        No Card
       </div>
     );
   }
 
-  // If there's an override text that is not a standard formula, we can show it (e.g. custom messages)
-  if (overrideText && !overrideText.includes('Base')) {
-    return (
-      <div className="mt-1 px-3 py-1 md:px-4 md:py-1.5 bg-white/5 border border-white/10 rounded-lg text-[0.55rem] md:text-xs font-mono tracking-wide text-[#00f2ff] shadow-[0_0_10px_rgba(0,242,255,0.1)]">
-        {overrideText}
-      </div>
-    );
-  }
-
+  // Calculate stats
   const base = card.power;
   const buffs = card.powerMarkers || 0;
   const weakness = card.weaknessMarkers || 0;
   const total = base + buffs - weakness;
+  const isFaceDown = card.name === 'Face Down Card';
 
-  return (
-    <div className="mt-1 px-2.5 py-1.5 md:px-3 md:py-2 bg-black/60 border border-white/10 rounded-xl text-[0.55rem] md:text-xs font-mono tracking-wide text-gray-300 shadow-md flex flex-col items-center gap-0.5 max-w-[155px] md:max-w-[220px]">
-      <div className="flex items-center gap-0.5 flex-wrap justify-center text-gray-400 text-[0.52rem] leading-none">
-        <span>{base}</span>
-        <span className="text-gray-500 text-[0.45rem] mr-1">Base</span>
-        {buffs > 0 && (
-          <>
-            <span className="text-[#00f2ff] font-bold">+</span>
-            <span className="text-[#00f2ff] font-bold">{buffs}</span>
-            <span className="text-[#00f2ff]/70 text-[0.45rem] mr-1">Buff</span>
-          </>
-        )}
-        {weakness > 0 && (
-          <>
-            <span className="text-[#ff0044] font-bold">-</span>
-            <span className="text-[#ff0044] font-bold">{weakness}</span>
-            <span className="text-[#ff0044]/70 text-[0.45rem] mr-1">Weak</span>
-          </>
-        )}
-      </div>
-      <div className="w-full h-[1px] bg-white/10 my-0.5" />
-      <div className="text-[0.6rem] md:text-sm font-bold text-white leading-none">
-        Total: <span className="text-[#00f2ff] font-extrabold text-[0.65rem] md:text-base">{total}</span> Power
-      </div>
-    </div>
-  );
-}
-
-function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft: boolean; card: any }) {
-  if (!card) return null;
-
+  // Rule checklist items logic
   const items = [
-    { id: 'haste', label: 'Haste Strike Check', activeStep: 'haste', prevSteps: ['flip', 'ability', 'combat', 'done'] },
-    { id: 'flip', label: 'Reveal & Flip Ability', activeStep: 'flip', prevSteps: ['ability', 'combat', 'done'] },
+    { id: 'haste', label: 'Haste Strike', activeStep: 'haste', prevSteps: ['flip', 'ability', 'combat', 'done'] },
+    { id: 'flip', label: 'Reveal & Flip', activeStep: 'flip', prevSteps: ['ability', 'combat', 'done'] },
     { id: 'ability', label: 'Activation Ability', activeStep: 'ability', prevSteps: ['combat', 'done'] },
     { id: 'combat', label: 'Combat Resolution', activeStep: 'combat', prevSteps: ['done'] },
     { id: 'done', label: 'Post-Combat / Ascension', activeStep: 'done', prevSteps: [] }
@@ -855,16 +724,15 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
       case 'haste':
         if (abilityLower.includes('haste') || card.hasHaste || name === 'Fenris Lightfoot' || name === 'Zelus' || name === 'Lucian Blackwood' || name === 'Samyaza') {
           if (name === 'Fenris Lightfoot') {
-            return '⚡ Fenris: Strikes immediately. Battles targets are destroyed at round end.';
+            return '⚡ Fenris: Strikes immediately. Targets are destroyed at round end.';
           }
-          return '⚡ Haste: Strikes immediately in Step 0 before Flip phase.';
+          return '⚡ Haste: Strikes immediately before Flip phase.';
         }
         return null;
       case 'flip':
         if (abilityLower.includes('flip:')) {
           const flipIdx = abilityLower.indexOf('flip:');
-          const text = flipIdx !== -1 ? ability.slice(flipIdx + 5).trim() : ability;
-          return `✦ Flip: ${text}`;
+          return flipIdx !== -1 ? `✦ Flip: ${ability.slice(flipIdx + 5).trim()}` : `✦ Flip: ${ability}`;
         }
         if (card.hasNullify || name === 'Fallen One') {
           return `✦ Flip: Nullifies opponent's Flip ability.`;
@@ -873,19 +741,18 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
       case 'ability':
         if (abilityLower.includes('activate:')) {
           const actIdx = abilityLower.indexOf('activate:');
-          const text = actIdx !== -1 ? ability.slice(actIdx + 9).trim() : ability;
-          return `✸ Activate: ${text}`;
+          return actIdx !== -1 ? `✸ Activate: ${ability.slice(actIdx + 9).trim()}` : `✸ Activate: ${ability}`;
         }
         return null;
       case 'combat':
         if (name === 'Sulvian Vane') {
-          return '⇄ Sulvian: Battled target is placed on top of owner\'s deck.';
+          return '⇄ Sulvian: Battled target placed on top of owner\'s deck.';
         }
         if (name === 'Valerius Nightshade') {
-          return '⚡ Valerius: Steals 1 Power from opponent before damage calculation.';
+          return '⚡ Valerius: Steals 1 Power from opponent before damage.';
         }
         if (name === 'Noble The Great') {
-          return '⚔ Noble: After winning battle, destroy another card or marker.';
+          return '⚔ Noble: After victory, destroy another card/marker.';
         }
         if (card.cannotBattleOrBeBattled) {
           return 'Cannot battle or be battled.';
@@ -893,13 +760,13 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
         return null;
       case 'done':
         if (name === 'Coal') {
-          return 'Graveyard: Discard from Limbo to block opponent ascension.';
+          return 'Limbo: Discard to block opponent ascension.';
         }
         if (name === 'Karlyah') {
-          return 'Graveyard: Discard from Limbo to give killer +3 Weakness.';
+          return 'Limbo: Discard to give killer +3 Weakness.';
         }
         if (name === 'Tarkidos') {
-          return 'Graveyard: Discard from Limbo to Purify a Seal.';
+          return 'Limbo: Discard to Purify a Seal.';
         }
         if (name === 'Lucian Blackwood') {
           return 'Gains +2 Power Markers on victory.';
@@ -908,7 +775,7 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
           return 'Gains +2 Power Markers per Graveborn on victory.';
         }
         if (card.isChampion || abilityLower.includes('champion.')) {
-          return '👑 Champion: Eligible to ascend and claim the Seal.';
+          return '👑 Champion: Eligible to claim the Seal.';
         }
         return null;
       default:
@@ -916,60 +783,146 @@ function CardResolutionChecklist({ step, isLeft, card }: { step: string; isLeft:
     }
   };
 
+  const activeItem = items.find(item => item.activeStep === step);
+  
+  let isNa = false;
+  let detail: string | null = null;
+  let statusText = 'Pending';
+  let statusColor = 'text-gray-400';
+
+  if (activeItem) {
+    const hasHaste = card.ability?.toLowerCase().includes('haste') || card.hasHaste;
+    const hasFlip = card.ability?.toLowerCase().includes('flip') || card.hasNullify || card.hasLustSealEffect;
+    const hasActivate = card.ability?.toLowerCase().includes('activate') || card.hasActivate;
+    const cannotBattle = card.cannotBattleOrBeBattled;
+
+    if (activeItem.id === 'haste' && !hasHaste) isNa = true;
+    if (activeItem.id === 'flip' && !hasFlip) isNa = true;
+    if (activeItem.id === 'ability' && !hasActivate) isNa = true;
+    if (activeItem.id === 'combat' && cannotBattle) isNa = true;
+
+    detail = getStepDetail(card, activeItem.id);
+
+    if (isNa) {
+      statusText = 'N/A';
+      statusColor = 'text-gray-500 line-through';
+    } else {
+      statusText = 'Active';
+      statusColor = isLeft ? 'text-[#00f2ff] font-extrabold drop-shadow-[0_0_4px_rgba(0,242,255,0.4)]' : 'text-[#ff0044] font-extrabold drop-shadow-[0_0_4px_rgba(255,0,68,0.4)]';
+    }
+  }
+
+  const faceSrc = card.faceArtPath ? cardArtUrl(card.faceArtPath) : undefined;
+
   return (
-    <div className="flex flex-col gap-1 p-1.5 md:p-3 bg-white/5 border border-white/10 rounded-lg md:rounded-xl backdrop-blur-sm w-full md:w-52 h-[105px] md:h-auto font-mono text-[0.45rem] md:text-xs uppercase tracking-wider text-left select-none shrink-0">
-      <div className="text-[0.48rem] md:text-xs font-bold text-gray-400 border-b border-white/5 pb-0.5 mb-0.5 shrink-0">
-        {isLeft ? 'Player Rules' : 'Rival Rules'}
+    <div
+      className={`w-28 h-42 sm:w-36 sm:h-54 md:w-64 md:h-[24rem] rounded-lg sm:rounded-2xl overflow-hidden border border-white/20 md:border-2 bg-[#0d0d11] relative flex flex-col transition-all duration-300 shadow-2xl shrink-0 select-none
+        ${hasteActive ? 'haste-glow-active' : ''}
+        ${glowActive ? 'flip-glow-active' : ''}
+        ${damageFlash ? 'card-shake-active' : ''}
+      `}
+    >
+      {/* Background Image / Art */}
+      <div className="absolute inset-0 z-0 bg-[#0d0d11]">
+        {faceSrc ? (
+          <img
+            src={faceSrc}
+            alt={card.name}
+            className="w-full h-full object-cover object-center"
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center text-[0.45rem] sm:text-xs text-gray-500 p-2 text-center uppercase tracking-widest">
+            {isFaceDown ? 'Face Down' : card.name}
+          </div>
+        )}
       </div>
-      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 scrollbar-none">
-        {items.map((item) => {
-          let status: 'pending' | 'active' | 'done' | 'na' = 'pending';
-          if (step === item.activeStep) {
-            status = 'active';
-          } else if (item.prevSteps.includes(step)) {
-            status = 'done';
-          }
 
-          const hasHaste = card.ability?.toLowerCase().includes('haste') || card.hasHaste;
-          const hasFlip = card.ability?.toLowerCase().includes('flip') || card.hasNullify || card.hasLustSealEffect;
-          const hasActivate = card.ability?.toLowerCase().includes('activate') || card.hasActivate;
-          const cannotBattle = card.cannotBattleOrBeBattled;
+      {damageFlash && (
+        <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
+      )}
 
-          if (item.id === 'haste' && !hasHaste && status !== 'done') status = 'na';
-          if (item.id === 'flip' && !hasFlip && status !== 'done') status = 'na';
-          if (item.id === 'ability' && !hasActivate && status !== 'done') status = 'na';
-          if (item.id === 'combat' && cannotBattle && status !== 'done') status = 'na';
+      {/* TOP OVERLAY BANNER (Card Name, Faction, Player/Rival indicator) */}
+      <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-black/95 via-black/80 to-transparent p-1.5 md:p-3 flex flex-col items-center pointer-events-none border-b border-white/5">
+        <div className={`text-[0.38rem] sm:text-[0.45rem] md:text-[0.65rem] font-black uppercase tracking-[0.2em] mb-0.5 ${isLeft ? 'text-[#00f2ff]' : 'text-[#ff0044]'}`}>
+          {isLeft ? 'Player' : 'Rival'}
+        </div>
+        <div className="text-white text-[0.5rem] sm:text-[0.65rem] md:text-sm font-extrabold uppercase tracking-wide truncate max-w-full font-mono text-center flex items-center gap-0.5">
+          {card.isChampion && <span className="text-yellow-400">👑</span>}
+          {card.name}
+        </div>
+        {card.faction && card.faction !== 'Unknown' && (
+          <div className="text-[0.35rem] sm:text-[0.4rem] md:text-[0.55rem] text-gray-400 font-mono tracking-widest leading-none mt-0.5">
+            {card.faction}
+          </div>
+        )}
+      </div>
 
-          let icon = '○';
-          let textClass = 'text-gray-600';
-          if (status === 'active') {
-            icon = '●';
-            textClass = isLeft ? 'text-[#00f2ff] font-bold shadow-pulse' : 'text-[#ff0044] font-bold shadow-pulse';
-          } else if (status === 'done') {
-            icon = '✓';
-            textClass = 'text-green-500';
-          } else if (status === 'na') {
-            icon = '—';
-            textClass = 'line-through text-gray-700';
-          }
+      {/* Power/Weakness Markers Badges (positioned below top overlay to avoid overlapping) */}
+      <div className="absolute top-9 sm:top-12 md:top-16 left-1 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
+        {buffs > 0 && (
+          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.38rem] sm:text-[0.5rem] md:text-[0.65rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
+            ⚡+{buffs}
+          </div>
+        )}
+        {weakness > 0 && (
+          <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#ff0044] text-[#ff0044] text-[0.38rem] sm:text-[0.5rem] md:text-[0.65rem] font-bold shadow-[0_0_8px_rgba(255,0,68,0.5)] font-mono animate-pulse leading-none">
+            💀-{weakness}
+          </div>
+        )}
+      </div>
 
-          const detail = getStepDetail(card, item.id);
-          const isCurrentActive = status === 'active';
-
-          return (
-            <div key={item.id} className="flex flex-col gap-0.5 shrink-0">
-              <div className={`flex items-center gap-1 leading-none ${textClass}`}>
-                <span className="text-[0.5rem] md:text-xs font-bold w-2 md:w-3">{icon}</span>
-                <span>{item.label}</span>
+      {/* MIDDLE OVERLAY BANNER (Fading active rule checklist item) */}
+      <div className="absolute inset-x-0 top-[40%] translate-y-[-50%] z-30 pointer-events-none">
+        <AnimatePresence mode="wait">
+          {activeItem && (
+            <motion.div
+              key={activeItem.id}
+              initial={{ opacity: 0, y: -15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="bg-black/80 backdrop-blur-[2px] border-y border-white/10 w-full py-1 sm:py-1.5 px-1 md:px-2 flex flex-col justify-center items-center gap-0.5 shadow-lg min-h-[45px] sm:min-h-[55px] md:min-h-[70px]"
+            >
+              <div className="flex items-center gap-1 leading-none text-center">
+                <span className={`text-[0.45rem] sm:text-[0.52rem] md:text-[0.7rem] uppercase tracking-wider font-mono font-bold ${statusColor}`}>
+                  {activeItem.label} ({statusText})
+                </span>
               </div>
-              {detail && isCurrentActive && (
-                <div className={`pl-2.5 md:pl-4 text-[0.43rem] md:text-[0.6rem] leading-tight font-sans normal-case ${isLeft ? 'text-[#00f2ff]/80' : 'text-[#ff0044]/80'}`}>
+              {detail && !isNa && (
+                <div className={`text-[0.38rem] sm:text-[0.45rem] md:text-[0.6rem] font-sans normal-case leading-tight text-center text-white/95 px-1 max-w-[95%] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]`}>
                   {detail}
                 </div>
               )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* BOTTOM OVERLAY BANNER (Power Formula & Total Power) */}
+      <div className="absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-black/95 via-black/85 to-transparent p-1 sm:p-1.5 md:p-2.5 flex flex-col items-center pointer-events-none border-t border-white/5">
+        {isFaceDown ? (
+          <div className="text-gray-400 text-[0.45rem] sm:text-[0.55rem] md:text-[0.7rem] font-mono uppercase tracking-wide">
+            Power: ?
+          </div>
+        ) : powerText && !powerText.includes('Base') ? (
+          // Custom override text (like resolved messages)
+          <div className="text-[#00f2ff] text-[0.45rem] sm:text-[0.55rem] md:text-[0.7rem] font-mono tracking-wide animate-pulse">
+            {powerText}
+          </div>
+        ) : (
+          <div className="w-full flex flex-col items-center gap-0.5">
+            {/* Total Power Badge */}
+            <div className="text-white text-[0.55rem] sm:text-[0.65rem] md:text-sm font-black font-mono leading-none tracking-wider flex items-center gap-1">
+              TOTAL: <span className={`${isLeft ? 'text-[#00f2ff]' : 'text-[#ff0044]'} text-[0.75rem] sm:text-[0.85rem] md:text-base font-black drop-shadow-[0_0_4px_rgba(0,242,255,0.3)]`}>{total}</span>
             </div>
-          );
-        })}
+            {/* Breakdown Formula */}
+            <div className="text-gray-400 text-[0.35rem] sm:text-[0.42rem] md:text-[0.58rem] font-mono tracking-wider leading-none">
+              {base} Base
+              {buffs > 0 && <span className="text-[#00f2ff]"> +{buffs}B</span>}
+              {weakness > 0 && <span className="text-[#ff0044]"> -{weakness}W</span>}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

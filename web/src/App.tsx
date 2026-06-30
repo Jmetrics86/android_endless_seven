@@ -53,6 +53,14 @@ export default function App() {
     gameState?.decisionContext
   );
 
+  const is3DTargetingActive = !!(
+    gameState?.currentPhase === Phase.PREP ||
+    gameState?.currentPhase === Phase.COUNTER_ALLOCATION ||
+    gameState?.currentPhase === Phase.SEAL_TARGETING ||
+    gameState?.currentPhase === Phase.DELTA_BUFF_TARGETING ||
+    (gameState?.currentPhase === Phase.ABILITY_TARGETING && !gameState?.decisionContext)
+  );
+
   useEffect(() => {
     if (displayLogs.length && logScrollRef.current) {
       logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
@@ -281,6 +289,23 @@ export default function App() {
                          <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)} className="drawer-btn border-amber-400 text-amber-300 py-1 text-[0.5rem]">Light</button>
                          <button onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)} className="drawer-btn border-purple-400 text-purple-300 py-1 text-[0.5rem]">Dark</button>
                       </div>
+                    ) : gameState.decisionContext === 'DEATH_CREATURE_TYPE' ? (
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {gameState.creatureTypeOptions?.map(opt => (
+                          <button
+                            key={opt}
+                            onClick={() => {
+                              if (gameRef.current) {
+                                (gameRef.current as any).creatureTypeCallback?.(opt);
+                                (gameRef.current as any).creatureTypeCallback = null;
+                              }
+                            }}
+                            className="drawer-btn border-purple-500 text-purple-300 py-1 px-1.5 text-[0.5rem]"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     ) : (
                       <div className="flex gap-1">
                          <button onClick={() => handleDecision(true)} className="drawer-btn border-[#00f2ff] text-[#00f2ff] py-1 text-[0.5rem]">Yes</button>
@@ -497,7 +522,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && !isActionRequired && showCombatOverlay && (
+        {gameState?.combatInterstitial?.active && !is3DTargetingActive && showCombatOverlay && (
           <motion.div
             key="combat-interstitial-auto"
             initial={{ opacity: 0 }}
@@ -517,40 +542,120 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
             </div>
 
             {/* Main Content Area (Side-by-Side Player vs Rival) */}
-            <div className="flex flex-row items-center justify-center gap-1.5 sm:gap-4 md:gap-10 my-2 w-full max-w-5xl px-2">
-              
-              {/* Left Column (Player Side) */}
-              <div className="flex flex-col items-center gap-1.5 shrink-0">
-                <CombatResolutionCard
-                  card={gameState.combatInterstitial.leftCard}
-                  isLeft={true}
-                  step={gameState.combatInterstitial.step}
-                  hasteActive={gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both'}
-                  glowActive={!!gameState.combatInterstitial.leftGlow}
-                  damageFlash={!!gameState.combatInterstitial.leftDamageFlash}
-                  powerText={gameState.combatInterstitial.leftPowerText}
-                />
+            <div className="relative my-2 w-full max-w-5xl px-2 flex flex-col items-center justify-center">
+              <div className="flex flex-row items-center justify-center gap-1.5 sm:gap-4 md:gap-10 w-full">
+                
+                {/* Left Column (Player Side) */}
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                  <CombatResolutionCard
+                    card={gameState.combatInterstitial.leftCard}
+                    isLeft={true}
+                    step={gameState.combatInterstitial.step}
+                    hasteActive={gameState.combatInterstitial.hasteActive === 'left' || gameState.combatInterstitial.hasteActive === 'both'}
+                    glowActive={!!gameState.combatInterstitial.leftGlow}
+                    damageFlash={!!gameState.combatInterstitial.leftDamageFlash}
+                    powerText={gameState.combatInterstitial.leftPowerText}
+                  />
+                </div>
+
+                {/* Center VS Column (Fixed Width & Height) */}
+                <div className="flex flex-col items-center justify-center shrink-0 self-center">
+                  <span className="text-xs sm:text-base md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none">
+                    VS
+                  </span>
+                </div>
+
+                {/* Right Column (Rival Side) */}
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                  <CombatResolutionCard
+                    card={gameState.combatInterstitial.rightCard}
+                    isLeft={false}
+                    step={gameState.combatInterstitial.step}
+                    hasteActive={gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both'}
+                    glowActive={!!gameState.combatInterstitial.rightGlow}
+                    damageFlash={!!gameState.combatInterstitial.rightDamageFlash}
+                    powerText={gameState.combatInterstitial.rightPowerText}
+                  />
+                </div>
               </div>
 
-              {/* Center VS Column (Fixed Width & Height) */}
-              <div className="flex flex-col items-center justify-center shrink-0 self-center">
-                <span className="text-xs sm:text-base md:text-2xl font-bold italic text-gray-500 tracking-wider font-cinzel select-none">
-                  VS
-                </span>
-              </div>
+              {/* Decision Prompt Overlay superimposed on top of the cards */}
+              {gameState?.decisionContext && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md border border-amber-500/40 rounded-xl p-3 text-center space-y-2.5 shadow-[0_0_30px_rgba(245,158,11,0.35)] z-[160] animate-fade-in">
+                  <div className="text-[0.55rem] sm:text-[0.7rem] text-amber-400 font-bold uppercase tracking-[0.2em] font-mono leading-none">
+                    ⚠️ Action Required: {gameState.decisionContext.replace(/_/g, ' ')}
+                  </div>
+                  <div className="text-[0.6rem] sm:text-xs text-gray-200 font-sans leading-tight px-4 max-w-md">
+                    {gameState.decisionMessage ?? gameState.instructionText}
+                  </div>
 
-              {/* Right Column (Rival Side) */}
-              <div className="flex flex-col items-center gap-1.5 shrink-0">
-                <CombatResolutionCard
-                  card={gameState.combatInterstitial.rightCard}
-                  isLeft={false}
-                  step={gameState.combatInterstitial.step}
-                  hasteActive={gameState.combatInterstitial.hasteActive === 'right' || gameState.combatInterstitial.hasteActive === 'both'}
-                  glowActive={!!gameState.combatInterstitial.rightGlow}
-                  damageFlash={!!gameState.combatInterstitial.rightDamageFlash}
-                  powerText={gameState.combatInterstitial.rightPowerText}
-                />
-              </div>
+                  <div className="flex flex-wrap gap-1.5 justify-center pt-1 w-full max-w-xs">
+                    {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
+                      <>
+                        <button
+                          onClick={() => handleMarkerTypeChoice('power')}
+                          className="px-3.5 py-1.5 rounded bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Power
+                        </button>
+                        <button
+                          onClick={() => handleMarkerTypeChoice('weakness')}
+                          className="px-3.5 py-1.5 rounded bg-[#ff0044]/20 border border-[#ff0044]/50 hover:bg-[#ff0044]/40 text-[#ff4466] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Weakness
+                        </button>
+                      </>
+                    ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
+                      <>
+                        <button
+                          onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)}
+                          className="px-3.5 py-1.5 rounded bg-amber-400/20 border border-amber-400/50 hover:bg-amber-400/40 text-amber-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Light
+                        </button>
+                        <button
+                          onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)}
+                          className="px-3.5 py-1.5 rounded bg-purple-400/20 border border-purple-400/50 hover:bg-purple-400/40 text-purple-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Dark
+                        </button>
+                      </>
+                    ) : gameState.decisionContext === 'DEATH_CREATURE_TYPE' ? (
+                      <div className="flex flex-wrap gap-1 justify-center max-h-[80px] overflow-y-auto px-1 py-0.5">
+                        {gameState.creatureTypeOptions?.map(opt => (
+                          <button
+                            key={opt}
+                            onClick={() => {
+                              if (gameRef.current) {
+                                (gameRef.current as any).creatureTypeCallback?.(opt);
+                                (gameRef.current as any).creatureTypeCallback = null;
+                              }
+                            }}
+                            className="px-2.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/50 hover:bg-purple-500/40 text-purple-300 text-[0.55rem] font-bold transition-all"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleDecision(true)}
+                          className="px-4 py-1.5 rounded bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => handleDecision(false)}
+                          className="px-4 py-1.5 rounded bg-white/5 border border-white/20 hover:bg-white/10 text-gray-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
+                        >
+                          Skip
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Step Indicators */}

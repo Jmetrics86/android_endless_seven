@@ -52,9 +52,13 @@ export class PhaseManager {
     const pCard = this.controller.playerBattlefield[idx];
     const eCard = this.controller.enemyBattlefield[idx];
     const seal = this.controller.seals[idx];
-    const right = eCard || seal.champion;
 
-    const leftHovered = pCard ? this.controller.cardToHoveredInfo(pCard) : null;
+    // Determine left (player-side) and right (enemy-side) cards correctly.
+    // The champion on the seal opposes the other side's cards.
+    const left = pCard || (seal.champion && !seal.champion.data.isEnemy ? seal.champion : null);
+    const right = eCard || (seal.champion && seal.champion.data.isEnemy ? seal.champion : null);
+
+    const leftHovered = left ? this.controller.cardToHoveredInfo(left) : null;
     let rightHovered = null;
     if (right) {
       const isSecret = right.data.isEnemy && !right.data.faceUp;
@@ -71,10 +75,10 @@ export class PhaseManager {
       } : this.controller.cardToHoveredInfo(right);
     }
 
-    const leftPow = pCard ? pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers : 0;
+    const leftPow = left ? left.data.power + left.data.powerMarkers - left.data.weaknessMarkers : 0;
     const rightPow = right ? right.data.power + right.data.powerMarkers - right.data.weaknessMarkers : 0;
 
-    const leftPowerText = pCard ? `${pCard.data.power} Base${pCard.data.powerMarkers ? ` + ${pCard.data.powerMarkers} Buff` : ''}${pCard.data.weaknessMarkers ? ` - ${pCard.data.weaknessMarkers} Weak` : ''} = ${leftPow} Power` : '';
+    const leftPowerText = left ? `${left.data.power} Base${left.data.powerMarkers ? ` + ${left.data.powerMarkers} Buff` : ''}${left.data.weaknessMarkers ? ` - ${left.data.weaknessMarkers} Weak` : ''} = ${leftPow} Power` : '';
     const rightPowerText = right ? (right.data.isEnemy && !right.data.faceUp ? 'Power: Unknown' : `${right.data.power} Base${right.data.powerMarkers ? ` + ${right.data.powerMarkers} Buff` : ''}${right.data.weaknessMarkers ? ` - ${right.data.weaknessMarkers} Weak` : ''} = ${rightPow} Power`) : '';
 
     this.updateInterstitial({

@@ -47,6 +47,9 @@ export default function App() {
   const isActionRequired = !!(
     gameState?.currentPhase === Phase.PREP ||
     gameState?.currentPhase === Phase.COUNTER_ALLOCATION ||
+    gameState?.currentPhase === Phase.ABILITY_TARGETING ||
+    gameState?.currentPhase === Phase.SEAL_TARGETING ||
+    gameState?.currentPhase === Phase.DELTA_BUFF_TARGETING ||
     gameState?.decisionContext
   );
 

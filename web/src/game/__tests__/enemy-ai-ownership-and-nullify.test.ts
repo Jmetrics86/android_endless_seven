@@ -306,6 +306,27 @@ describe('Enemy AI ownership', () => {
     const t3 = pickBellaTarget(bella as unknown as CardEntity, withMarkers3, ctrl.seals as any);
     expect(t3).toBeNull();
   });
+
+  it('Bella ability destroys all markers of a type on target card', async () => {
+    const bella = card({
+      name: 'Bella',
+      power: 9,
+      isEnemy: false,
+      isChampion: true,
+    });
+    const ally = card({ name: 'Ally', power: 5, isEnemy: false, weaknessMarkers: 3, powerMarkers: 1 });
+    const enemy = card({ name: 'Enemy', power: 5, isEnemy: true, powerMarkers: 4, weaknessMarkers: 2 });
+
+    // Target ally with weakness -> should destroy ALL weakness markers (power markers should remain intact)
+    await ctrl.abilityManager.applyAbilityEffect(ally as unknown as CardEntity, { source: bella as unknown as CardEntity, effect: 'destroy_marker' });
+    expect(ally.data.weaknessMarkers).toBe(0);
+    expect(ally.data.powerMarkers).toBe(1);
+
+    // Target enemy with power -> should destroy ALL power markers (weakness markers should remain intact)
+    await ctrl.abilityManager.applyAbilityEffect(enemy as unknown as CardEntity, { source: bella as unknown as CardEntity, effect: 'destroy_marker' });
+    expect(enemy.data.powerMarkers).toBe(0);
+    expect(enemy.data.weaknessMarkers).toBe(2);
+  });
 });
 
 describe('Limbo nullify and Graveyard rules', () => {

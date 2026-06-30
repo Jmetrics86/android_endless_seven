@@ -689,30 +689,59 @@ export class AbilityManager {
     }
 
     if (effect === 'destroy_marker') {
-      const markerType = pendingAbilityData.markerType as 'power' | 'weakness' | undefined;
-      if (markerType === 'power') {
-        if (target.data.powerMarkers > 0) {
-          target.data.powerMarkers--;
-          this.controller.addLog(`${source.data.name} destroys a Power Marker on ${target.data.name}`);
+      if (source.data.name === "Bella") {
+        const isAlly = target.data.isEnemy === source.data.isEnemy;
+        if (isAlly) {
+          if (target.data.weaknessMarkers > 0) {
+            const count = target.data.weaknessMarkers;
+            target.data.weaknessMarkers = 0;
+            this.controller.addLog(`${source.data.name} destroys all (${count}) Weakness Markers on ally ${target.data.name}`);
+          } else if (target.data.powerMarkers > 0) {
+            const count = target.data.powerMarkers;
+            target.data.powerMarkers = 0;
+            this.controller.addLog(`${source.data.name} destroys all (${count}) Power Markers on ally ${target.data.name}`);
+          } else {
+            this.controller.addLog(`No markers to destroy on ${target.data.name}`);
+          }
         } else {
-          this.controller.addLog(`No Power markers to destroy on ${target.data.name}`);
-        }
-      } else if (markerType === 'weakness') {
-        if (target.data.weaknessMarkers > 0) {
-          target.data.weaknessMarkers--;
-          this.controller.addLog(`${source.data.name} destroys a Weakness Marker on ${target.data.name}`);
-        } else {
-          this.controller.addLog(`No Weakness markers to destroy on ${target.data.name}`);
+          if (target.data.powerMarkers > 0) {
+            const count = target.data.powerMarkers;
+            target.data.powerMarkers = 0;
+            this.controller.addLog(`${source.data.name} destroys all (${count}) Power Markers on opponent ${target.data.name}`);
+          } else if (target.data.weaknessMarkers > 0) {
+            const count = target.data.weaknessMarkers;
+            target.data.weaknessMarkers = 0;
+            this.controller.addLog(`${source.data.name} destroys all (${count}) Weakness Markers on opponent ${target.data.name}`);
+          } else {
+            this.controller.addLog(`No markers to destroy on ${target.data.name}`);
+          }
         }
       } else {
-        if (target.data.powerMarkers > 0) {
-          target.data.powerMarkers--;
-          this.controller.addLog(`${source.data.name} destroys a Power Marker on ${target.data.name}`);
-        } else if (target.data.weaknessMarkers > 0) {
-          target.data.weaknessMarkers--;
-          this.controller.addLog(`${source.data.name} destroys a Weakness Marker on ${target.data.name}`);
+        const markerType = pendingAbilityData.markerType as 'power' | 'weakness' | undefined;
+        if (markerType === 'power') {
+          if (target.data.powerMarkers > 0) {
+            target.data.powerMarkers--;
+            this.controller.addLog(`${source.data.name} destroys a Power Marker on ${target.data.name}`);
+          } else {
+            this.controller.addLog(`No Power markers to destroy on ${target.data.name}`);
+          }
+        } else if (markerType === 'weakness') {
+          if (target.data.weaknessMarkers > 0) {
+            target.data.weaknessMarkers--;
+            this.controller.addLog(`${source.data.name} destroys a Weakness Marker on ${target.data.name}`);
+          } else {
+            this.controller.addLog(`No Weakness markers to destroy on ${target.data.name}`);
+          }
         } else {
-          this.controller.addLog(`No markers to destroy on ${target.data.name}`);
+          if (target.data.powerMarkers > 0) {
+            target.data.powerMarkers--;
+            this.controller.addLog(`${source.data.name} destroys a Power Marker on ${target.data.name}`);
+          } else if (target.data.weaknessMarkers > 0) {
+            target.data.weaknessMarkers--;
+            this.controller.addLog(`${source.data.name} destroys a Weakness Marker on ${target.data.name}`);
+          } else {
+            this.controller.addLog(`No markers to destroy on ${target.data.name}`);
+          }
         }
       }
       target.updateVisualMarkers();

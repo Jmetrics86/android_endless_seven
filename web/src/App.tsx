@@ -32,6 +32,11 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
+  const [showCombatOverlay, setShowCombatOverlay] = useState(false);
+
+  useEffect(() => {
+    setShowCombatOverlay(!!gameState?.combatInterstitial?.active);
+  }, [gameState?.combatInterstitial?.active]);
 
   const LOG_RECENT_COUNT = 30;
   const displayLogs =
@@ -489,7 +494,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && !isActionRequired && (
+        {gameState?.combatInterstitial?.active && !isActionRequired && showCombatOverlay && (
           <motion.div
             key="combat-interstitial-auto"
             initial={{ opacity: 0 }}
@@ -570,6 +575,24 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Global toggle button for Board vs Combat view */}
+      {gameState?.combatInterstitial?.active && (
+        <button
+          onClick={() => setShowCombatOverlay(!showCombatOverlay)}
+          className="fixed bottom-4 right-4 z-[160] px-3.5 py-2 rounded-xl bg-black/90 border border-[#00f2ff]/40 text-white font-mono text-[0.55rem] sm:text-xs uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(0,242,255,0.25)] hover:border-[#00f2ff] hover:bg-black transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none"
+        >
+          {showCombatOverlay ? (
+            <>
+              <span className="text-[#00f2ff] animate-pulse">👁</span> View Board
+            </>
+          ) : (
+            <>
+              <span className="text-[#ff0044] animate-pulse">⚔</span> Combat View
+            </>
+          )}
+        </button>
+      )}
 
       <style>{`
         .drawer-btn {

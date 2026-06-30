@@ -867,24 +867,8 @@ function CombatResolutionCard({
         <div className="absolute inset-0 z-10 damage-flash-active pointer-events-none rounded-lg sm:rounded-2xl" />
       )}
 
-      {/* TOP OVERLAY BANNER (Card Name, Faction, Player/Rival indicator) */}
-      <div className="absolute top-0 inset-x-0 z-20 bg-gradient-to-b from-black/95 via-black/80 to-transparent p-1.5 md:p-3 flex flex-col items-center pointer-events-none border-b border-white/5">
-        <div className={`text-[0.38rem] sm:text-[0.45rem] md:text-[0.65rem] font-black uppercase tracking-[0.2em] mb-0.5 ${isLeft ? 'text-[#00f2ff]' : 'text-[#ff0044]'}`}>
-          {isLeft ? 'Player' : 'Rival'}
-        </div>
-        <div className="text-white text-[0.5rem] sm:text-[0.65rem] md:text-sm font-extrabold uppercase tracking-wide truncate max-w-full font-mono text-center flex items-center gap-0.5">
-          {card.isChampion && <span className="text-yellow-400">👑</span>}
-          {card.name}
-        </div>
-        {card.faction && card.faction !== 'Unknown' && (
-          <div className="text-[0.35rem] sm:text-[0.4rem] md:text-[0.55rem] text-gray-400 font-mono tracking-widest leading-none mt-0.5">
-            {card.faction}
-          </div>
-        )}
-      </div>
-
-      {/* Power/Weakness Markers Badges (positioned below top overlay to avoid overlapping) */}
-      <div className="absolute top-9 sm:top-12 md:top-16 left-1 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
+      {/* Power/Weakness Markers Badges (positioned near the top since top overlay banner is removed) */}
+      <div className="absolute top-1 sm:top-2 md:top-3 left-1 md:left-2 z-20 flex flex-col gap-0.5 pointer-events-none">
         {buffs > 0 && (
           <div className="flex items-center gap-0.5 bg-black/85 px-1 py-0.2 md:px-2 md:py-1 rounded border border-[#00f2ff] text-[#00f2ff] text-[0.38rem] sm:text-[0.5rem] md:text-[0.65rem] font-bold shadow-[0_0_8px_rgba(0,242,255,0.5)] font-mono animate-pulse leading-none">
             ⚡+{buffs}

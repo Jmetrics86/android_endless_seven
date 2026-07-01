@@ -32,11 +32,28 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
-  const [showCombatOverlay, setShowCombatOverlay] = useState(false);
+  const [activeView, setActiveView] = useState<'combat' | 'hand' | 'board'>('board');
 
   useEffect(() => {
-    setShowCombatOverlay(!!gameState?.combatInterstitial?.active);
+    if (gameState?.combatInterstitial?.active) {
+      setActiveView('combat');
+    } else {
+      setActiveView('board');
+    }
   }, [gameState?.combatInterstitial?.active]);
+
+  useEffect(() => {
+    if (gameState?.combatInterstitial?.active) {
+      if (activeView === 'combat') {
+        gameRef.current?.setResolutionPaused(false);
+      } else {
+        gameRef.current?.setResolutionPaused(true);
+      }
+    } else {
+      gameRef.current?.setResolutionPaused(false);
+    }
+    gameRef.current?.setCameraView(activeView);
+  }, [activeView, gameState?.combatInterstitial?.active]);
 
   const LOG_RECENT_COUNT = 30;
   const displayLogs =
@@ -522,7 +539,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && !is3DTargetingActive && showCombatOverlay && (
+        {gameState?.combatInterstitial?.active && !is3DTargetingActive && activeView === 'combat' && (
           <motion.div
             key="combat-interstitial-auto"
             initial={{ opacity: 0 }}
@@ -684,23 +701,44 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         )}
       </AnimatePresence>
 
-      {/* Global toggle button for Board vs Combat view */}
-      {gameState?.combatInterstitial?.active && (
+      {/* Camera & Resolution Control Interface in Bottom Right */}
+      <div className="fixed bottom-4 right-4 z-[160] flex flex-col items-end gap-2.5">
+        {/* Resume Button: Shown when combat is active but user is in board/hand view (so resolution is paused) */}
+        {gameState?.combatInterstitial?.active && activeView !== 'combat' && (
+          <button
+            onClick={() => setActiveView('combat')}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 border border-amber-400/50 text-white font-mono text-[0.6rem] sm:text-xs uppercase tracking-widest font-black shadow-[0_0_20px_rgba(245,158,11,0.45)] hover:from-amber-600 hover:to-orange-700 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none animate-bounce"
+          >
+            <span className="animate-pulse">▶</span> Resume Action
+          </button>
+        )}
+
+        {/* Global camera view switching button */}
         <button
-          onClick={() => setShowCombatOverlay(!showCombatOverlay)}
-          className="fixed bottom-4 right-4 z-[160] px-3.5 py-2 rounded-xl bg-black/90 border border-[#00f2ff]/40 text-white font-mono text-[0.55rem] sm:text-xs uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(0,242,255,0.25)] hover:border-[#00f2ff] hover:bg-black transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none"
+          onClick={() => {
+            let nextView: 'combat' | 'hand' | 'board';
+            if (gameState?.combatInterstitial?.active) {
+              if (activeView === 'combat') nextView = 'hand';
+              else if (activeView === 'hand') nextView = 'board';
+              else nextView = 'combat';
+            } else {
+              if (activeView === 'hand') nextView = 'board';
+              else nextView = 'hand';
+            }
+            setActiveView(nextView);
+          }}
+          className="px-3.5 py-2.5 rounded-xl bg-black/90 border border-[#00f2ff]/40 text-white font-mono text-[0.55rem] sm:text-xs uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(0,242,255,0.25)] hover:border-[#00f2ff] hover:bg-black transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none"
         >
-          {showCombatOverlay ? (
-            <>
-              <span className="text-[#00f2ff] animate-pulse">👁</span> View Board
-            </>
+          <span className="text-[#00f2ff] font-sans">📷</span>
+          {activeView === 'combat' ? (
+            <>View: Combat</>
+          ) : activeView === 'hand' ? (
+            <>View: Hand</>
           ) : (
-            <>
-              <span className="text-[#ff0044] animate-pulse">⚔</span> Combat View
-            </>
+            <>View: Board</>
           )}
         </button>
-      )}
+      </div>
 
       <style>{`
         .drawer-btn {

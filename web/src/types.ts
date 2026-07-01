@@ -119,6 +119,7 @@ export interface GameState {
   /** Active combat/interaction interstitial overlay state. */
   combatInterstitial?: CombatInterstitialState | null;
   slowMode: boolean;
+  isResolutionPaused?: boolean;
 }
 
 export interface CombatInterstitialState {

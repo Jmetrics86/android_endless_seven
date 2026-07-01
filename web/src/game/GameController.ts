@@ -164,7 +164,8 @@ export class GameController implements IGameController {
       playerDeckCards: [],
       enemyDeckCards: [],
       combatInterstitial: null,
-      slowMode: true
+      slowMode: true,
+      isResolutionPaused: false
     };
 
     this.uiManager = new UIManager(initialState, (s) => {
@@ -903,6 +904,24 @@ export class GameController implements IGameController {
     this.updateState({ slowMode: enabled });
   }
 
+  public setResolutionPaused(paused: boolean) {
+    this.updateState({ isResolutionPaused: paused });
+  }
+
+  public setCameraView(view: 'combat' | 'hand' | 'board') {
+    const duration = 0.8;
+    if (view === 'board') {
+      gsap.to(this.sceneManager.camera.position, { x: 0, y: 25, z: 0.1, duration, ease: "power2.inOut" });
+      gsap.to(this.sceneManager.cameraTarget, { x: 0, y: 0, z: 0, duration, ease: "power2.inOut" });
+    } else if (view === 'hand') {
+      gsap.to(this.sceneManager.camera.position, { x: 0, y: 10, z: 18, duration, ease: "power2.inOut" });
+      gsap.to(this.sceneManager.cameraTarget, { x: 0, y: 0, z: 12, duration, ease: "power2.inOut" });
+    } else { // combat
+      gsap.to(this.sceneManager.camera.position, { x: 0, y: 28, z: 32, duration, ease: "power2.inOut" });
+      gsap.to(this.sceneManager.cameraTarget, { x: 0, y: 0, z: -2, duration, ease: "power2.inOut" });
+    }
+  }
+
   public async handleBattle(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean): Promise<boolean> {
     return await this.phaseManager.handleBattle(attacker, defender, idx, isAgainstChamp);
   }
@@ -1117,17 +1136,27 @@ export class GameController implements IGameController {
       const ray = this.inputHandler.raycaster.ray;
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4); // float y = 0.4
       const intersectPoint = new THREE.Vector3();
-      if (ray.intersectPlane(plane, intersectPoint)) {
-        this.draggedMarker.position.copy(intersectPoint);
-      }
-
+      
       const sealChampions = this.seals.map(s => s.champion).filter((c): c is CardEntity => c !== null);
       const allBoardCards = [...this.playerBattlefield, ...this.enemyBattlefield, ...sealChampions].filter(c => c !== null) as CardEntity[];
-      const intersects = this.inputHandler.raycaster.intersectObjects(allBoardCards.map(c => c.mesh), true);
-
+      
       let hoveredCard: CardEntity | null = null;
-      if (intersects.length > 0) {
-        hoveredCard = this.findCardEntityFromObject(intersects[0].object, allBoardCards);
+      
+      if (ray.intersectPlane(plane, intersectPoint)) {
+        this.draggedMarker.position.copy(intersectPoint);
+        
+        // Find closest card within generous distance (2.0 units) on XZ plane
+        let minDistance = 2.0;
+        for (const card of allBoardCards) {
+          const cardPos = card.mesh.position;
+          const dx = intersectPoint.x - cardPos.x;
+          const dz = intersectPoint.z - cardPos.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < minDistance) {
+            minDistance = dist;
+            hoveredCard = card;
+          }
+        }
       }
 
       if (hoveredCard !== this.hoveredMarkerCard) {
@@ -1503,68 +1532,119 @@ export class GameController implements IGameController {
   private async handleMouseDown(event: MouseEvent | PointerEvent) {
     if (this.state.currentPhase === Phase.GAME_OVER) return;
 
-    // Raycast against marker reservoirs and existing card markers
-    const reservoirTargets = [this.powerReservoirOrb, this.weaknessReservoirSpark.children[0]];
+    // Only allow marker dragging during PREP or COUNTER_ALLOCATION phases
+    const isMarkerDragAllowed = this.state.currentPhase === Phase.PREP || this.state.currentPhase === Phase.COUNTER_ALLOCATION;
     const sealChampions = this.seals.map(s => s.champion).filter((c): c is CardEntity => c !== null);
     const allBoardCards = [...this.playerBattlefield, ...this.enemyBattlefield, ...sealChampions].filter(c => c !== null) as CardEntity[];
-    
-    const markerMeshesToTest: THREE.Object3D[] = [];
-    allBoardCards.forEach(c => {
-      markerMeshesToTest.push(...c.getMarkerMeshes());
-    });
 
-    const dragTargets = [...reservoirTargets, ...markerMeshesToTest];
-    const markerIntersects = this.inputHandler.raycaster.intersectObjects(dragTargets, true);
+    if (isMarkerDragAllowed) {
+      const reservoirTargets = [this.powerReservoirOrb, this.weaknessReservoirSpark.children[0]];
+      const markerMeshesToTest: THREE.Object3D[] = [];
+      allBoardCards.forEach(c => {
+        markerMeshesToTest.push(...c.getMarkerMeshes());
+      });
 
-    if (markerIntersects.length > 0) {
-      const hitObj = markerIntersects[0].object;
-      let type: 'power' | 'weakness' | null = null;
-      let fromCard: CardEntity | null = null;
+      // Add full card meshes to make selecting them much easier
+      const dragTargets = [...reservoirTargets, ...markerMeshesToTest, ...allBoardCards.map(c => c.mesh)];
+      const markerIntersects = this.inputHandler.raycaster.intersectObjects(dragTargets, true);
 
-      if (hitObj === this.powerReservoirOrb) {
-        type = 'power';
-      } else if (hitObj.parent === this.weaknessReservoirSpark || hitObj === this.weaknessReservoirSpark.children[0]) {
-        type = 'weakness';
-      } else {
-        for (const card of allBoardCards) {
-          const markerType = card.hitTestMarkers(hitObj);
-          if (markerType) {
-            type = markerType;
-            fromCard = card;
+      if (markerIntersects.length > 0) {
+        const hitObj = markerIntersects[0].object;
+        let type: 'power' | 'weakness' | null = null;
+        let fromCard: CardEntity | null = null;
+
+        // 1. Check if we hit any part of the reservoirs
+        let currentObj: THREE.Object3D | null = hitObj;
+        let isPowerReservoir = false;
+        let isWeaknessReservoir = false;
+        while (currentObj) {
+          if (currentObj === this.powerReservoirMesh) {
+            isPowerReservoir = true;
             break;
           }
-        }
-      }
-
-      if (type) {
-        this.clearCardHoverLiftTarget();
-        if (fromCard) {
-          if (type === 'power') {
-            fromCard.data.powerMarkers = Math.max(0, fromCard.data.powerMarkers - 1);
-          } else {
-            fromCard.data.weaknessMarkers = Math.max(0, fromCard.data.weaknessMarkers - 1);
+          if (currentObj === this.weaknessReservoirMesh) {
+            isWeaknessReservoir = true;
+            break;
           }
-          fromCard.updateVisualMarkers();
-          this.addLog(`Player picked up a ${type} marker from ${fromCard.data.name}.`);
-        } else {
-          this.addLog(`Player picked up a new ${type} marker.`);
+          currentObj = currentObj.parent;
         }
 
-        this.draggedMarkerType = type;
-        this.draggedFromCard = fromCard;
-        this.draggedMarker = this.createDraggedMarker(type);
-
-        const ray = this.inputHandler.raycaster.ray;
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
-        const intersectPoint = new THREE.Vector3();
-        if (ray.intersectPlane(plane, intersectPoint)) {
-          this.draggedMarker.position.copy(intersectPoint);
+        if (isPowerReservoir) {
+          type = 'power';
+        } else if (isWeaknessReservoir) {
+          type = 'weakness';
         } else {
-          this.draggedMarker.position.set(fromCard ? fromCard.mesh.position.x : (type === 'power' ? -2.2 : 2.2), 0.4, fromCard ? fromCard.mesh.position.z : 4.8);
+          // 2. Check if we clicked directly on or within a card
+          for (const card of allBoardCards) {
+            let markerType = card.hitTestMarkers(hitObj);
+            
+            // Generous check: if clicked on the card itself, lift an existing marker
+            if (!markerType) {
+              let isCardHit = false;
+              let tempObj: THREE.Object3D | null = hitObj;
+              while (tempObj) {
+                if (tempObj === card.mesh) {
+                  isCardHit = true;
+                  break;
+                }
+                tempObj = tempObj.parent;
+              }
+              if (isCardHit) {
+                if (card.data.powerMarkers > 0 && card.data.weaknessMarkers === 0) {
+                  markerType = 'power';
+                } else if (card.data.weaknessMarkers > 0 && card.data.powerMarkers === 0) {
+                  markerType = 'weakness';
+                } else if (card.data.powerMarkers > 0 && card.data.weaknessMarkers > 0) {
+                  const intersection = markerIntersects.find(i => i.object === hitObj || card.mesh.getObjectById(i.object.id));
+                  if (intersection) {
+                    const localPoint = card.mesh.worldToLocal(intersection.point.clone());
+                    // Left half = Power, Right half = Weakness
+                    markerType = localPoint.x < 0 ? 'power' : 'weakness';
+                  } else {
+                    markerType = 'power';
+                  }
+                }
+              }
+            }
+
+            if (markerType) {
+              type = markerType;
+              fromCard = card;
+              break;
+            }
+          }
         }
 
-        this.sceneManager.scene.add(this.draggedMarker);
-        return;
+        if (type) {
+          this.clearCardHoverLiftTarget();
+          if (fromCard) {
+            if (type === 'power') {
+              fromCard.data.powerMarkers = Math.max(0, fromCard.data.powerMarkers - 1);
+            } else {
+              fromCard.data.weaknessMarkers = Math.max(0, fromCard.data.weaknessMarkers - 1);
+            }
+            fromCard.updateVisualMarkers();
+            this.addLog(`Player picked up a ${type} marker from ${fromCard.data.name}.`);
+          } else {
+            this.addLog(`Player picked up a new ${type} marker.`);
+          }
+
+          this.draggedMarkerType = type;
+          this.draggedFromCard = fromCard;
+          this.draggedMarker = this.createDraggedMarker(type);
+
+          const ray = this.inputHandler.raycaster.ray;
+          const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
+          const intersectPoint = new THREE.Vector3();
+          if (ray.intersectPlane(plane, intersectPoint)) {
+            this.draggedMarker.position.copy(intersectPoint);
+          } else {
+            this.draggedMarker.position.set(fromCard ? fromCard.mesh.position.x : (type === 'power' ? -2.2 : 2.2), 0.4, fromCard ? fromCard.mesh.position.z : 4.8);
+          }
+
+          this.sceneManager.scene.add(this.draggedMarker);
+          return;
+        }
       }
     }
 

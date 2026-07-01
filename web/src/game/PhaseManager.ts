@@ -40,8 +40,16 @@ export class PhaseManager {
   }
 
   private async delay(ms: number) {
-    if (this.controller.state.slowMode) {
-      await new Promise(r => setTimeout(r, ms));
+    if (!this.controller.state.slowMode) return;
+    const start = Date.now();
+    let elapsed = 0;
+    while (elapsed < ms) {
+      if (this.controller.state.isResolutionPaused) {
+        await new Promise(r => setTimeout(r, 100));
+      } else {
+        await new Promise(r => setTimeout(r, 50));
+        elapsed = Date.now() - start;
+      }
     }
   }
 

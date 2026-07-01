@@ -567,6 +567,7 @@ export class AbilityManager {
       }
       return Promise.resolve();
     } else {
+      this.controller.abilitySourceCard = card;
       this.controller.updateState({ 
         currentPhase: Phase.COUNTER_ALLOCATION, 
         powerPool, 

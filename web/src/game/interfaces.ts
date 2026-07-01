@@ -30,6 +30,7 @@ export interface IGameController {
   sealCameraZoomedIn: boolean;
   currentResolvingSealIndex: number;
   cardsThatBattledThisRound: CardEntity[];
+  abilitySourceCard: CardEntity | null;
   resolutionCallback: (() => void) | null;
   pendingAbilityData: any;
   nullifyCallback: ((confirmed: boolean) => void) | null;

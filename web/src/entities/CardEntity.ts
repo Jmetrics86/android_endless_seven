@@ -500,6 +500,19 @@ export class CardEntity implements GameEntity {
     });
   }
 
+  public hitTestMarkers(object: THREE.Object3D): 'power' | 'weakness' | null {
+    if (object === this.pMesh) return 'power';
+    if (object === this.wMesh) return 'weakness';
+    return null;
+  }
+
+  public getMarkerMeshes(): THREE.Object3D[] {
+    const list: THREE.Object3D[] = [];
+    if (this.pMesh && this.pMesh.visible) list.push(this.pMesh);
+    if (this.wMesh && this.wMesh.visible) list.push(this.wMesh);
+    return list;
+  }
+
   public dispose() {
     this.pTex.dispose();
     this.wTex.dispose();

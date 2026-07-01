@@ -102,6 +102,18 @@ export class GameController implements IGameController {
   public pendingDeltaSacrificeSource: CardEntity | null = null;
   public pendingDeltaSacrificeSourceIdx: number = -1;
 
+  // Reservoirs for free-floating markers
+  private powerReservoirMesh!: THREE.Group;
+  private weaknessReservoirMesh!: THREE.Group;
+  private powerReservoirOrb!: THREE.Mesh;
+  private weaknessReservoirSpark!: THREE.Group;
+
+  // Dragging state for free-floating markers
+  private draggedMarker: THREE.Object3D | null = null;
+  private draggedMarkerType: 'power' | 'weakness' | null = null;
+  private draggedFromCard: CardEntity | null = null;
+  private hoveredMarkerCard: CardEntity | null = null;
+
   public uiManager: UIManager;
   public abilityManager: AbilityManager;
   public phaseManager: PhaseManager;
@@ -231,6 +243,181 @@ export class GameController implements IGameController {
     this.sceneManager.scene.add(this.spotLightBlue);
 
     this.setupPiles();
+    this.setupMarkerReservoirs();
+  }
+
+  private setupMarkerReservoirs() {
+    const rZ = 4.8;
+    const rY = 0.06;
+    const powerX = -2.2;
+    const weaknessX = 2.2;
+
+    // 1. Power Reservoir (Blue Orb)
+    this.powerReservoirMesh = new THREE.Group();
+    this.powerReservoirMesh.position.set(powerX, rY, rZ);
+
+    // Ring base on table
+    const blueRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.35, 0.4, 32),
+      new THREE.MeshBasicMaterial({ color: 0x00f2ff, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+    );
+    blueRing.rotation.x = -Math.PI / 2;
+    blueRing.userData = { isMarkerReservoirBase: true, type: 'power' };
+    this.powerReservoirMesh.add(blueRing);
+
+    // Floating pulsing blue orb
+    const orbGeo = new THREE.SphereGeometry(0.2, 32, 32);
+    const orbMat = new THREE.MeshPhongMaterial({
+      color: 0x00f2ff,
+      emissive: 0x0088ff,
+      transparent: true,
+      opacity: 0.75,
+      shininess: 100
+    });
+    this.powerReservoirOrb = new THREE.Mesh(orbGeo, orbMat);
+    this.powerReservoirOrb.position.y = 0.25;
+    this.powerReservoirOrb.userData = { isMarkerReservoir: true, type: 'power' };
+    this.powerReservoirMesh.add(this.powerReservoirOrb);
+
+    // Label canvas for "POWER"
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = 128;
+    pCanvas.height = 64;
+    const pCtx = pCanvas.getContext('2d')!;
+    pCtx.fillStyle = 'rgba(0,0,0,0)';
+    pCtx.fillRect(0, 0, 128, 64);
+    pCtx.font = 'bold 20px Cinzel, Arial';
+    pCtx.fillStyle = '#00f2ff';
+    pCtx.textAlign = 'center';
+    pCtx.textBaseline = 'middle';
+    pCtx.fillText('POWER', 64, 32);
+    const pTex = new THREE.CanvasTexture(pCanvas);
+    const pLabel = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.4),
+      new THREE.MeshBasicMaterial({ map: pTex, transparent: true })
+    );
+    pLabel.rotation.x = -Math.PI / 2;
+    pLabel.position.set(0, 0.005, 0.6);
+    this.powerReservoirMesh.add(pLabel);
+
+    this.sceneManager.scene.add(this.powerReservoirMesh);
+
+
+    // 2. Weakness Reservoir (Red Spark)
+    this.weaknessReservoirMesh = new THREE.Group();
+    this.weaknessReservoirMesh.position.set(weaknessX, rY, rZ);
+
+    // Ring base on table
+    const redRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.35, 0.4, 32),
+      new THREE.MeshBasicMaterial({ color: 0xff0044, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+    );
+    redRing.rotation.x = -Math.PI / 2;
+    redRing.userData = { isMarkerReservoirBase: true, type: 'weakness' };
+    this.weaknessReservoirMesh.add(redRing);
+
+    // Floating sparking red element
+    this.weaknessReservoirSpark = new THREE.Group();
+    this.weaknessReservoirSpark.position.y = 0.25;
+    
+    // Core
+    const sparkCore = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.12, 0),
+      new THREE.MeshBasicMaterial({ color: 0xff0044 })
+    );
+    sparkCore.userData = { isMarkerReservoir: true, type: 'weakness' };
+    this.weaknessReservoirSpark.add(sparkCore);
+
+    // Spikes/crosses
+    const spikeMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+    const spikeGeo = new THREE.ConeGeometry(0.03, 0.35, 4);
+    
+    const spike1 = new THREE.Mesh(spikeGeo, spikeMat);
+    spike1.rotation.z = Math.PI / 2;
+    this.weaknessReservoirSpark.add(spike1);
+
+    const spike2 = new THREE.Mesh(spikeGeo, spikeMat);
+    spike2.rotation.z = -Math.PI / 2;
+    this.weaknessReservoirSpark.add(spike2);
+
+    const spike3 = new THREE.Mesh(spikeGeo, spikeMat);
+    this.weaknessReservoirSpark.add(spike3);
+
+    const spike4 = new THREE.Mesh(spikeGeo, spikeMat);
+    spike4.rotation.x = Math.PI / 2;
+    this.weaknessReservoirSpark.add(spike4);
+
+    this.weaknessReservoirMesh.add(this.weaknessReservoirSpark);
+
+    // Label canvas for "WEAKNESS"
+    const wCanvas = document.createElement('canvas');
+    wCanvas.width = 128;
+    wCanvas.height = 64;
+    const wCtx = wCanvas.getContext('2d')!;
+    wCtx.fillStyle = 'rgba(0,0,0,0)';
+    wCtx.fillRect(0, 0, 128, 64);
+    wCtx.font = 'bold 20px Cinzel, Arial';
+    wCtx.fillStyle = '#ff0044';
+    wCtx.textAlign = 'center';
+    wCtx.textBaseline = 'middle';
+    wCtx.fillText('WEAKNESS', 64, 32);
+    const wTex = new THREE.CanvasTexture(wCanvas);
+    const wLabel = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 0.6),
+      new THREE.MeshBasicMaterial({ map: wTex, transparent: true })
+    );
+    wLabel.rotation.x = -Math.PI / 2;
+    wLabel.position.set(0, 0.005, 0.6);
+    this.weaknessReservoirMesh.add(wLabel);
+
+    this.sceneManager.scene.add(this.weaknessReservoirMesh);
+  }
+
+  private createDraggedMarker(type: 'power' | 'weakness'): THREE.Object3D {
+    if (type === 'power') {
+      const orbGeo = new THREE.SphereGeometry(0.25, 32, 32);
+      const orbMat = new THREE.MeshPhongMaterial({
+        color: 0x00f2ff,
+        emissive: 0x00aaff,
+        transparent: true,
+        opacity: 0.8,
+        shininess: 120
+      });
+      const mesh = new THREE.Mesh(orbGeo, orbMat);
+      mesh.position.y = 0.4;
+      mesh.userData = { isDraggedMarker: true, type: 'power' };
+      return mesh;
+    } else {
+      const group = new THREE.Group();
+      group.position.y = 0.4;
+      group.userData = { isDraggedMarker: true, type: 'weakness' };
+      
+      const sparkCore = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.15, 0),
+        new THREE.MeshBasicMaterial({ color: 0xff0044 })
+      );
+      group.add(sparkCore);
+
+      const spikeMat = new THREE.MeshBasicMaterial({ color: 0xff5500 });
+      const spikeGeo = new THREE.ConeGeometry(0.04, 0.4, 4);
+      
+      const spike1 = new THREE.Mesh(spikeGeo, spikeMat);
+      spike1.rotation.z = Math.PI / 2;
+      group.add(spike1);
+
+      const spike2 = new THREE.Mesh(spikeGeo, spikeMat);
+      spike2.rotation.z = -Math.PI / 2;
+      group.add(spike2);
+
+      const spike3 = new THREE.Mesh(spikeGeo, spikeMat);
+      group.add(spike3);
+
+      const spike4 = new THREE.Mesh(spikeGeo, spikeMat);
+      spike4.rotation.x = Math.PI / 2;
+      group.add(spike4);
+
+      return group;
+    }
   }
 
   private setupPiles() {
@@ -926,6 +1113,36 @@ export class GameController implements IGameController {
   }
 
   private handleMouseMove(event: MouseEvent | PointerEvent) {
+    if (this.draggedMarker && this.draggedMarkerType) {
+      const ray = this.inputHandler.raycaster.ray;
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4); // float y = 0.4
+      const intersectPoint = new THREE.Vector3();
+      if (ray.intersectPlane(plane, intersectPoint)) {
+        this.draggedMarker.position.copy(intersectPoint);
+      }
+
+      const sealChampions = this.seals.map(s => s.champion).filter((c): c is CardEntity => c !== null);
+      const allBoardCards = [...this.playerBattlefield, ...this.enemyBattlefield, ...sealChampions].filter(c => c !== null) as CardEntity[];
+      const intersects = this.inputHandler.raycaster.intersectObjects(allBoardCards.map(c => c.mesh), true);
+
+      let hoveredCard: CardEntity | null = null;
+      if (intersects.length > 0) {
+        hoveredCard = this.findCardEntityFromObject(intersects[0].object, allBoardCards);
+      }
+
+      if (hoveredCard !== this.hoveredMarkerCard) {
+        if (this.hoveredMarkerCard) {
+          this.hoveredMarkerCard.resetHoverLift(0.2);
+        }
+        if (hoveredCard) {
+          const liftY = 0.3 * hoveredCard.getHoverLiftWorldUpSign();
+          hoveredCard.tweenHoverLift(liftY, 0.2, 'power2.out', false);
+        }
+        this.hoveredMarkerCard = hoveredCard;
+      }
+      return;
+    }
+
     if (this.state.draggingCard) {
       this.updateState({ dragPosition: { x: event.clientX, y: event.clientY } });
 
@@ -1151,6 +1368,67 @@ export class GameController implements IGameController {
   }
 
   private handleMouseUp(event: MouseEvent | PointerEvent) {
+    if (this.draggedMarker && this.draggedMarkerType) {
+      const type = this.draggedMarkerType;
+      const markerMesh = this.draggedMarker;
+      const card = this.hoveredMarkerCard;
+
+      if (card) {
+        if (type === 'power') {
+          card.data.powerMarkers++;
+        } else {
+          card.data.weaknessMarkers++;
+        }
+        card.updateVisualMarkers();
+        this.addLog(`Placed ${type} marker on ${card.data.name}.`);
+
+        this.sceneManager.scene.remove(markerMesh);
+      } else {
+        if (this.draggedFromCard) {
+          this.addLog(`Discarded ${type} marker from table.`);
+          gsap.to(markerMesh.scale, {
+            x: 0.01,
+            y: 0.01,
+            z: 0.01,
+            duration: 0.25,
+            onComplete: () => {
+              this.sceneManager.scene.remove(markerMesh);
+            }
+          });
+        } else {
+          const targetX = type === 'power' ? -2.2 : 2.2;
+          const targetZ = 4.8;
+          gsap.to(markerMesh.position, {
+            x: targetX,
+            y: 0.25,
+            z: targetZ,
+            duration: 0.4,
+            ease: 'power2.out',
+            onComplete: () => {
+              this.sceneManager.scene.remove(markerMesh);
+            }
+          });
+          gsap.to(markerMesh.scale, {
+            x: 0.01,
+            y: 0.01,
+            z: 0.01,
+            duration: 0.4,
+            ease: 'power2.out'
+          });
+        }
+      }
+
+      if (this.hoveredMarkerCard) {
+        this.hoveredMarkerCard.resetHoverLift(0.2);
+      }
+
+      this.draggedMarker = null;
+      this.draggedMarkerType = null;
+      this.draggedFromCard = null;
+      this.hoveredMarkerCard = null;
+      return;
+    }
+
     if (this.state.draggingCard && this.activeSelection) {
       // Restore opacity
       this.activeSelection.setOpacity(1.0);
@@ -1223,6 +1501,73 @@ export class GameController implements IGameController {
   }
 
   private async handleMouseDown(event: MouseEvent | PointerEvent) {
+    if (this.state.currentPhase === Phase.GAME_OVER) return;
+
+    // Raycast against marker reservoirs and existing card markers
+    const reservoirTargets = [this.powerReservoirOrb, this.weaknessReservoirSpark.children[0]];
+    const sealChampions = this.seals.map(s => s.champion).filter((c): c is CardEntity => c !== null);
+    const allBoardCards = [...this.playerBattlefield, ...this.enemyBattlefield, ...sealChampions].filter(c => c !== null) as CardEntity[];
+    
+    const markerMeshesToTest: THREE.Object3D[] = [];
+    allBoardCards.forEach(c => {
+      markerMeshesToTest.push(...c.getMarkerMeshes());
+    });
+
+    const dragTargets = [...reservoirTargets, ...markerMeshesToTest];
+    const markerIntersects = this.inputHandler.raycaster.intersectObjects(dragTargets, true);
+
+    if (markerIntersects.length > 0) {
+      const hitObj = markerIntersects[0].object;
+      let type: 'power' | 'weakness' | null = null;
+      let fromCard: CardEntity | null = null;
+
+      if (hitObj === this.powerReservoirOrb) {
+        type = 'power';
+      } else if (hitObj.parent === this.weaknessReservoirSpark || hitObj === this.weaknessReservoirSpark.children[0]) {
+        type = 'weakness';
+      } else {
+        for (const card of allBoardCards) {
+          const markerType = card.hitTestMarkers(hitObj);
+          if (markerType) {
+            type = markerType;
+            fromCard = card;
+            break;
+          }
+        }
+      }
+
+      if (type) {
+        this.clearCardHoverLiftTarget();
+        if (fromCard) {
+          if (type === 'power') {
+            fromCard.data.powerMarkers = Math.max(0, fromCard.data.powerMarkers - 1);
+          } else {
+            fromCard.data.weaknessMarkers = Math.max(0, fromCard.data.weaknessMarkers - 1);
+          }
+          fromCard.updateVisualMarkers();
+          this.addLog(`Player picked up a ${type} marker from ${fromCard.data.name}.`);
+        } else {
+          this.addLog(`Player picked up a new ${type} marker.`);
+        }
+
+        this.draggedMarkerType = type;
+        this.draggedFromCard = fromCard;
+        this.draggedMarker = this.createDraggedMarker(type);
+
+        const ray = this.inputHandler.raycaster.ray;
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
+        const intersectPoint = new THREE.Vector3();
+        if (ray.intersectPlane(plane, intersectPoint)) {
+          this.draggedMarker.position.copy(intersectPoint);
+        } else {
+          this.draggedMarker.position.set(fromCard ? fromCard.mesh.position.x : (type === 'power' ? -2.2 : 2.2), 0.4, fromCard ? fromCard.mesh.position.z : 4.8);
+        }
+
+        this.sceneManager.scene.add(this.draggedMarker);
+        return;
+      }
+    }
+
     if (this.state.currentPhase === Phase.PREP) {
       const limboIntersects = this.inputHandler.raycaster.intersectObjects(this.playerLimbo.map(c => c.mesh), true);
       if (limboIntersects.length > 0) {
@@ -1389,6 +1734,33 @@ export class GameController implements IGameController {
       seal.setLocked(idx === lockedIdx);
     });
 
+    // Animate Reservoirs
+    if (this.powerReservoirOrb) {
+      const orbScale = 1.0 + Math.sin(time * 4.0) * 0.12;
+      this.powerReservoirOrb.scale.set(orbScale, orbScale, orbScale);
+      this.powerReservoirOrb.position.y = 0.25 + Math.sin(time * 3.0) * 0.05;
+    }
+    if (this.weaknessReservoirSpark) {
+      const jitter = 0.8 + Math.random() * 0.45;
+      this.weaknessReservoirSpark.scale.set(jitter, jitter, jitter);
+      this.weaknessReservoirSpark.rotation.x += 0.08;
+      this.weaknessReservoirSpark.rotation.y += 0.12;
+      this.weaknessReservoirSpark.rotation.z += 0.05;
+    }
+
+    // Animate Dragged Marker
+    if (this.draggedMarker && this.draggedMarkerType) {
+      if (this.draggedMarkerType === 'power') {
+        const orbScale = 1.1 + Math.sin(time * 8.0) * 0.15;
+        this.draggedMarker.scale.set(orbScale, orbScale, orbScale);
+      } else {
+        const jitter = 0.85 + Math.random() * 0.4;
+        this.draggedMarker.scale.set(jitter, jitter, jitter);
+        this.draggedMarker.rotation.x += 0.12;
+        this.draggedMarker.rotation.y += 0.18;
+      }
+    }
+
     this.entityManager.update(time);
     this.sceneManager.update();
   }
@@ -1396,6 +1768,31 @@ export class GameController implements IGameController {
   public dispose() {
     this.clearCardHoverLiftTarget();
     window.removeEventListener('resize', this.onResizeBound);
+
+    // Clean up marker reservoirs
+    if (this.powerReservoirMesh) {
+      this.sceneManager.scene.remove(this.powerReservoirMesh);
+      this.powerReservoirMesh.traverse((child) => {
+        if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
+        if ((child as THREE.Mesh).material) {
+          const mat = (child as THREE.Mesh).material;
+          if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+          else mat.dispose();
+        }
+      });
+    }
+    if (this.weaknessReservoirMesh) {
+      this.sceneManager.scene.remove(this.weaknessReservoirMesh);
+      this.weaknessReservoirMesh.traverse((child) => {
+        if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
+        if ((child as THREE.Mesh).material) {
+          const mat = (child as THREE.Mesh).material;
+          if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+          else mat.dispose();
+        }
+      });
+    }
+
     this.sceneManager.dispose();
     this.inputHandler.dispose();
     this.entityManager.clear();

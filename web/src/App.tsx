@@ -32,13 +32,13 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
-  const [activeView, setActiveView] = useState<'combat' | 'hand' | 'board'>('board');
+  const [activeView, setActiveView] = useState<'combat' | 'starting' | 'hand' | 'board'>('starting');
 
   useEffect(() => {
     if (gameState?.combatInterstitial?.active) {
       setActiveView('combat');
     } else {
-      setActiveView('board');
+      setActiveView('starting');
     }
   }, [gameState?.combatInterstitial?.active]);
 
@@ -716,14 +716,16 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         {/* Global camera view switching button */}
         <button
           onClick={() => {
-            let nextView: 'combat' | 'hand' | 'board';
+            let nextView: 'combat' | 'starting' | 'hand' | 'board';
             if (gameState?.combatInterstitial?.active) {
-              if (activeView === 'combat') nextView = 'hand';
+              if (activeView === 'combat') nextView = 'starting';
+              else if (activeView === 'starting') nextView = 'hand';
               else if (activeView === 'hand') nextView = 'board';
               else nextView = 'combat';
             } else {
-              if (activeView === 'hand') nextView = 'board';
-              else nextView = 'hand';
+              if (activeView === 'starting') nextView = 'hand';
+              else if (activeView === 'hand') nextView = 'board';
+              else nextView = 'starting';
             }
             setActiveView(nextView);
           }}
@@ -732,6 +734,8 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
           <span className="text-[#00f2ff] font-sans">📷</span>
           {activeView === 'combat' ? (
             <>View: Combat</>
+          ) : activeView === 'starting' ? (
+            <>View: Start</>
           ) : activeView === 'hand' ? (
             <>View: Hand</>
           ) : (

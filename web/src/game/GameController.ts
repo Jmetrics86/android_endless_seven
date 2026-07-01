@@ -908,7 +908,7 @@ export class GameController implements IGameController {
     this.updateState({ isResolutionPaused: paused });
   }
 
-  public setCameraView(view: 'combat' | 'hand' | 'board') {
+  public setCameraView(view: 'combat' | 'starting' | 'hand' | 'board') {
     const duration = 0.8;
     if (view === 'board') {
       gsap.to(this.sceneManager.camera.position, { x: 0, y: 25, z: 0.1, duration, ease: "power2.inOut" });
@@ -992,6 +992,9 @@ export class GameController implements IGameController {
       this.addLog(msg);
     }
     this.abilityManager.stripBoardPresencePowerFromCard(card);
+    card.data.powerMarkers = 0;
+    card.data.weaknessMarkers = 0;
+    card.updateVisualMarkers();
     const limbo = isEnemy ? this.enemyLimbo : this.playerLimbo;
     const mesh = isEnemy ? this.enemyLimboMesh : this.playerLimboMesh;
     limbo.push(card);
@@ -1405,8 +1408,14 @@ export class GameController implements IGameController {
       if (card) {
         if (type === 'power') {
           card.data.powerMarkers++;
+          if (this.draggedFromCard === null) {
+            this.updateState({ powerPool: this.state.powerPool - 1 });
+          }
         } else {
           card.data.weaknessMarkers++;
+          if (this.draggedFromCard === null) {
+            this.updateState({ weaknessPool: this.state.weaknessPool - 1 });
+          }
         }
         card.updateVisualMarkers();
         this.addLog(`Placed ${type} marker on ${card.data.name}.`);
@@ -1415,6 +1424,11 @@ export class GameController implements IGameController {
       } else {
         if (this.draggedFromCard) {
           this.addLog(`Discarded ${type} marker from table.`);
+          if (type === 'power') {
+            this.updateState({ powerPool: this.state.powerPool + 1 });
+          } else {
+            this.updateState({ weaknessPool: this.state.weaknessPool + 1 });
+          }
           gsap.to(markerMesh.scale, {
             x: 0.01,
             y: 0.01,
@@ -1570,9 +1584,17 @@ export class GameController implements IGameController {
         }
 
         if (isPowerReservoir) {
-          type = 'power';
+          if (this.state.powerPool > 0) {
+            type = 'power';
+          } else {
+            this.addLog("Power pool is empty.");
+          }
         } else if (isWeaknessReservoir) {
-          type = 'weakness';
+          if (this.state.weaknessPool > 0) {
+            type = 'weakness';
+          } else {
+            this.addLog("Weakness pool is empty.");
+          }
         } else {
           // 2. Check if we clicked directly on or within a card
           for (const card of allBoardCards) {
@@ -1813,6 +1835,12 @@ export class GameController implements IGameController {
     this.seals.forEach((seal, idx) => {
       seal.setLocked(idx === lockedIdx);
     });
+
+    // Synchronize reservoirs visibility with active counter allocation phase & pools
+    const showPowerRes = this.state.currentPhase === Phase.COUNTER_ALLOCATION && this.state.powerPool > 0;
+    const showWeaknessRes = this.state.currentPhase === Phase.COUNTER_ALLOCATION && this.state.weaknessPool > 0;
+    if (this.powerReservoirMesh) this.powerReservoirMesh.visible = showPowerRes;
+    if (this.weaknessReservoirMesh) this.weaknessReservoirMesh.visible = showWeaknessRes;
 
     // Animate Reservoirs
     if (this.powerReservoirOrb) {

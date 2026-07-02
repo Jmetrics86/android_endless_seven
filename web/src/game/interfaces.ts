@@ -33,7 +33,7 @@ export interface IGameController {
   abilitySourceCard: CardEntity | null;
   resolutionCallback: (() => void) | null;
   pendingAbilityData: any;
-  nullifyCallback: ((confirmed: boolean) => void) | null;
+  nullifyCallback: ((choice: any) => void) | null;
   sealSelectionCallback: ((idx: number) => void) | null;
   updateState(patch: Partial<GameState>): void;
   cardToHoveredInfo(card: CardEntity): HoveredCardInfo;

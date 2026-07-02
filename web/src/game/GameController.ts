@@ -1168,7 +1168,7 @@ export class GameController implements IGameController {
     // Luna: Final Act: Only when Seal has no Champion; optional — you may move Luna to Graveyard to nullify.
     const sealWithoutChampion = !this.seals[idx].champion;
     const lunaCard = sealWithoutChampion
-      ? [...this.playerLimbo, ...this.enemyLimbo].find(c => c.data.name === "Luna" && c.data.isEnemy !== (status === Alignment.DARK))
+      ? [...this.playerLimbo, ...this.enemyLimbo].find(c => c.data.name === "Luna" && c.data.isEnemy !== (status === Alignment.DARK) && !c.data.isHeldForRound)
       : null;
     if (lunaCard) {
       const isEnemyLuna = lunaCard.data.isEnemy;
@@ -1186,11 +1186,15 @@ export class GameController implements IGameController {
           instructionText: 'Use Luna from Limbo to nullify this influence change? (Luna moves to Graveyard)',
           decisionMessage: 'Your opponent is changing a Seal\'s influence. Use Luna from your Limbo to nullify this? (Luna is moved to your Graveyard.)'
         });
-        const useLuna = await new Promise<boolean>(resolve => { (this as any).nullifyCallback = resolve; });
+        const choice = await new Promise<'yes' | 'skip' | 'hold'>(resolve => { (this as any).nullifyCallback = resolve; });
         this.updateState({ decisionContext: undefined, decisionMessage: undefined });
-        if (useLuna) {
+        if (choice === 'yes') {
           this.abilityManager.moveToGraveyard(lunaCard);
           this.addLog(`Luna is moved to the Graveyard to nullify the influence change.`);
+          return;
+        } else if (choice === 'hold') {
+          lunaCard.data.isHeldForRound = true;
+          this.addLog(`Luna is held for the rest of the round.`);
           return;
         }
       }

@@ -134,9 +134,9 @@ export default function App() {
     gameRef.current?.finishCounters();
   };
 
-  const handleDecision = (confirmed: boolean) => {
+  const handleDecision = (choice: 'yes' | 'skip' | 'hold' | boolean) => {
     if (gameRef.current) {
-      (gameRef.current as any).nullifyCallback?.(confirmed);
+      (gameRef.current as any).nullifyCallback?.(choice);
       (gameRef.current as any).nullifyCallback = null;
     }
   };
@@ -690,6 +690,27 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
                       </button>
                     ))}
                   </div>
+                ) : gameState.decisionContext === 'LUNA_NULLIFY' || gameState.decisionContext === 'FALLEN_ONE' || gameState.decisionContext === 'COAL_BLOCK_ASCENSION' ? (
+                  <>
+                    <button
+                      onClick={() => handleDecision('yes')}
+                      className="px-5 py-2 rounded-lg bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => handleDecision('skip')}
+                      className="px-5 py-2 rounded-lg bg-white/5 border border-white/20 hover:bg-white/10 text-gray-300 text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Skip
+                    </button>
+                    <button
+                      onClick={() => handleDecision('hold')}
+                      className="px-5 py-2 rounded-lg bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/40 text-amber-300 text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Hold
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button

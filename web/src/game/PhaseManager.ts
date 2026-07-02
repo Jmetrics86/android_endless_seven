@@ -128,6 +128,19 @@ export class PhaseManager {
     // Clear any temporary battle invincibility applied in the previous round
     this.clearTemporaryInvincibility();
 
+    // Reset held-for-round flags on all cards in all relevant zones
+    [
+      ...this.controller.playerLimbo,
+      ...this.controller.enemyLimbo,
+      ...this.controller.playerBattlefield,
+      ...this.controller.enemyBattlefield,
+      ...this.controller.seals.map(s => s.champion)
+    ].forEach(c => {
+      if (c && c.data) {
+        c.data.isHeldForRound = false;
+      }
+    });
+
     // Preload card back texture before creating any hand cards so the first (leftmost) card is never rendered without it
     await getOrLoadBackTexture();
 
@@ -908,7 +921,7 @@ export class PhaseManager {
       // Coal block ascension check
       const opponentIsEnemy = !survivor.data.isEnemy;
       const opponentLimbo = opponentIsEnemy ? this.controller.enemyLimbo : this.controller.playerLimbo;
-      const coal = opponentLimbo.find(c => c.data.name === "Coal");
+      const coal = opponentLimbo.find(c => c.data.name === "Coal" && !c.data.isHeldForRound);
       let blocked = false;
 
       if (coal) {
@@ -926,16 +939,19 @@ export class PhaseManager {
           
           this.controller.zoomOut();
           
-          const confirmed = await new Promise<boolean>((resolve) => {
+          const choice = await new Promise<'yes' | 'skip' | 'hold'>((resolve) => {
             (this.controller as any).nullifyCallback = resolve;
           });
           
           this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
           
-          if (confirmed) {
+          if (choice === 'yes') {
             this.controller.addLog(`Player uses Coal from Limbo to block ${survivor.data.name}'s ascension!`);
             this.controller.abilityManager.moveToGraveyard(coal);
             blocked = true;
+          } else if (choice === 'hold') {
+            coal.data.isHeldForRound = true;
+            this.controller.addLog(`Coal is held for the rest of the round.`);
           }
           if (this.controller.currentResolvingSealIndex !== -1) {
             this.controller.zoomIn(this.controller.currentResolvingSealIndex);

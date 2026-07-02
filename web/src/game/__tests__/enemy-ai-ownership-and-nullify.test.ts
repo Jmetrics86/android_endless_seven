@@ -30,6 +30,7 @@ interface MockCard {
     weaknessMarkers: number;
     isInvincible?: boolean;
     isSuppressed?: boolean;
+    isHeldForRound?: boolean;
   };
   updateVisualMarkers: () => void;
   applyBackTextureIfNeeded: () => void;
@@ -121,7 +122,7 @@ function createCtrl() {
     cardsThatBattledThisRound: [] as CardEntity[],
     resolutionCallback: null as (() => void) | null,
     pendingAbilityData: null,
-    nullifyCallback: null as ((b: boolean) => void) | null,
+    nullifyCallback: null as ((choice: any) => void) | null,
     sealSelectionCallback: null as ((n: number) => void) | null,
     updateState: vi.fn(),
     addLog: vi.fn(),
@@ -378,5 +379,28 @@ describe('Limbo nullify and Graveyard rules', () => {
     const result = await ctrl.abilityManager.checkNullify(playerFlipper as unknown as CardEntity);
 
     expect(result).toBe(false);
+  });
+
+  it('checkNullify: player chooses to hold Samyaza — sets isHeldForRound, returns false, and does not check again in this round', async () => {
+    const samyaza = card({ name: 'Samyaza', power: 3, isEnemy: false });
+    ctrl.playerLimbo.push(samyaza);
+
+    const enemyFlipper = card({ name: 'Herald', power: 5, isEnemy: true });
+
+    const checkPromise = ctrl.abilityManager.checkNullify(enemyFlipper as unknown as CardEntity);
+    
+    if (ctrl.nullifyCallback) {
+      ctrl.nullifyCallback('hold');
+    }
+
+    const result = await checkPromise;
+
+    expect(result).toBe(false);
+    expect(samyaza.data.isHeldForRound).toBe(true);
+
+    ctrl.nullifyCallback = null;
+    const secondResult = await ctrl.abilityManager.checkNullify(enemyFlipper as unknown as CardEntity);
+    expect(secondResult).toBe(false);
+    expect(ctrl.nullifyCallback).toBeNull();
   });
 });

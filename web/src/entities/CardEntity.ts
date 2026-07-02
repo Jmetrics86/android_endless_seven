@@ -66,6 +66,7 @@ export class CardEntity implements GameEntity {
     weaknessMarkers: number;
     isInvincible: boolean;
     isSuppressed: boolean;
+    isHeldForRound?: boolean;
     markedByWildWolf?: boolean;
     pendingDeltaSacrifice?: boolean;
     markedForDeltaBuff?: boolean;
@@ -125,6 +126,7 @@ export class CardEntity implements GameEntity {
       weaknessMarkers: 0,
       isInvincible: false,
       isSuppressed: false,
+      isHeldForRound: false,
       markedByWildWolf: false,
       pendingDeltaSacrifice: false,
       markedForDeltaBuff: false,

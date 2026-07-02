@@ -1229,7 +1229,7 @@ export class AbilityManager {
   public async checkNullify(source: CardEntity): Promise<boolean> {
     const isEnemy = source.data.isEnemy;
     const opponentLimbo = isEnemy ? this.controller.playerLimbo : this.controller.enemyLimbo;
-    const nullifier = opponentLimbo.find((c) => c.data.name === 'Samyaza' || c.data.name === 'Belphegor');
+    const nullifier = opponentLimbo.find((c) => (c.data.name === 'Samyaza' || c.data.name === 'Belphegor') && !c.data.isHeldForRound);
     if (!nullifier || !opponentLimbo.includes(nullifier)) return false;
 
     if (!isEnemy) {
@@ -1248,16 +1248,19 @@ export class AbilityManager {
       decisionMessage: `Opponent revealed ${source.data.name}. Use ${nullifier.data.name} from your Limbo to nullify its ability? (${nullifier.data.name} is moved to your Graveyard.)`
     });
 
-    const confirmed = await new Promise<boolean>((resolve) => {
+    const choice = await new Promise<'yes' | 'skip' | 'hold'>((resolve) => {
       (this.controller as any).nullifyCallback = resolve;
     });
 
     this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
 
-    if (confirmed) {
+    if (choice === 'yes') {
       this.controller.addLog(`Player uses ${nullifier.data.name} from Limbo to Nullify ${source.data.name}'s ability!`);
       this.moveToGraveyard(nullifier);
       return true;
+    } else if (choice === 'hold') {
+      nullifier.data.isHeldForRound = true;
+      this.controller.addLog(`${nullifier.data.name} is held for the rest of the round.`);
     }
     return false;
   }

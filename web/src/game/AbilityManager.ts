@@ -412,6 +412,15 @@ export class AbilityManager {
         target.updateVisualMarkers();
         this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers on ${target.data.name} (${count} removed).`);
         if (choice === 'power') this.afterBulkPowerMarkersCleared();
+
+        const nextPhase = this.controller.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+        this.controller.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });
+        if (this.controller.currentResolvingSealIndex !== -1) this.controller.zoomIn(this.controller.currentResolvingSealIndex);
+        this.controller.pendingAbilityData = null;
+        if ((this.controller as any).resolutionCallback) {
+          (this.controller as any).resolutionCallback();
+          (this.controller as any).resolutionCallback = null;
+        }
         return;
       }
     }

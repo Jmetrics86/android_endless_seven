@@ -1857,16 +1857,19 @@ export class GameController implements IGameController {
         if (card) {
           if (forSentinel && !this.playerLimbo.includes(card) && !this.enemyLimbo.includes(card)) return; // Sentinel must target Limbo
           if (forChampion && !card.data.isChampion) return; // Lord must target Champion
+          const isMetatronSelect = this.pendingAbilityData?.effect === 'metatron_select_type';
           this.abilityManager.applyAbilityEffect(card, this.pendingAbilityData);
-          const phaseAfterEffect = this.state.currentPhase as Phase;
-          if (phaseAfterEffect !== Phase.GAME_OVER) {
-            const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
-            this.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });
-            if (this.currentResolvingSealIndex !== -1) this.zoomIn(this.currentResolvingSealIndex);
+          if (!isMetatronSelect) {
+            const phaseAfterEffect = this.state.currentPhase as Phase;
+            if (phaseAfterEffect !== Phase.GAME_OVER) {
+              const nextPhase = this.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
+              this.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });
+              if (this.currentResolvingSealIndex !== -1) this.zoomIn(this.currentResolvingSealIndex);
+            }
+            this.pendingAbilityData = null;
+            if (this.resolutionCallback) this.resolutionCallback();
+            this.resolutionCallback = null;
           }
-          this.pendingAbilityData = null;
-          if (this.resolutionCallback) this.resolutionCallback();
-          this.resolutionCallback = null;
         }
       }
     } else if (this.state.currentPhase === Phase.SEAL_TARGETING) {

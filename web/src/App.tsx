@@ -596,83 +596,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
                 </div>
               </div>
 
-              {/* Decision Prompt Overlay superimposed on top of the cards */}
-              {gameState?.decisionContext && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md border border-amber-500/40 rounded-xl p-3 text-center space-y-2.5 shadow-[0_0_30px_rgba(245,158,11,0.35)] z-[160] animate-fade-in">
-                  <div className="text-[0.55rem] sm:text-[0.7rem] text-amber-400 font-bold uppercase tracking-[0.2em] font-mono leading-none">
-                    ⚠️ Action Required: {gameState.decisionContext.replace(/_/g, ' ')}
-                  </div>
-                  <div className="text-[0.6rem] sm:text-xs text-gray-200 font-sans leading-tight px-4 max-w-md">
-                    {gameState.decisionMessage ?? gameState.instructionText}
-                  </div>
 
-                  <div className="flex flex-wrap gap-1.5 justify-center pt-1 w-full max-w-xs">
-                    {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
-                      <>
-                        <button
-                          onClick={() => handleMarkerTypeChoice('power')}
-                          className="px-3.5 py-1.5 rounded bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Power
-                        </button>
-                        <button
-                          onClick={() => handleMarkerTypeChoice('weakness')}
-                          className="px-3.5 py-1.5 rounded bg-[#ff0044]/20 border border-[#ff0044]/50 hover:bg-[#ff0044]/40 text-[#ff4466] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Weakness
-                        </button>
-                      </>
-                    ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
-                      <>
-                        <button
-                          onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)}
-                          className="px-3.5 py-1.5 rounded bg-amber-400/20 border border-amber-400/50 hover:bg-amber-400/40 text-amber-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Light
-                        </button>
-                        <button
-                          onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)}
-                          className="px-3.5 py-1.5 rounded bg-purple-400/20 border border-purple-400/50 hover:bg-purple-400/40 text-purple-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Dark
-                        </button>
-                      </>
-                    ) : gameState.decisionContext === 'DEATH_CREATURE_TYPE' ? (
-                      <div className="flex flex-wrap gap-1 justify-center max-h-[80px] overflow-y-auto px-1 py-0.5">
-                        {gameState.creatureTypeOptions?.map(opt => (
-                          <button
-                            key={opt}
-                            onClick={() => {
-                              if (gameRef.current) {
-                                (gameRef.current as any).creatureTypeCallback?.(opt);
-                                (gameRef.current as any).creatureTypeCallback = null;
-                              }
-                            }}
-                            className="px-2.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/50 hover:bg-purple-500/40 text-purple-300 text-[0.55rem] font-bold transition-all"
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleDecision(true)}
-                          className="px-4 py-1.5 rounded bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => handleDecision(false)}
-                          className="px-4 py-1.5 rounded bg-white/5 border border-white/20 hover:bg-white/10 text-gray-300 text-[0.55rem] sm:text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Skip
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Step Indicators */}
@@ -696,6 +620,93 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
               >
                 Skip Interaction
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Decision Prompt Overlay */}
+      <AnimatePresence>
+        {gameState?.decisionContext && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-[200] p-4 text-center"
+          >
+            <div className="bg-black/90 border border-amber-500/40 rounded-2xl p-6 max-w-md w-full flex flex-col items-center justify-center space-y-4 shadow-[0_0_30px_rgba(245,158,11,0.35)] animate-fade-in">
+              <div className="text-[0.6rem] sm:text-[0.8rem] text-amber-400 font-bold uppercase tracking-[0.2em] font-mono leading-none">
+                ⚠️ Action Required: {gameState.decisionContext.replace(/_/g, ' ')}
+              </div>
+              <div className="text-[0.7rem] sm:text-sm text-gray-200 font-sans leading-relaxed px-2">
+                {gameState.decisionMessage ?? gameState.instructionText}
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 justify-center pt-2 w-full max-w-xs">
+                {gameState.decisionContext === 'ALMIGHTY_MARKER_TYPE' || gameState.decisionContext === 'DESTROYER_MARKER_TYPE' ? (
+                  <>
+                    <button
+                      onClick={() => handleMarkerTypeChoice('power')}
+                      className="px-4 py-2 rounded-lg bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Power
+                    </button>
+                    <button
+                      onClick={() => handleMarkerTypeChoice('weakness')}
+                      className="px-4 py-2 rounded-lg bg-[#ff0044]/20 border border-[#ff0044]/50 hover:bg-[#ff0044]/40 text-[#ff4466] text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Weakness
+                    </button>
+                  </>
+                ) : gameState.decisionContext === 'LUST_SEAL_INFLUENCE' ? (
+                  <>
+                    <button
+                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.LIGHT)}
+                      className="px-4 py-2 rounded-lg bg-amber-400/20 border border-amber-400/50 hover:bg-amber-400/40 text-amber-300 text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Light
+                    </button>
+                    <button
+                      onClick={() => (gameRef.current as any)?.alignmentChoiceCallback?.(Alignment.DARK)}
+                      className="px-4 py-2 rounded-lg bg-purple-400/20 border border-purple-400/50 hover:bg-purple-400/40 text-purple-300 text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Dark
+                    </button>
+                  </>
+                ) : gameState.decisionContext === 'DEATH_CREATURE_TYPE' ? (
+                  <div className="flex flex-wrap gap-1.5 justify-center max-h-[120px] overflow-y-auto px-1 py-0.5">
+                    {gameState.creatureTypeOptions?.map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => {
+                          if (gameRef.current) {
+                            (gameRef.current as any).creatureTypeCallback?.(opt);
+                            (gameRef.current as any).creatureTypeCallback = null;
+                          }
+                        }}
+                        className="px-3 py-1 rounded bg-purple-500/20 border border-purple-500/50 hover:bg-purple-500/40 text-purple-300 text-[0.6rem] font-bold transition-all cursor-pointer"
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleDecision(true)}
+                      className="px-5 py-2 rounded-lg bg-[#00f2ff]/20 border border-[#00f2ff]/50 hover:bg-[#00f2ff]/40 text-[#00f2ff] text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => handleDecision(false)}
+                      className="px-5 py-2 rounded-lg bg-white/5 border border-white/20 hover:bg-white/10 text-gray-300 text-[0.65rem] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      Skip
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

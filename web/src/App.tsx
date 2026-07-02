@@ -35,15 +35,15 @@ export default function App() {
   const [activeView, setActiveView] = useState<'combat' | 'starting' | 'hand' | 'board'>('starting');
 
   useEffect(() => {
-    if (gameState?.combatInterstitial?.active) {
+    if (gameState?.combatInterstitial) {
       setActiveView('combat');
     } else {
       setActiveView('starting');
     }
-  }, [gameState?.combatInterstitial?.active]);
+  }, [!!gameState?.combatInterstitial]);
 
   useEffect(() => {
-    if (gameState?.combatInterstitial?.active) {
+    if (gameState?.combatInterstitial) {
       if (activeView === 'combat') {
         gameRef.current?.setResolutionPaused(false);
       } else {
@@ -53,7 +53,7 @@ export default function App() {
       gameRef.current?.setResolutionPaused(false);
     }
     gameRef.current?.setCameraView(activeView);
-  }, [activeView, gameState?.combatInterstitial?.active]);
+  }, [activeView, !!gameState?.combatInterstitial]);
 
   const LOG_RECENT_COUNT = 30;
   const displayLogs =
@@ -539,7 +539,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {gameState?.combatInterstitial?.active && !is3DTargetingActive && activeView === 'combat' && (
+        {gameState?.combatInterstitial && !is3DTargetingActive && activeView === 'combat' && (
           <motion.div
             key="combat-interstitial-auto"
             initial={{ opacity: 0 }}
@@ -736,7 +736,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
       {/* Camera & Resolution Control Interface in Bottom Right */}
       <div className="fixed bottom-4 right-4 z-[160] flex flex-col items-end gap-2.5">
         {/* Resume Button: Shown when combat is active but user is in board/hand view (so resolution is paused) */}
-        {gameState?.combatInterstitial?.active && activeView !== 'combat' && (
+        {gameState?.combatInterstitial && activeView !== 'combat' && (
           <button
             onClick={() => setActiveView('combat')}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 border border-amber-400/50 text-white font-mono text-[0.6rem] sm:text-xs uppercase tracking-widest font-black shadow-[0_0_20px_rgba(245,158,11,0.45)] hover:from-amber-600 hover:to-orange-700 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none animate-bounce"
@@ -749,7 +749,7 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         <button
           onClick={() => {
             let nextView: 'combat' | 'starting' | 'hand' | 'board';
-            if (gameState?.combatInterstitial?.active) {
+            if (gameState?.combatInterstitial) {
               if (activeView === 'combat') nextView = 'starting';
               else if (activeView === 'starting') nextView = 'hand';
               else if (activeView === 'hand') nextView = 'board';

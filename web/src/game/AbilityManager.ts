@@ -39,9 +39,16 @@ import {
 import gsap from 'gsap';
 
 export class AbilityManager {
-  private metatronResolve: ((target: CardEntity) => void) | null = null;
+  private metatronResolve: ((target: CardEntity | null) => void) | null = null;
 
   constructor(private controller: IGameController) {}
+
+  public cancelPendingPromises() {
+    if (this.metatronResolve) {
+      this.metatronResolve(null);
+      this.metatronResolve = null;
+    }
+  }
 
   public isImmuneToAbilities(target: CardEntity, source: CardEntity): boolean {
     if (source.data.type !== 'Creature') return false;
@@ -389,29 +396,33 @@ export class AbilityManager {
           instructionText: "Metatron: Select a creature to destroy one marker type on."
         });
         this.controller.zoomOut();
-        const target = await new Promise<CardEntity>((resolve) => {
+        const target = await new Promise<CardEntity | null>((resolve) => {
           this.metatronResolve = resolve;
           (this.controller as any).pendingAbilityData = { source, effect: 'metatron_select_type', targetType: 'creature', validTargets };
         });
-        if (!target) return;
-        if (this.isImmuneToAbilities(target, source)) {
-          this.controller.addLog(`${target.data.name} is immune to ${source.data.name}'s ability.`);
-          return;
+
+        if (target) {
+          if (this.isImmuneToAbilities(target, source)) {
+            this.controller.addLog(`${target.data.name} is immune to ${source.data.name}'s ability.`);
+          } else {
+            this.controller.updateState({
+              decisionContext: 'DESTROYER_MARKER_TYPE',
+              instructionText: "Metatron: Choose which marker type to eliminate on the chosen creature.",
+              decisionMessage: `Destroy all Power Markers or all Weakness Markers on ${target.data.name}.`
+            });
+            const choice = await new Promise<'power' | 'weakness' | null>((resolve) => {
+              (this.controller as any).markerTypeCallback = resolve;
+            });
+            this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
+            if (choice) {
+              const count = target.data[key(choice)];
+              target.data[key(choice)] = 0;
+              target.updateVisualMarkers();
+              this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers on ${target.data.name} (${count} removed).`);
+              if (choice === 'power') this.afterBulkPowerMarkersCleared();
+            }
+          }
         }
-        this.controller.updateState({
-          decisionContext: 'DESTROYER_MARKER_TYPE',
-          instructionText: "Metatron: Choose which marker type to eliminate on the chosen creature.",
-          decisionMessage: `Destroy all Power Markers or all Weakness Markers on ${target.data.name}.`
-        });
-        const choice = await new Promise<'power' | 'weakness'>((resolve) => {
-          (this.controller as any).markerTypeCallback = resolve;
-        });
-        this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
-        const count = target.data[key(choice)];
-        target.data[key(choice)] = 0;
-        target.updateVisualMarkers();
-        this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers on ${target.data.name} (${count} removed).`);
-        if (choice === 'power') this.afterBulkPowerMarkersCleared();
 
         const nextPhase = this.controller.currentResolvingSealIndex !== -1 ? Phase.RESOLUTION : Phase.PREP;
         this.controller.updateState({ currentPhase: nextPhase, instructionText: '', isSelectingLimboTarget: false });

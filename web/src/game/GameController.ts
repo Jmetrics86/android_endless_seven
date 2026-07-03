@@ -949,6 +949,7 @@ export class GameController implements IGameController {
 
     this.addLog("Forcing skip of current interaction...");
     this.isProcessing = false;
+    this.abilityManager.cancelPendingPromises();
 
     // Clear any ability activation highlight on all cards so glow never lingers after a skip
     const clearActivationGlow = (card: CardEntity | null) => {
@@ -980,6 +981,10 @@ export class GameController implements IGameController {
     if ((this as any).creatureTypeCallback) {
       (this as any).creatureTypeCallback('');
       (this as any).creatureTypeCallback = null;
+    }
+    if ((this as any).markerTypeCallback) {
+      (this as any).markerTypeCallback(null);
+      (this as any).markerTypeCallback = null;
     }
 
     if (this.state.currentPhase !== Phase.GAME_OVER) {

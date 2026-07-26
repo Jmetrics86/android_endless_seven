@@ -12,6 +12,7 @@ import { cardArtUrl, CARD_BACK_PATH } from './cardArtPaths';
 import type { EnvironmentTheme } from './theme';
 import { THEME_STORAGE_KEY } from './theme';
 import { GameOverAchievements } from './components/GameOverAchievements';
+import { AbilitiesDrawer } from './components/AbilitiesDrawer';
 
 function loadStoredTheme(): EnvironmentTheme {
   try {
@@ -30,6 +31,7 @@ export default function App() {
   const [showSelection, setShowSelection] = useState(true);
   const [zoneSearchModal, setZoneSearchModal] = useState<'limbo' | 'graveyard' | 'deck' | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAbilitiesDrawerOpen, setIsAbilitiesDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
   const [activeView, setActiveView] = useState<'combat' | 'starting' | 'hand' | 'board'>('starting');
@@ -169,6 +171,33 @@ export default function App() {
           <span className={`text-2xl ${isActionRequired && !isDrawerOpen ? 'text-[#00f2ff]' : 'text-white'}`}>
             {isDrawerOpen ? '✕' : isActionRequired ? '!' : '☰'}
           </span>
+        </button>
+      )}
+
+      {/* Abilities Storage Toggle Button (Far Right Side) */}
+      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
+        <button
+          onClick={() => {
+            const next = !isAbilitiesDrawerOpen;
+            setIsAbilitiesDrawerOpen(next);
+            gameRef.current?.setAbilitiesDrawerPaused(next);
+          }}
+          className={`fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
+            (gameState.playerAbilityQueue?.length ?? 0) > 0
+              ? 'border-[#00f2ff] bg-[#00f2ff]/10 shadow-[0_0_15px_rgba(0,242,255,0.4)] animate-pulse'
+              : 'border-white/20 hover:border-[#00f2ff]/60 bg-black/40'
+          }`}
+          aria-label="Toggle Ability Storage"
+        >
+          <span className="text-xl">⚡</span>
+          <span className="text-[0.65rem] font-bold text-white tracking-widest uppercase hidden sm:inline">
+            Abilities
+          </span>
+          {(gameState.playerAbilityQueue?.length ?? 0) > 0 && (
+            <span className="bg-[#00f2ff] text-black font-extrabold text-[0.6rem] px-1.5 py-0.5 rounded-full min-w-5 text-center">
+              {gameState.playerAbilityQueue.length}
+            </span>
+          )}
         </button>
       )}
 
@@ -763,7 +792,6 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
           }}
           className="px-3.5 py-2.5 rounded-xl bg-black/90 border border-[#00f2ff]/40 text-white font-mono text-[0.55rem] sm:text-xs uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(0,242,255,0.25)] hover:border-[#00f2ff] hover:bg-black transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer select-none"
         >
-          <span className="text-[#00f2ff] font-sans">📷</span>
           {activeView === 'combat' ? (
             <>View: Combat</>
           ) : activeView === 'starting' ? (
@@ -775,6 +803,21 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
           )}
         </button>
       </div>
+
+      {/* Abilities Storage Drawer */}
+      <AbilitiesDrawer
+        isOpen={isAbilitiesDrawerOpen}
+        onClose={() => {
+          setIsAbilitiesDrawerOpen(false);
+          gameRef.current?.setAbilitiesDrawerPaused(false);
+        }}
+        abilities={gameState?.playerAbilityQueue ?? []}
+        onUseAbility={(abilityId) => {
+          setIsAbilitiesDrawerOpen(false);
+          gameRef.current?.setAbilitiesDrawerPaused(false);
+          gameRef.current?.useQueuedAbility(abilityId);
+        }}
+      />
 
       <style>{`
         .drawer-btn {

@@ -6,7 +6,7 @@
 import { CardEntity } from '../entities/CardEntity';
 import { SealEntity } from '../entities/SealEntity';
 import { IGameController } from './interfaces';
-import { Alignment, Phase } from '../types';
+import { Alignment, Phase, QueuedAbility } from '../types';
 import { GAME_CONSTANTS } from '../constants';
 import {
   pickChampionForLordAlaric,
@@ -40,6 +40,158 @@ import gsap from 'gsap';
 
 export class AbilityManager {
   private metatronResolve: ((target: CardEntity | null) => void) | null = null;
+  public playerAbilityQueue: QueuedAbility[] = [];
+  public enemyAbilityQueue: QueuedAbility[] = [];
+
+  public queueAbility(sourceCard: CardEntity, abilityType: 'activate' | 'limbo', description?: string) {
+    if (!sourceCard || !sourceCard.data) return;
+    const isPlayer = !sourceCard.data.isEnemy;
+    const requiredLocation = abilityType === 'limbo' ? 'limbo' : 'board';
+    const queue = isPlayer ? this.playerAbilityQueue : this.enemyAbilityQueue;
+
+    const existing = queue.find(q => q.sourceCard === sourceCard && q.abilityType === abilityType);
+    if (!existing) {
+      const desc = description || this.getAbilityDescription(sourceCard, abilityType);
+      queue.push({
+        id: `${sourceCard.data.name}_${abilityType}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        cardName: sourceCard.data.name,
+        description: desc,
+        abilityType,
+        requiredLocation,
+        sourceCard,
+        isPlayer,
+        valid: true,
+        faceArtPath: sourceCard.data.faceArtPath
+      });
+      this.controller.addLog(`${sourceCard.data.name} ability stored in Ability Storage.`);
+    }
+  }
+
+  public getAbilityDescription(card: CardEntity, type: 'activate' | 'limbo'): string {
+    const name = card.data.name;
+    if (type === 'limbo') {
+      if (name === "Karlyah") return "Karlyah (Limbo): Select a card that battled this turn to destroy. Karlyah moves to Graveyard.";
+      if (name === "Golgothane") return "Golgothane (Limbo): Shuffle all enemy creatures from Limbo back into their deck.";
+      if (name === "Kaelarion") return "Kaelarion (Limbo): Select a Champion in play to place on top of its owner's deck.";
+      if (name === "Alistar Elren") return "Alistar Elren (Limbo): Select a creature in play to place a -3 Weakness Marker on.";
+      if (name === "Tarkidos") return "Tarkidos (Limbo): Select a Seal without a Champion to Purify.";
+      if (name === "Luna") return "Luna (Limbo): Nullify an opponent's seal influence change.";
+      if (name === "Samyaza") return "Samyaza (Limbo): Siphon Power Markers from enemy cards.";
+      return `${name} (Limbo): ${card.data.ability || 'Trigger Final Act ability from Limbo.'}`;
+    } else {
+      if (name === "Bella") return "Bella (Activate): Destroy one Marker from any creature.";
+      if (name === "Calmadious") return "Calmadious (Activate): Destroy all Power or Weakness Markers in play.";
+      if (name === "Skarados") return "Skarados (Activate): Eliminate all Power or Weakness Markers in play.";
+      if (name === "Metatron") return "Metatron (Activate): Select a creature to destroy all Markers of one type.";
+      if (name === "Lord Alaric") return "Lord Alaric (Activate): Select an Enemy Champion to place on top of its owner's deck.";
+      if (name === "Dawn") return "Dawn (Activate): Win if 4 Oathbringers in play and a Champion on a Seal.";
+      if (name === "Coal") return "Coal (Activate): Win if controlling 5+ Seals with Champions.";
+      return `${name} (Activate): ${card.data.ability || 'Trigger active ability on board.'}`;
+    }
+  }
+
+  public isAbilityValid(item: QueuedAbility): boolean {
+    const card = item.sourceCard as CardEntity;
+    if (!card || !card.data) return false;
+
+    if (item.requiredLocation === 'board') {
+      const inPlay = this.controller.playerBattlefield.includes(card) ||
+                     this.controller.enemyBattlefield.includes(card) ||
+                     this.controller.seals.some(s => s.champion === card);
+      return inPlay && card.data.faceUp;
+    } else if (item.requiredLocation === 'limbo') {
+      const inLimbo = this.controller.playerLimbo.includes(card) ||
+                      this.controller.enemyLimbo.includes(card);
+      return inLimbo;
+    }
+    return false;
+  }
+
+  public getQueuedAbilities(isPlayer: boolean = true): QueuedAbility[] {
+    const list: QueuedAbility[] = [];
+    const limboCards = isPlayer ? this.controller.playerLimbo : this.controller.enemyLimbo;
+    const boardCards = [
+      ...(isPlayer ? this.controller.playerBattlefield : this.controller.enemyBattlefield),
+      ...this.controller.seals.map(s => s.champion).filter(c => c !== null && c.data.isEnemy !== isPlayer)
+    ].filter(c => c !== null && c.data.faceUp) as CardEntity[];
+
+    // 1. Check explicit queue items
+    const explicitQueue = isPlayer ? this.playerAbilityQueue : this.enemyAbilityQueue;
+    for (const item of explicitQueue) {
+      if (this.isAbilityValid(item)) {
+        if (!list.some(q => q.sourceCard === item.sourceCard && q.abilityType === item.abilityType)) {
+          list.push(item);
+        }
+      }
+    }
+
+    // 2. Discover active Limbo cards
+    for (const card of limboCards) {
+      if (card && (card.data.hasLimboAbility || ['Tarkidos', 'Karlyah', 'Golgothane', 'Kaelarion', 'Alistar Elren'].includes(card.data.name))) {
+        if (!list.some(q => q.sourceCard === card && q.abilityType === 'limbo')) {
+          list.push({
+            id: `limbo_${card.data.name}_${card.mesh?.id || Math.random()}`,
+            cardName: card.data.name,
+            description: this.getAbilityDescription(card, 'limbo'),
+            abilityType: 'limbo',
+            requiredLocation: 'limbo',
+            sourceCard: card,
+            isPlayer,
+            valid: true,
+            faceArtPath: card.data.faceArtPath
+          });
+        }
+      }
+    }
+
+    // 3. Discover active Board cards with Activate abilities
+    for (const card of boardCards) {
+      if (card && (card.data.hasActivate || card.data.hasTargetedAbility)) {
+        if (!list.some(q => q.sourceCard === card && q.abilityType === 'activate')) {
+          list.push({
+            id: `activate_${card.data.name}_${card.mesh?.id || Math.random()}`,
+            cardName: card.data.name,
+            description: this.getAbilityDescription(card, 'activate'),
+            abilityType: 'activate',
+            requiredLocation: 'board',
+            sourceCard: card,
+            isPlayer,
+            valid: true,
+            faceArtPath: card.data.faceArtPath
+          });
+        }
+      }
+    }
+
+    return list;
+  }
+
+  public async executeQueuedAbility(abilityId: string): Promise<boolean> {
+    const list = [...this.getQueuedAbilities(true), ...this.getQueuedAbilities(false)];
+    const item = list.find(q => q.id === abilityId);
+    if (!item || !this.isAbilityValid(item)) {
+      this.controller.addLog("Selected ability is no longer valid.");
+      return false;
+    }
+
+    // Remove from explicit queues if present
+    this.playerAbilityQueue = this.playerAbilityQueue.filter(q => q.id !== abilityId);
+    this.enemyAbilityQueue = this.enemyAbilityQueue.filter(q => q.id !== abilityId);
+
+    const card = item.sourceCard as CardEntity;
+    const isAI = card.data.isEnemy;
+
+    if (item.abilityType === 'limbo') {
+      await this.handleLimboAbility(card);
+    } else {
+      if (card.data.hasActivate) {
+        await this.handleActivateAbility(card, isAI);
+      } else if (card.data.hasTargetedAbility) {
+        await this.handleTargetedAbility(card, isAI);
+      }
+    }
+    return true;
+  }
 
   constructor(private controller: IGameController) {}
 

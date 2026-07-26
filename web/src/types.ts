@@ -66,6 +66,18 @@ export interface HoveredCardInfo {
   faceArtPath?: string;
 }
 
+export interface QueuedAbility {
+  id: string;
+  cardName: string;
+  description: string;
+  abilityType: 'activate' | 'limbo';
+  requiredLocation: 'board' | 'limbo';
+  sourceCard: any;
+  isPlayer: boolean;
+  valid: boolean;
+  faceArtPath?: string;
+}
+
 export interface GameState {
   playerAlignment: Alignment;
   currentRound: number;
@@ -106,6 +118,9 @@ export interface GameState {
   enemyDeckCards: HoveredCardInfo[];
   /** True when in ABILITY_TARGETING and the target must be a creature in Limbo (e.g. Sentinel). */
   isSelectingLimboTarget?: boolean;
+  /** Stored abilities for player and enemy. */
+  playerAbilityQueue: QueuedAbility[];
+  enemyAbilityQueue: QueuedAbility[];
   /** Set when game ends: who won or draw. */
   gameOverResult?: 'player' | 'enemy' | 'draw';
   /** Human-readable win condition that was enacted (e.g. "Majority of Seals (4 of 7)", "Horseman (4 Horsemen + Champion on Seal)"). */

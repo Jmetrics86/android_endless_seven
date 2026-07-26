@@ -165,6 +165,8 @@ export class GameController implements IGameController {
       enemyGraveyardCards: [],
       playerDeckCards: [],
       enemyDeckCards: [],
+      playerAbilityQueue: [],
+      enemyAbilityQueue: [],
       combatInterstitial: null,
       slowMode: true,
       isResolutionPaused: false
@@ -853,10 +855,30 @@ export class GameController implements IGameController {
       playerGraveyardCards: this.playerGraveyard.map((c) => this.cardToHoveredInfo(c)),
       enemyGraveyardCards: this.enemyGraveyard.map((c) => this.cardToHoveredInfo(c)),
       playerDeckCards: this.playerDeck.map((d) => this.cardDataToHoveredInfo(d)),
-      enemyDeckCards: this.enemyDeck.map((d) => this.cardDataToHoveredInfo(d))
+      enemyDeckCards: this.enemyDeck.map((d) => this.cardDataToHoveredInfo(d)),
+      playerAbilityQueue: this.abilityManager ? this.abilityManager.getQueuedAbilities(true) : [],
+      enemyAbilityQueue: this.abilityManager ? this.abilityManager.getQueuedAbilities(false) : []
     };
     this.uiManager.updateState({ ...zonePatch, ...patch }, this.playerDeck.length, this.enemyDeck.length, this.playerGraveyard.length, this.enemyGraveyard.length);
     this.syncPoolMarkerMeshes();
+  }
+
+  public async useQueuedAbility(abilityId: string): Promise<boolean> {
+    const success = await this.abilityManager.executeQueuedAbility(abilityId);
+    this.updateState({
+      playerAbilityQueue: this.abilityManager.getQueuedAbilities(true),
+      enemyAbilityQueue: this.abilityManager.getQueuedAbilities(false)
+    });
+    return success;
+  }
+
+  public setAbilitiesDrawerPaused(paused: boolean) {
+    this.setResolutionPaused(paused);
+    this.updateState({
+      isResolutionPaused: paused,
+      playerAbilityQueue: this.abilityManager ? this.abilityManager.getQueuedAbilities(true) : [],
+      enemyAbilityQueue: this.abilityManager ? this.abilityManager.getQueuedAbilities(false) : []
+    });
   }
 
   /** Only the top card in each Limbo/Graveyard pile is visible; others are hidden. */

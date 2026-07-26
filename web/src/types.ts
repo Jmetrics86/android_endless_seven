@@ -50,6 +50,7 @@ export interface CardData {
   /** Desire (formerly Lust): After sacrifice, may change seal influence if no champion */
   hasLustSealEffect?: boolean;
   hasTarkidosNullifyUsedThisRound?: boolean;
+  hasActivatedThisRound?: boolean;
 }
 
 /** Card summary for magnified hover preview (small screens). */

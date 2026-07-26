@@ -138,6 +138,7 @@ export class PhaseManager {
     ].forEach(c => {
       if (c && c.data) {
         c.data.isHeldForRound = false;
+        c.data.hasActivatedThisRound = false;
       }
     });
 

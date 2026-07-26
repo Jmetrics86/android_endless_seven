@@ -95,13 +95,13 @@ export class AbilityManager {
     if (!card || !card.data) return false;
 
     if (item.requiredLocation === 'board') {
-      const inPlay = this.controller.playerBattlefield.includes(card) ||
-                     this.controller.enemyBattlefield.includes(card) ||
-                     this.controller.seals.some(s => s.champion === card);
-      return inPlay && card.data.faceUp;
+      const inPlay = (this.controller?.playerBattlefield?.includes(card) ?? false) ||
+                     (this.controller?.enemyBattlefield?.includes(card) ?? false) ||
+                     (this.controller?.seals?.some(s => s.champion === card) ?? false);
+      return inPlay && card.data.faceUp && !card.data.hasActivatedThisRound;
     } else if (item.requiredLocation === 'limbo') {
-      const inLimbo = this.controller.playerLimbo.includes(card) ||
-                      this.controller.enemyLimbo.includes(card);
+      const inLimbo = (this.controller?.playerLimbo?.includes(card) ?? false) ||
+                      (this.controller?.enemyLimbo?.includes(card) ?? false);
       return inLimbo;
     }
     return false;
@@ -146,7 +146,7 @@ export class AbilityManager {
 
     // 3. Discover active Board cards with Activate abilities
     for (const card of boardCards) {
-      if (card && (card.data.hasActivate || card.data.hasTargetedAbility)) {
+      if (card && card.data && (card.data.hasActivate || card.data.hasTargetedAbility) && !card.data.hasActivatedThisRound) {
         if (!list.some(q => q.sourceCard === card && q.abilityType === 'activate')) {
           list.push({
             id: `activate_${card.data.name}_${card.mesh?.id || Math.random()}`,
@@ -184,6 +184,7 @@ export class AbilityManager {
     if (item.abilityType === 'limbo') {
       await this.handleLimboAbility(card);
     } else {
+      card.data.hasActivatedThisRound = true;
       if (card.data.hasActivate) {
         await this.handleActivateAbility(card, isAI);
       } else if (card.data.hasTargetedAbility) {
@@ -441,6 +442,7 @@ export class AbilityManager {
   }
 
   public async handleActivateAbility(source: CardEntity, isAI: boolean): Promise<void> {
+    if (source && source.data) source.data.hasActivatedThisRound = true;
     // 1. Dawn (formerly The Spinner): Activate = Win if 4 Oathbringers (Light) in play and at least one Champion on a Seal.
     if (source.data.name === "Dawn") {
       const isEnemy = source.data.isEnemy;
@@ -994,6 +996,7 @@ export class AbilityManager {
   }
 
   public async handleTargetedAbility(source: CardEntity, isAI: boolean) {
+    if (source && source.data) source.data.hasActivatedThisRound = true;
     const data = source.data;
     if (data.targetType === 'champion') {
       const targets = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)]

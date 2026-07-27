@@ -13,6 +13,7 @@ import {
   preferEnemyFirstWhenFlipPowerTied,
   vacantSlotPriorityForReinforce,
 } from './EnemyEasyAI';
+import { NeuralAI } from './NeuralAI';
 
 export class PhaseManager {
   constructor(private controller: IGameController) {}
@@ -188,26 +189,52 @@ export class PhaseManager {
     const aiHand: CardData[] = [];
     for (let i = 0; i < 8; i++) { if (this.controller.enemyDeck.length > 0) aiHand.push(this.controller.enemyDeck.pop()!); }
 
-    const handStrength = (d: CardData) => (d.isChampion ? 85 : 0) + d.power;
-    aiHand.sort((a, b) => handStrength(b) - handStrength(a));
+    const useNeuralAI = (this.controller.state as any).aiDifficulty !== 'easy';
+    let chosenPlacements: { cardData: CardData; slotIdx: number }[] = [];
 
-    const vacantSlots = this.controller.enemyBattlefield.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
-    vacantSlots.sort(
-      (a, b) =>
-        vacantSlotPriorityForReinforce(b, this.controller.playerBattlefield) -
-        vacantSlotPriorityForReinforce(a, this.controller.playerBattlefield)
-    );
+    if (useNeuralAI) {
+      chosenPlacements = NeuralAI.selectPrepPlacements(
+        aiHand,
+        this.controller.enemyBattlefield,
+        this.controller.playerBattlefield,
+        this.controller.seals,
+        true,
+        this.controller.state.currentRound
+      );
+      // Remove chosen cards from aiHand
+      for (const p of chosenPlacements) {
+        const idx = aiHand.findIndex(c => c.name === p.cardData.name);
+        if (idx !== -1) aiHand.splice(idx, 1);
+      }
+    } else {
+      // ⚙️ Original Heuristic Logic (100% Untouched Fallback)
+      const handStrength = (d: CardData) => (d.isChampion ? 85 : 0) + d.power;
+      aiHand.sort((a, b) => handStrength(b) - handStrength(a));
+
+      const vacantSlots = this.controller.enemyBattlefield.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
+      vacantSlots.sort(
+        (a, b) =>
+          vacantSlotPriorityForReinforce(b, this.controller.playerBattlefield) -
+          vacantSlotPriorityForReinforce(a, this.controller.playerBattlefield)
+      );
+
+      for (let i = 0; i < vacantSlots.length && aiHand.length > 0; i++) {
+        const slotIdx = vacantSlots[i];
+        const cardData = aiHand.shift()!;
+        chosenPlacements.push({ cardData, slotIdx });
+      }
+    }
+
     const isSlow = this.controller.state.slowMode;
-    for (let i = 0; i < vacantSlots.length && aiHand.length > 0; i++) {
-      const slotIdx = vacantSlots[i];
-      const cardData = aiHand.shift()!;
+    for (let i = 0; i < chosenPlacements.length; i++) {
+      const { cardData, slotIdx } = chosenPlacements[i];
       const card = new CardEntity(cardData, true, this.controller.state.playerAlignment);
       this.controller.entityManager.add(card);
       card.mesh.position.set(-15, 2, -6);
       card.mesh.rotation.x = Math.PI;
       this.controller.sceneManager.scene.add(card.mesh);
       this.controller.enemyBattlefield[slotIdx] = card;
-      card.applyBackTextureIfNeeded(); // All cards share same back graphic; ensure it is applied as soon as ready
+      card.applyBackTextureIfNeeded();
 
       const duration = isSlow ? 0.8 : 0;
       const delay = isSlow ? i * 0.15 : 0;

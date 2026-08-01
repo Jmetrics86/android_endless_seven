@@ -1,0 +1,17 @@
+{
+  "id": "jasonbrewster/endless-seven-gpu-ai-trainer",
+  "title": "endless-seven-gpu-ai-trainer",
+  "code_file": "train_endless_ai_v2.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [
+    "jasonbrewster/endless-seven-selfplay-data"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

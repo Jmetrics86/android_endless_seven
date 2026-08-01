@@ -204,6 +204,11 @@ export class AbilityManager {
   }
 
   public isImmuneToAbilities(target: CardEntity, source: CardEntity): boolean {
+    const isChampioning = this.controller?.seals?.some(s => s.champion === target) ?? false;
+    if (isChampioning) {
+      if (target.data.type === 'God') return true;
+      if (target.data.type === 'Avatar' && source.data.type === 'Creature') return true;
+    }
     if (source.data.type !== 'Creature') return false;
     if (target.data.abilityImmune) return true; // Belphegor
     if (target.data.faction !== 'Celestial') return false;

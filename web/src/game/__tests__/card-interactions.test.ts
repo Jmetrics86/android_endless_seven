@@ -2519,4 +2519,38 @@ describe('Desire – seal influence', () => {
       await p;
     });
   });
+
+  describe('Rule Compliance – Avatar/God Champion Immunity & Post-Flip Tie Rule', () => {
+    let mock: ReturnType<typeof createMockControllerForAbilities>;
+
+    beforeEach(() => {
+      mock = createMockControllerForAbilities();
+      mock.playerBattlefield.fill(null);
+      mock.enemyBattlefield.fill(null);
+      mock.seals.forEach((s) => {
+        (s as { champion: CardEntity | null }).champion = null;
+      });
+      vi.clearAllMocks();
+    });
+
+    it('isImmuneToAbilities returns true for God championing a seal against any ability', () => {
+      const realAbilityManager = new AbilityManager(mock);
+      const godChamp = createMockCard({ name: 'Calmadious', type: 'God', isChampion: true, isEnemy: false }) as unknown as CardEntity;
+      mock.seals[0].champion = godChamp;
+      const attacker = createMockCard({ name: 'Bogva', type: 'Creature', isEnemy: true }) as unknown as CardEntity;
+
+      expect(realAbilityManager.isImmuneToAbilities(godChamp, attacker)).toBe(true);
+    });
+
+    it('isImmuneToAbilities returns true for Avatar championing a seal against Creature abilities', () => {
+      const realAbilityManager = new AbilityManager(mock);
+      const avatarChamp = createMockCard({ name: 'Bella', type: 'Avatar', isChampion: true, isEnemy: false }) as unknown as CardEntity;
+      mock.seals[1].champion = avatarChamp;
+      const creatureAttacker = createMockCard({ name: 'Alistar Elren', type: 'Creature', isEnemy: true }) as unknown as CardEntity;
+
+      expect(realAbilityManager.isImmuneToAbilities(avatarChamp, creatureAttacker)).toBe(true);
+    });
+  });
 });
+
+

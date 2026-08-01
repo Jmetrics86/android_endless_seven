@@ -18,10 +18,11 @@ Strategic Tactical Card Game for Android
 
 ## 🏗️ Project Structure
 
-The project is organized into two main components:
+The project is organized into three main components:
 
 - **`/app` (Android):** The native Android application wrapper using **Kotlin** and **Jetpack Compose**. It hosts the game engine via a high-performance `WebView`.
 - **`/web` (Game Engine):** The core game logic and 3D environment built with **React**, **Three.js**, and **TypeScript**. Assets are compiled and bundled into the Android project's assets folder.
+- **`/simulator` (Balance & AI Tooling):** Fast headless **TypeScript** game engine simulator for balance reporting, automated AI self-play, dataset export, and Python ML/SHAP balance analysis.
 
 ---
 
@@ -31,7 +32,7 @@ The project is organized into two main components:
 
 - **JDK 17**
 - **Android SDK** (API 34+)
-- **Node.js 20+** (for compiling game assets)
+- **Node.js 20+** (for compiling game assets and running simulator)
 
 ### Initial Setup
 
@@ -41,14 +42,18 @@ The project is organized into two main components:
    cd endless-seven
    ```
 
-2. Install web dependencies:
+2. Install dependencies:
    ```bash
-   cd web
-   npm install
+   # Install Web dependencies
+   cd web && npm install
+
+   # Install Simulator dependencies
+   cd ../simulator && npm install
    ```
 
 ### Building & Running
 
+#### Android & Web Application
 The easiest way to build and run the game is using the provided `npm` scripts from the `web/` directory:
 
 - **Build Game Assets & Run Debug APK:**
@@ -64,6 +69,22 @@ Alternatively, you can build the Android app from the root directory using Gradl
 ```bash
 ./gradlew assembleDebug
 ```
+
+#### Simulator & Balance Tooling
+From the `simulator/` directory:
+
+- **Run Unit & Balance Tests:**
+  ```bash
+  npm test
+  ```
+- **Run Headless Balance Simulation:**
+  ```bash
+  npm run simulate -- --matches 1000
+  ```
+- **Compile TypeScript Build:**
+  ```bash
+  npm run build
+  ```
 
 ---
 

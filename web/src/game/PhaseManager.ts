@@ -452,40 +452,6 @@ export class PhaseManager {
       await this.delay(1000);
     }
 
-    // Tie Rule Check
-    if (pCard && eCard) {
-      const pEff = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
-      const eEff = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
-      if (pEff === eEff) {
-        this.controller.addLog(`Tie Rule: ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEff}). Both are destroyed immediately!`);
-        
-        if (hasCards) {
-          this.refreshInterstitialCards(
-            `Tie Rule: Equal effective Power (${pEff}). Both are destroyed!`,
-            'combat',
-            { leftDamageFlash: true, rightDamageFlash: true }
-          );
-          await this.delay(1500);
-        }
-
-        const killer = { cardName: 'Tie Rule', cause: 'ability' as const };
-        this.controller.destroyCard(pCard, false, idx, false, killer);
-        this.controller.destroyCard(eCard, true, idx, false, killer);
-        this.controller.playerBattlefield[idx] = null;
-        this.controller.enemyBattlefield[idx] = null;
-        await this.controller.claimSeal(idx, Alignment.NEUTRAL);
-        
-        if (hasCards) {
-          this.refreshInterstitialCards("Tie Rule resolved.", 'done', { leftDamageFlash: false, rightDamageFlash: false });
-          await this.delay(1000);
-          this.clearInterstitial();
-        } else {
-          await this.delay(1000);
-        }
-        return;
-      }
-    }
-
     // Step B: Flip & Activate Abilities
     this.controller.updateState({ phaseStep: "Step B: Abilities" });
     this.controller.addLog("Processing Abilities...");
@@ -870,6 +836,44 @@ export class PhaseManager {
     if (pCard) pCard.data.faceUp = true;
     if (eCard) eCard.data.faceUp = true;
     this.controller.abilityManager.syncBoardPresencePowerMarkers();
+
+    // Re-check battlefield cards after Step B abilities
+    pCard = this.controller.playerBattlefield[idx];
+    eCard = this.controller.enemyBattlefield[idx];
+
+    // The Tie Rule: Equal Power = both cards are destroyed immediately (evaluated after Flip abilities)
+    if (pCard && eCard) {
+      const pEff = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
+      const eEff = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
+      if (pEff === eEff) {
+        this.controller.addLog(`Tie Rule: ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEff}). Both are destroyed immediately!`);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards(
+            `Tie Rule: Equal effective Power (${pEff}). Both are destroyed!`,
+            'combat',
+            { leftDamageFlash: true, rightDamageFlash: true }
+          );
+          await this.delay(1500);
+        }
+
+        const killer = { cardName: 'Tie Rule', cause: 'ability' as const };
+        this.controller.destroyCard(pCard, false, idx, false, killer);
+        this.controller.destroyCard(eCard, true, idx, false, killer);
+        this.controller.playerBattlefield[idx] = null;
+        this.controller.enemyBattlefield[idx] = null;
+        await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards("Tie Rule resolved.", 'done', { leftDamageFlash: false, rightDamageFlash: false });
+          await this.delay(1000);
+          this.clearInterstitial();
+        } else {
+          await this.delay(1000);
+        }
+        return;
+      }
+    }
 
     // Step C: Combat
     this.controller.updateState({ phaseStep: "Step C: Combat" });
@@ -1310,7 +1314,7 @@ export class PhaseManager {
     return stymied;
   }
 
-  private enforceDuplicateRule() {
+  private async enforceDuplicateRule() {
     const sides = [false, true]; // false = player, true = enemy
     for (const isEnemy of sides) {
       const cardsInPlay: { card: CardEntity; idx: number; isChampion: boolean }[] = [];
@@ -1339,19 +1343,49 @@ export class PhaseManager {
       for (const name in groups) {
         const group = groups[name];
         if (group.length > 1) {
-          group.sort((a, b) => {
-            const aPow = a.card.data.power + a.card.data.powerMarkers - a.card.data.weaknessMarkers;
-            const bPow = b.card.data.power + b.card.data.powerMarkers - b.card.data.weaknessMarkers;
-            if (aPow !== bPow) return bPow - aPow;
-            if (a.isChampion !== b.isChampion) return a.isChampion ? -1 : 1;
-            return 0;
-          });
+          let survivor: typeof group[0];
+          if (isEnemy) {
+            group.sort((a, b) => {
+              const aPow = a.card.data.power + a.card.data.powerMarkers - a.card.data.weaknessMarkers;
+              const bPow = b.card.data.power + b.card.data.powerMarkers - b.card.data.weaknessMarkers;
+              if (aPow !== bPow) return bPow - aPow;
+              if (a.isChampion !== b.isChampion) return a.isChampion ? -1 : 1;
+              return 0;
+            });
+            survivor = group[0];
+          } else {
+            // For human player, prompt choice if candidates are distinct, or pick selected
+            this.controller.updateState({
+              currentPhase: Phase.ABILITY_TARGETING,
+              instructionText: `Duplicate Rule: Select which ${name} to KEEP. The other copy will be sacrificed.`
+            });
+            this.controller.zoomOut();
+            const validTargets = group.map(g => g.card);
+            const selected = await new Promise<CardEntity | null>((resolve) => {
+              (this.controller.abilityManager as any).metatronResolve = resolve;
+              (this.controller as any).pendingAbilityData = {
+                source: group[0].card,
+                effect: 'select_duplicate_to_keep',
+                targetType: 'creature',
+                validTargets
+              };
+            });
+            if (selected && validTargets.includes(selected)) {
+              survivor = group.find(g => g.card === selected)!;
+            } else {
+              survivor = group[0];
+            }
+            this.controller.pendingAbilityData = null;
+            (this.controller.abilityManager as any).metatronResolve = null;
+            this.controller.updateState({ instructionText: '' });
+          }
           
-          const survivor = group[0];
-          this.controller.addLog(`Duplicate Rule: player controls multiple ${name}s. Keeping ${survivor.card.data.name} (Power ${survivor.card.data.power + survivor.card.data.powerMarkers - survivor.card.data.weaknessMarkers}) and sacrificing others.`);
+          this.controller.addLog(`Duplicate Rule: player controls multiple ${name}s. Keeping ${survivor.card.data.name} and sacrificing others.`);
           
-          for (let i = 1; i < group.length; i++) {
-            const duplicate = group[i];
+          for (let i = 0; i < group.length; i++) {
+            const item = group[i];
+            if (item === survivor) continue;
+            const duplicate = item;
             const killedBy = { cardName: 'Duplicate Rule', cause: 'ability' as const };
             if (duplicate.isChampion) {
               this.controller.destroyCard(duplicate.card, isEnemy, duplicate.idx, true, killedBy);
@@ -1372,7 +1406,7 @@ export class PhaseManager {
 
   private async cleanupEndOfRoundEffects() {
     // Duplicate Rule
-    this.enforceDuplicateRule();
+    await this.enforceDuplicateRule();
 
     // Fenris Lightfoot (Wild Wolf) cleanup
     const wildWolfVictims: { card: CardEntity; isEnemy: boolean; idx: number; isChampion: boolean }[] = [];

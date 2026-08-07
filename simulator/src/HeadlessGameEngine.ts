@@ -47,6 +47,8 @@ export class HeadlessGameEngine {
   public enemyGraveyard: HeadlessCard[] = [];
   public cardsThatBattledThisRound: HeadlessCard[] = [];
   public enemyPrepRemainder: CardData[] = [];
+  public deferredAbilities: HeadlessCard[] = [];
+  public laneAbilityDestruction: ('player' | 'enemy' | null)[] = [null, null, null, null, null, null, null];
 
   public currentRound = 1;
   public lockedSealIndex = -1;
@@ -58,6 +60,7 @@ export class HeadlessGameEngine {
   public playerAlignment: Alignment = Alignment.LIGHT;
   public enemyAlignment: Alignment = Alignment.DARK;
   public playerSideName = "Vampires & Demons";
+  public enableAbilityDeferral = true;
   public enemySideName = "Werewolves & Vampires";
   public playerAIType: 'easy' | 'smart' | 'neural' = 'easy';
   public enemyAIType: 'easy' | 'smart' | 'neural' = 'easy';
@@ -151,6 +154,7 @@ export class HeadlessGameEngine {
 
   private runPrepPhase() {
     this.addLog(`--- Prep Phase (Round ${this.currentRound}) ---`);
+    this.laneAbilityDestruction = [null, null, null, null, null, null, null];
 
     // Attrition check
     if (this.playerDeck.length < 8 || this.enemyDeck.length < 8) {
@@ -289,6 +293,14 @@ export class HeadlessGameEngine {
     if (pCard) pCard.faceUp = true;
     if (eCard) eCard.faceUp = true;
 
+    // Step A Tie Rule Check: Equal effective power upon reveal = both cards destroyed immediately before abilities
+    if (pCard && eCard && effectivePower(pCard) === effectivePower(eCard) && !pCard.data.cannotBattleOrBeBattled && !eCard.data.cannotBattleOrBeBattled) {
+      this.destroyCard(pCard);
+      this.destroyCard(eCard);
+      this.seals[idx].alignment = Alignment.NEUTRAL;
+      return;
+    }
+
     // Check Nullify (Remiel / Valerius Nightshade)
     const pNullified = !!(eCard && eCard.data.hasNullify);
     const eNullified = !!(pCard && pCard.data.hasNullify);
@@ -344,6 +356,16 @@ export class HeadlessGameEngine {
         const canCorrupt = !this.seals.some(s => s.champion && s.champion.data.name === 'Valtarious' && s.champion.isEnemy !== eCard!.isEnemy);
         if (canCorrupt || seal.alignment !== this.playerAlignment) {
           seal.alignment = this.enemyAlignment;
+        }
+      } else if (!pCard && !eCard && this.laneAbilityDestruction[idx]) {
+        // Ability-based defender destruction without a card present!
+        const claimingSide = this.laneAbilityDestruction[idx];
+        const isPlayerClaim = claimingSide === 'player';
+        const targetAlignment = isPlayerClaim ? this.playerAlignment : this.enemyAlignment;
+        const oppAlignment = isPlayerClaim ? this.enemyAlignment : this.playerAlignment;
+        const canCorrupt = !this.seals.some(s => s.champion && s.champion.data.name === 'Valtarious' && s.champion.isEnemy !== isPlayerClaim);
+        if (canCorrupt || seal.alignment !== oppAlignment) {
+          seal.alignment = targetAlignment;
         }
       }
     }
@@ -505,9 +527,39 @@ export class HeadlessGameEngine {
     }
   }
 
-  private triggerActivateAbility(source: HeadlessCard) {
+  private triggerActivateAbility(source: HeadlessCard, isDeferredTrigger = false) {
     const isEnemy = source.isEnemy;
     const name = source.data.name;
+
+    // AI Deferral Logic
+    if (!isDeferredTrigger && this.enableAbilityDeferral) {
+      let shouldDefer = false;
+      const allCards = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)].filter((c): c is HeadlessCard => c !== null && c.faceUp);
+      
+      if (name === "Bella") {
+        const target = pickBellaTarget(source, allCards.filter(c => c.powerMarkers > 0 || c.weaknessMarkers > 0), this.seals);
+        if (!target) shouldDefer = true;
+      } else if (name === "Calmadious" || name === "Skarados") {
+        const markersInPlay = allCards.some(c => c.powerMarkers > 0 || c.weaknessMarkers > 0);
+        if (!markersInPlay) shouldDefer = true;
+      } else if (name === "Metatron") {
+        const target = pickBellaTarget(source, allCards.filter(c => c.powerMarkers > 0 || c.weaknessMarkers > 0), this.seals);
+        if (!target) shouldDefer = true;
+      } else if (name === "Ulfric Thorne") {
+        const target = pickBestAllyPowerTarget(allCards.filter(c => c.isEnemy === isEnemy), this.seals);
+        if (!target) shouldDefer = true;
+      }
+
+      // Also allow a 20% random deferral chance for testing ability timing impact if no strict rule triggered
+      if (!shouldDefer && Math.random() < 0.20) {
+        shouldDefer = true;
+      }
+
+      if (shouldDefer) {
+        this.deferredAbilities.push(source);
+        return;
+      }
+    }
 
     if (name === "Dawn") {
       const oathbringers = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)]
@@ -557,6 +609,16 @@ export class HeadlessGameEngine {
     this.cardsThatBattledThisRound.push(cardA);
     this.cardsThatBattledThisRound.push(cardB);
 
+    // Valerius Nightshade Errata: Steals 1 Power from the opponent before combat damage is calculated.
+    if (cardA.data.name === "Valerius Nightshade") {
+      cardA.powerMarkers += 1;
+      cardB.weaknessMarkers += 1;
+    }
+    if (cardB.data.name === "Valerius Nightshade") {
+      cardB.powerMarkers += 1;
+      cardA.weaknessMarkers += 1;
+    }
+
     const powA = effectivePower(cardA);
     const powB = effectivePower(cardB);
 
@@ -578,7 +640,7 @@ export class HeadlessGameEngine {
     const isEnemy = winner.isEnemy;
     if (winner.data.name === "Umbarax") {
       const graveborns = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)].filter(c => c !== null && c.faceUp && c.data.type === 'Graveborn' && c.isEnemy === isEnemy).length;
-      winner.powerMarkers += 2 * graveborns;
+      winner.powerMarkers += 2 + (2 * graveborns);
     } else if (winner.data.name === "Lucian Blackwood") {
       winner.powerMarkers += 2;
     } else if (winner.data.name === "Noble The Great") {
@@ -594,8 +656,13 @@ export class HeadlessGameEngine {
     const seal = this.seals.find(s => s.champion === card);
 
     if (seal) seal.champion = null;
-    else if (idxP !== -1) this.playerBattlefield[idxP] = null;
-    else if (idxE !== -1) this.enemyBattlefield[idxE] = null;
+    else if (idxP !== -1) {
+      this.playerBattlefield[idxP] = null;
+      this.laneAbilityDestruction[idxP] = 'enemy';
+    } else if (idxE !== -1) {
+      this.enemyBattlefield[idxE] = null;
+      this.laneAbilityDestruction[idxE] = 'player';
+    }
 
     const grave = card.isEnemy ? this.enemyGraveyard : this.playerGraveyard;
     grave.push(card);
@@ -615,6 +682,14 @@ export class HeadlessGameEngine {
   }
 
   private endRoundCleanup() {
+    // Process Deferred Abilities
+    for (const card of this.deferredAbilities) {
+      if (card && card.faceUp && !this.isGameOver) {
+        this.triggerActivateAbility(card, true);
+      }
+    }
+    this.deferredAbilities = [];
+
     // End of round sacrifices
     [...this.playerBattlefield, ...this.enemyBattlefield].forEach(c => {
       if (c && c.data.sacrificeEndOfTurn) {

@@ -81,10 +81,9 @@ Higher Power has priority.
 3. Battle: Compare Power, Loser goes to Limbo.
 If the Battlefield is clear, you may battle the Champion on the Seal.
 Activation Window II (Post-Battle): Use "Activate" abilities or Paradigms.
-4. Claim/Ascend: If killed the defender or the Seal was empty, flip the
-Seal to your Alignment. If your unit is a Champion, move it from the
-you
-Battlefield onto the Seal.
+4. Claim/Ascend: If you killed the defender (via combat or ability destruction/exile to Graveyard/Limbo) or the Seal was empty, flip the Seal to your Alignment, even if you do not have a card present in that lane slot.
+   * NOTE (Bounce Exception): Using an ability that sends an opponent defender back to their Hand or to the top/bottom of their Deck does NOT trigger this Seal alignment change if your lane slot is empty.
+   If your unit is a Champion, move it from the Battlefield onto the Seal.
 3. The Cleanup Phase (End of Round)
 I. Duplicate Rule: Sacrifice copies; keep only one of any specific card
 name.

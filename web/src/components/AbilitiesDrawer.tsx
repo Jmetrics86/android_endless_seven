@@ -12,7 +12,10 @@ interface AbilitiesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   abilities: QueuedAbility[];
-  onUseAbility: (abilityId: string) => void;
+  onUseAbility?: (abilityId: string) => void;
+  position?: 'top' | 'bottom';
+  theme?: 'player' | 'enemy';
+  title?: string;
 }
 
 export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
@@ -20,7 +23,13 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
   onClose,
   abilities,
   onUseAbility,
+  position = 'bottom',
+  theme = 'player',
+  title = 'ABILITY STORAGE',
 }) => {
+  const isEnemy = theme === 'enemy';
+  const colorHex = isEnemy ? '#ff0044' : '#00f2ff';
+  
   return (
     <AnimatePresence>
       {isOpen && (
@@ -37,20 +46,22 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
 
           {/* Right Drawer */}
           <motion.div
-            key="abilities-drawer-content"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            key={`abilities-drawer-${position}`}
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(320px,82vw)] md:w-[380px] bg-[#0a0a0c]/95 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)] font-cinzel select-none"
+            className={`fixed right-0 z-[105] w-[min(320px,82vw)] md:w-[380px] bg-[#0a0a0c]/95 border-l border-y ${isEnemy ? 'border-[#ff0044]/30' : 'border-white/10'} shadow-2xl flex flex-col font-cinzel select-none
+              ${position === 'top' ? 'top-0 bottom-auto rounded-bl-3xl max-h-[45vh] pt-[env(safe-area-inset-top,10px)] pb-2' : 'bottom-0 top-auto rounded-tl-3xl max-h-[45vh] pb-[env(safe-area-inset-bottom,10px)] pt-2'}
+            `}
           >
-            <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
+            <div className="px-3 py-1 flex flex-col h-full overflow-hidden">
               {/* Header */}
-              <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+              <div className={`flex items-center justify-between mb-2 border-b ${isEnemy ? 'border-[#ff0044]/20' : 'border-white/10'} pb-1.5`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-[#00f2ff] text-lg">⚡</span>
-                  <h2 className="text-[#00f2ff] text-[0.75rem] tracking-[0.2em] font-bold">
-                    ABILITY STORAGE
+                  <span className={`text-[${colorHex}] text-lg`}>⚡</span>
+                  <h2 className={`text-[${colorHex}] text-[0.75rem] tracking-[0.2em] font-bold uppercase`}>
+                    {title}
                   </h2>
                 </div>
                 <button
@@ -63,12 +74,12 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
               </div>
 
               {/* Status Banner */}
-              <div className="mb-3 glass-panel p-2 border border-[#00f2ff]/30 bg-[#00f2ff]/5 rounded-xl text-center space-y-1">
-                <div className="text-[0.5rem] text-[#00f2ff] font-extrabold uppercase tracking-widest animate-pulse">
+              <div className={`mb-2 glass-panel p-1.5 border bg-black/40 rounded-xl text-center space-y-0.5 ${isEnemy ? 'border-[#ff0044]/30' : 'border-[#00f2ff]/30'}`}>
+                <div className={`text-[0.45rem] font-extrabold uppercase tracking-widest ${isEnemy ? 'text-[#ff0044]' : 'text-[#00f2ff]'}`}>
                   Game Paused for Ability Response
                 </div>
                 <div className="text-[0.55rem] text-gray-300 font-sans leading-tight">
-                  Browse and cast queued abilities. Unpauses when drawer closes.
+                  {isEnemy ? "Opponent's queued abilities" : "Browse and cast queued abilities"}
                 </div>
               </div>
 
@@ -88,7 +99,7 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
                   abilities.map((item) => (
                     <div
                       key={item.id}
-                      className="glass-panel p-2.5 border border-white/15 hover:border-[#00f2ff]/50 rounded-xl bg-black/40 flex gap-2.5 items-center transition-all shadow-md group"
+                      className={`glass-panel p-2 border ${isEnemy ? 'border-white/10 hover:border-[#ff0044]/50' : 'border-white/15 hover:border-[#00f2ff]/50'} rounded-xl bg-black/40 flex gap-2.5 items-center transition-all shadow-md group`}
                     >
                       {/* Card Art Thumbnail */}
                       <div className="w-12 h-16 rounded-md border border-white/20 overflow-hidden shrink-0 relative bg-black/60 shadow-inner">
@@ -107,9 +118,9 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
                               {item.cardName}
                             </span>
                             <span
-                              className={`text-[0.45rem] px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 ${
+                              className={`text-[0.4rem] px-1 py-0.5 rounded font-extrabold uppercase tracking-wider shrink-0 ${
                                 item.requiredLocation === 'board'
-                                  ? 'bg-[#00f2ff]/20 text-[#00f2ff] border border-[#00f2ff]/40'
+                                  ? `bg-[${colorHex}]/10 text-[${colorHex}] border border-[${colorHex}]/30`
                                   : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                               }`}
                             >
@@ -121,12 +132,14 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => onUseAbility(item.id)}
-                          className="mt-2 w-full py-1 border border-[#00f2ff]/60 bg-[#00f2ff]/10 hover:bg-[#00f2ff]/25 text-[#00f2ff] text-[0.55rem] font-bold uppercase tracking-widest rounded transition-all active:scale-95 shadow-[0_0_10px_rgba(0,242,255,0.2)]"
-                        >
-                          Use Ability
-                        </button>
+                        {!isEnemy && onUseAbility && (
+                          <button
+                            onClick={() => onUseAbility(item.id)}
+                            className={`mt-1.5 w-full py-1 border border-[${colorHex}]/60 bg-[${colorHex}]/10 hover:bg-[${colorHex}]/25 text-[${colorHex}] text-[0.5rem] font-bold uppercase tracking-widest rounded transition-all active:scale-95 shadow-[0_0_10px_rgba(0,242,255,0.2)]`}
+                          >
+                            Use Ability
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))

@@ -103,6 +103,7 @@ export class PhaseManager {
 
   public async startPrepPhase() {
     this.controller.currentResolvingSealIndex = -1;
+    this.controller.laneAbilityDestruction = [null, null, null, null, null, null, null];
     if (this.controller.isProcessing) return;
     
     // Attrition check
@@ -296,6 +297,15 @@ export class PhaseManager {
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
       if (this.controller.state.currentPhase === Phase.GAME_OVER) break;
       await this.resolveSeal(i);
+      
+      // Pause after each seal to allow the player to review the AI evaluation and use abilities
+      if (this.controller.state.currentPhase !== Phase.GAME_OVER) {
+        this.controller.updateState({ waitingForSealContinue: true });
+        await new Promise<void>(resolve => {
+          this.controller.sealContinueCallback = resolve;
+        });
+        this.controller.updateState({ waitingForSealContinue: false });
+      }
     }
 
     // End-of-round cleanup effects (e.g., Wild Wolf, Delta)
@@ -450,6 +460,40 @@ export class PhaseManager {
     if (hasCards && (pNeedsFlipAnim || eNeedsFlipAnim)) {
       this.refreshInterstitialCards("Cards are revealed!", 'flip', { leftGlow: false, rightGlow: false });
       await this.delay(1000);
+    }
+
+    // Step A Tie Rule Check: Equal effective power upon reveal = both cards destroyed immediately before Step B abilities
+    if (pCard && eCard) {
+      const pEffInitial = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
+      const eEffInitial = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
+      if (pEffInitial === eEffInitial && !pCard.data.cannotBattleOrBeBattled && !eCard.data.cannotBattleOrBeBattled) {
+        this.controller.addLog(`Tie Rule (Step A): ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEffInitial}). Both are destroyed immediately before abilities!`);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards(
+            `Tie Rule: Equal effective Power (${pEffInitial}). Both are destroyed before abilities!`,
+            'combat',
+            { leftDamageFlash: true, rightDamageFlash: true }
+          );
+          await this.delay(1500);
+        }
+
+        const killer = { cardName: 'Tie Rule', cause: 'ability' as const };
+        this.controller.destroyCard(pCard, false, idx, false, killer);
+        this.controller.destroyCard(eCard, true, idx, false, killer);
+        this.controller.playerBattlefield[idx] = null;
+        this.controller.enemyBattlefield[idx] = null;
+        await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+        
+        if (hasCards) {
+          this.refreshInterstitialCards("Tie Rule resolved.", 'done', { leftDamageFlash: false, rightDamageFlash: false });
+          await this.delay(1000);
+          this.clearInterstitial();
+        } else {
+          await this.delay(1000);
+        }
+        return;
+      }
     }
 
     // Step B: Flip & Activate Abilities
@@ -698,7 +742,7 @@ export class PhaseManager {
       // Duke: Flip = place any creature in play on top of that player's deck (handled via hasTargetedAbility)
 
       // Death: Flip = Choose a creature type, destroy all cards of that type in play. Only flipped cards count or are destroyed.
-      // Target types: Avatar, Horseman, God, or creature factions (Vampyre, Lycan, Celestial, Daemon) — not generic "Creature".
+      // Target types: Avatar, Graveborn, God, or creature factions (Vampyre, Lycan, Celestial, Daemon) — not generic "Creature".
       if (current.data.name === "Death" && isFlipping) {
         const allInPlay = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)].filter(c => c !== null && (c as CardEntity).data.faceUp) as CardEntity[];
         const deathTargetType = (c: CardEntity): string =>
@@ -943,6 +987,16 @@ export class PhaseManager {
           await this.delay(1500);
         }
         await this.controller.handleSiege(idx, eCard, false);
+      } else if (!pCard && !eCard && this.controller.laneAbilityDestruction && this.controller.laneAbilityDestruction[idx]) {
+        const claimingSide = this.controller.laneAbilityDestruction[idx];
+        const isPlayerClaim = claimingSide === 'player';
+        const pAlign = this.controller.state.playerAlignment;
+        const targetAlign = isPlayerClaim ? pAlign : (pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT);
+        if (hasCards) {
+          this.refreshInterstitialCards(`Siege: ${isPlayerClaim ? 'Player' : 'Enemy'} influences Seal ${idx + 1} towards ${targetAlign} (Defender Destroyed by Ability)`, 'done');
+          await this.delay(1500);
+        }
+        await this.controller.claimSeal(idx, targetAlign);
       }
     }
 
@@ -1017,8 +1071,9 @@ export class PhaseManager {
   public async handleBattle(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean): Promise<boolean> {
     this.controller.cardsThatBattledThisRound.push(attacker);
     this.controller.cardsThatBattledThisRound.push(defender);
-    const aPow = attacker.data.power + attacker.data.powerMarkers - attacker.data.weaknessMarkers;
-    const dPow = defender.data.power + defender.data.powerMarkers - defender.data.weaknessMarkers;
+    // Power is computed after Valerius steal is applied below, so we use a let
+    let aPow = attacker.data.power + attacker.data.powerMarkers - attacker.data.weaknessMarkers;
+    let dPow = defender.data.power + defender.data.powerMarkers - defender.data.weaknessMarkers;
 
     const isAProtected = this.controller.abilityManager.isProtected(attacker);
     const isDProtected = this.controller.abilityManager.isProtected(defender);
@@ -1033,6 +1088,26 @@ export class PhaseManager {
       attacker.data.isSuppressed = true;
       this.controller.addLog(`Valerius Nightshade nullifies the Flip ability of ${attacker.data.name}.`);
     }
+
+    // Valerius Nightshade Errata: Steals 1 Power from the opponent before combat damage is calculated.
+    if (attacker.data.name === "Valerius Nightshade" && !this.controller.abilityManager.isImmuneToAbilities(defender, attacker)) {
+      attacker.data.powerMarkers += 1;
+      defender.data.weaknessMarkers += 1;
+      attacker.updateVisualMarkers();
+      defender.updateVisualMarkers();
+      this.controller.addLog(`Valerius Nightshade steals 1 Power from ${defender.data.name} before combat.`);
+    }
+    if (defender.data.name === "Valerius Nightshade" && !this.controller.abilityManager.isImmuneToAbilities(attacker, defender)) {
+      defender.data.powerMarkers += 1;
+      attacker.data.weaknessMarkers += 1;
+      defender.updateVisualMarkers();
+      attacker.updateVisualMarkers();
+      this.controller.addLog(`Valerius Nightshade steals 1 Power from ${attacker.data.name} before combat.`);
+    }
+
+    // Recalculate effective power after any Valerius steal
+    aPow = attacker.data.power + attacker.data.powerMarkers - attacker.data.weaknessMarkers;
+    dPow = defender.data.power + defender.data.powerMarkers - defender.data.weaknessMarkers;
 
     const elderAttacker = attacker.data.name === "Sulvian Vane";
     const elderDefender = defender.data.name === "Sulvian Vane";
@@ -1185,6 +1260,7 @@ export class PhaseManager {
         this.controller.abilityManager.handleFinalAct(defender, attacker);
         if (elderAttacker) sendToDeckInstead(defender);
         else this.controller.destroyCard(defender, defender.data.isEnemy, idx, isAgainstChamp, { cardName: attacker.data.name, cause: 'combat' });
+        if (elderDefender) sendToDeckInstead(attacker);
         await this.controller.abilityManager.handlePostCombat(attacker);
 
         this.refreshInterstitialCards(
@@ -1201,6 +1277,8 @@ export class PhaseManager {
           'combat',
           { leftGlow: false, rightGlow: false }
         );
+        if (elderDefender) sendToDeckInstead(attacker);
+        if (elderAttacker) sendToDeckInstead(defender);
         await this.delay(1200);
         stymied = true;
       }
@@ -1223,6 +1301,7 @@ export class PhaseManager {
         this.controller.abilityManager.handleFinalAct(attacker, defender);
         if (elderDefender) sendToDeckInstead(attacker);
         else this.controller.destroyCard(attacker, attacker.data.isEnemy, idx, false, { cardName: defender.data.name, cause: 'combat' });
+        if (elderAttacker) sendToDeckInstead(defender);
         await this.controller.abilityManager.handlePostCombat(defender);
 
         this.refreshInterstitialCards(
@@ -1239,6 +1318,8 @@ export class PhaseManager {
           'combat',
           { leftGlow: false, rightGlow: false }
         );
+        if (elderAttacker) sendToDeckInstead(defender);
+        if (elderDefender) sendToDeckInstead(attacker);
         await this.delay(1200);
         stymied = true;
       }

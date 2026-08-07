@@ -80,6 +80,7 @@ export class AbilityManager {
       return `${name} (Limbo): ${card.data.ability || 'Trigger Final Act ability from Limbo.'}`;
     } else {
       if (name === "Bella") return "Bella (Activate): Destroy one Marker from any creature.";
+      if (name === "Bogva") return "Bogva (Action): Destroy any creature in play with a Weakness Marker on it.";
       if (name === "Calmadious") return "Calmadious (Activate): Destroy all Power or Weakness Markers in play.";
       if (name === "Skarados") return "Skarados (Activate): Eliminate all Power or Weakness Markers in play.";
       if (name === "Metatron") return "Metatron (Activate): Select a creature to destroy all Markers of one type.";
@@ -146,7 +147,7 @@ export class AbilityManager {
 
     // 3. Discover active Board cards with Activate abilities
     for (const card of boardCards) {
-      if (card && card.data && (card.data.hasActivate || card.data.hasTargetedAbility) && !card.data.hasActivatedThisRound) {
+      if (card && card.data && (card.data.hasActivate || card.data.hasTargetedAbility || card.data.name === 'Bogva') && !card.data.hasActivatedThisRound) {
         if (!list.some(q => q.sourceCard === card && q.abilityType === 'activate')) {
           list.push({
             id: `activate_${card.data.name}_${card.mesh?.id || Math.random()}`,
@@ -184,11 +185,12 @@ export class AbilityManager {
     if (item.abilityType === 'limbo') {
       await this.handleLimboAbility(card);
     } else {
-      card.data.hasActivatedThisRound = true;
       if (card.data.hasActivate) {
         await this.handleActivateAbility(card, isAI);
       } else if (card.data.hasTargetedAbility) {
         await this.handleTargetedAbility(card, isAI);
+      } else if (card.data.name === 'Bogva') {
+        await this.handleBogvaDestroyAction(card, isAI);
       }
     }
     return true;
@@ -234,10 +236,10 @@ export class AbilityManager {
   public async handlePostCombat(winner: CardEntity): Promise<void> {
     if (winner.data.name === "Umbarax" || winner.data.name === "Lucian Blackwood") {
       const gravebornCount = winner.data.name === "Umbarax" ? this.countGravebornInPlay(winner.data.isEnemy) : 0;
-      const gain = winner.data.name === "Umbarax" ? 2 * gravebornCount : 2;
+      const gain = winner.data.name === "Umbarax" ? 2 + (2 * gravebornCount) : 2;
       winner.data.powerMarkers += gain;
       winner.updateVisualMarkers();
-      this.controller.addLog(`${winner.data.name} gains ${gain} Power Marker(s)${winner.data.name === "Umbarax" && gravebornCount > 0 ? ` (+2 per Graveborn, ${gravebornCount} in play)` : ''}.`);
+      this.controller.addLog(`${winner.data.name} gains ${gain} Power Marker(s)${winner.data.name === "Umbarax" ? ` (base +2, plus +2 per Graveborn, ${gravebornCount} in play)` : ''}.`);
       return;
     }
     if (winner.data.name === "Noble The Great") {
@@ -447,7 +449,6 @@ export class AbilityManager {
   }
 
   public async handleActivateAbility(source: CardEntity, isAI: boolean): Promise<void> {
-    if (source && source.data) source.data.hasActivatedThisRound = true;
     // 1. Dawn (formerly The Spinner): Activate = Win if 4 Oathbringers (Light) in play and at least one Champion on a Seal.
     if (source.data.name === "Dawn") {
       const isEnemy = source.data.isEnemy;
@@ -456,6 +457,7 @@ export class AbilityManager {
       const count = lightCardsInPlay.length;
       const hasChampionOnSeal = this.controller.seals.some(s => s.champion && s.champion.data.isEnemy === isEnemy);
       if (count >= 4 && hasChampionOnSeal) {
+        if (source && source.data) source.data.hasActivatedThisRound = true;
         this.controller.addLog(`Dawn: 4+ Oathbringers in play and a Champion on a Seal — you win!`);
         (this.controller as any).phaseManager.finalizeGame("Dawn (4 Oathbringers + Champion on Seal)");
         return;
@@ -486,7 +488,7 @@ export class AbilityManager {
       this.controller.zoomOut();
       return new Promise<void>((resolve) => {
         (this.controller as any).resolutionCallback = resolve;
-        (this.controller as any).pendingAbilityData = { source, effect: 'destroy_marker', targetType: 'creature', validTargets: allBoard };
+        (this.controller as any).pendingAbilityData = { source, effect: 'destroy_marker', targetType: 'creature', validTargets: allBoard, canHold: true };
       });
     }
 
@@ -510,6 +512,7 @@ export class AbilityManager {
             c.data[key(choice)] = 0;
             c.updateVisualMarkers();
           });
+          if (source && source.data) source.data.hasActivatedThisRound = true;
           this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers in play (${count} removed).`);
           if (choice === 'power') this.afterBulkPowerMarkersCleared();
           return;
@@ -525,14 +528,17 @@ export class AbilityManager {
           (this.controller as any).markerTypeCallback = resolve;
         });
         this.controller.updateState({ decisionContext: undefined, decisionMessage: undefined });
-        let count = 0;
-        allBoard.forEach(c => {
-          count += c.data[key(choice)];
-          c.data[key(choice)] = 0;
-          c.updateVisualMarkers();
-        });
-        this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers in play (${count} removed).`);
-        if (choice === 'power') this.afterBulkPowerMarkersCleared();
+        if (choice) {
+          if (source && source.data) source.data.hasActivatedThisRound = true;
+          let count = 0;
+          allBoard.forEach(c => {
+            count += c.data[key(choice)];
+            c.data[key(choice)] = 0;
+            c.updateVisualMarkers();
+          });
+          this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers in play (${count} removed).`);
+          if (choice === 'power') this.afterBulkPowerMarkersCleared();
+        }
         return;
       } else {
         const validTargets = allBoard.filter(c => c.data.powerMarkers > 0 || c.data.weaknessMarkers > 0);
@@ -546,6 +552,7 @@ export class AbilityManager {
           const count = target.data[key(choice)];
           target.data[key(choice)] = 0;
           target.updateVisualMarkers();
+          if (source && source.data) source.data.hasActivatedThisRound = true;
           this.controller.addLog(`Enemy Metatron destroys all ${typeName(choice)} Markers on ${target.data.name} (${count} removed).`);
           if (choice === 'power') this.afterBulkPowerMarkersCleared();
           return;
@@ -557,7 +564,7 @@ export class AbilityManager {
         this.controller.zoomOut();
         const target = await new Promise<CardEntity | null>((resolve) => {
           this.metatronResolve = resolve;
-          (this.controller as any).pendingAbilityData = { source, effect: 'metatron_select_type', targetType: 'creature', validTargets };
+          (this.controller as any).pendingAbilityData = { source, effect: 'metatron_select_type', targetType: 'creature', validTargets, canHold: true };
         });
 
         if (target) {
@@ -577,6 +584,7 @@ export class AbilityManager {
               const count = target.data[key(choice)];
               target.data[key(choice)] = 0;
               target.updateVisualMarkers();
+              if (source && source.data) source.data.hasActivatedThisRound = true;
               this.controller.addLog(`${source.data.name} destroys all ${typeName(choice)} Markers on ${target.data.name} (${count} removed).`);
               if (choice === 'power') this.afterBulkPowerMarkersCleared();
             }
@@ -600,6 +608,7 @@ export class AbilityManager {
       const isEnemy = source.data.isEnemy;
       const sealsWithChampion = this.controller.seals.filter(s => s.champion && s.champion.data.isEnemy === isEnemy).length;
       if (sealsWithChampion >= 5) {
+        if (source && source.data) source.data.hasActivatedThisRound = true;
         this.controller.addLog(`${source.data.name}: You control ${sealsWithChampion} Seals with Champions — you win!`);
         (this.controller as any).phaseManager.finalizeGame("Five Seals with Champions");
         return;
@@ -613,6 +622,7 @@ export class AbilityManager {
       const isEnemy = source.data.isEnemy;
       const sealsWithChampion = this.controller.seals.filter(s => s.champion && s.champion.data.isEnemy === isEnemy).length;
       if (sealsWithChampion >= 5) {
+        if (source && source.data) source.data.hasActivatedThisRound = true;
         this.controller.addLog(`${source.data.name}: You control ${sealsWithChampion} Seals with Champions — you win!`);
         (this.controller as any).phaseManager.finalizeGame("Five Seals with Champions");
         return;
@@ -627,6 +637,7 @@ export class AbilityManager {
       const gravebornCount = this.countGravebornInPlay(isEnemy);
       const hasChampionOnSeal = this.controller.seals.some(s => s.champion && s.champion.data.isEnemy === isEnemy);
       if (gravebornCount >= 4 && hasChampionOnSeal) {
+        if (source && source.data) source.data.hasActivatedThisRound = true;
         this.controller.addLog(`${source.data.name}: 4+ Graveborn in play and a Champion on a Seal — you win!`);
         (this.controller as any).phaseManager.finalizeGame("Graveborn (4 Graveborn + Champion on Seal)");
         return;
@@ -641,6 +652,7 @@ export class AbilityManager {
       const count = this.countVampyresInPlay(isEnemy);
       source.data.powerMarkers += count;
       source.updateVisualMarkers();
+      if (source && source.data) source.data.hasActivatedThisRound = true;
       this.controller.addLog(`${source.data.name} gains ${count} Power Markers (one per Vampyre in play).`);
       return;
     }
@@ -652,6 +664,7 @@ export class AbilityManager {
         const idx = pickAnakimSealIndex(this.controller.seals, eAlign);
         if (idx !== -1) {
           this.controller.updateState({ lockedSealIndex: idx });
+          if (source && source.data) source.data.hasActivatedThisRound = true;
           this.controller.addLog(`Enemy Anakim The Wise locks Seal ${idx + 1} for this round.`);
         }
         return;
@@ -666,6 +679,7 @@ export class AbilityManager {
       });
       if (targetIdx >= 0) {
         this.controller.updateState({ lockedSealIndex: targetIdx });
+        if (source && source.data) source.data.hasActivatedThisRound = true;
         this.controller.addLog(`Anakim The Wise locks Seal ${targetIdx + 1} for this round.`);
       }
       return;
@@ -682,6 +696,7 @@ export class AbilityManager {
         if (target) {
           target.data.powerMarkers += 2;
           target.updateVisualMarkers();
+          if (source && source.data) source.data.hasActivatedThisRound = true;
           this.controller.addLog(`Enemy Ulfric Thorne places +2 Power Marker on ${target.data.name}.`);
         }
         return;
@@ -693,7 +708,7 @@ export class AbilityManager {
       this.controller.zoomOut();
       return new Promise<void>((resolve) => {
         (this.controller as any).resolutionCallback = resolve;
-        (this.controller as any).pendingAbilityData = { source, effect: 'place_power', markerPower: 2, targetType: 'creature', validTargets: allBoard };
+        (this.controller as any).pendingAbilityData = { source, effect: 'place_power', markerPower: 2, targetType: 'creature', validTargets: allBoard, canHold: true };
       });
     }
 
@@ -709,6 +724,7 @@ export class AbilityManager {
       });
       source.data.powerMarkers += transferred;
       source.updateVisualMarkers();
+      if (source && source.data) source.data.hasActivatedThisRound = true;
       this.controller.addLog(`${source.data.name} transfers all ${transferred} Power Markers in play to itself.`);
       this.afterBulkPowerMarkersCleared();
       return;
@@ -763,6 +779,10 @@ export class AbilityManager {
   public applyAbilityEffect(target: CardEntity, pendingAbilityData: any) {
     if (!pendingAbilityData) return;
     const { effect, source } = pendingAbilityData;
+
+    if (source && source.data && (source.data.hasActivate || source.data.hasTargetedAbility || source.data.name === 'Bogva')) {
+      source.data.hasActivatedThisRound = true;
+    }
 
     if (effect === 'metatron_select_type') {
       if (this.metatronResolve) {
@@ -1001,7 +1021,6 @@ export class AbilityManager {
   }
 
   public async handleTargetedAbility(source: CardEntity, isAI: boolean) {
-    if (source && source.data) source.data.hasActivatedThisRound = true;
     const data = source.data;
     if (data.targetType === 'champion') {
       const targets = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)]
@@ -1197,7 +1216,7 @@ export class AbilityManager {
     this.controller.zoomOut();
     await new Promise<void>((resolve) => {
       (this.controller as any).resolutionCallback = resolve;
-      (this.controller as any).pendingAbilityData = { source, effect: 'destroy_creature_with_weakness', validTargets };
+      (this.controller as any).pendingAbilityData = { source, effect: 'destroy_creature_with_weakness', validTargets, canHold: true };
     });
   }
 
@@ -1250,7 +1269,7 @@ export class AbilityManager {
       this.controller.zoomOut();
       await new Promise<void>((resolve) => {
         (this.controller as any).resolutionCallback = resolve;
-        (this.controller as any).pendingAbilityData = { source: card, effect: 'saint_michael_destroy', targetType: 'battled', validTargets };
+        (this.controller as any).pendingAbilityData = { source: card, effect: 'saint_michael_destroy', targetType: 'battled', validTargets, canHold: true };
       });
       return;
     }
@@ -1292,7 +1311,7 @@ export class AbilityManager {
       this.controller.zoomOut();
       await new Promise<void>((resolve) => {
         (this.controller as any).resolutionCallback = resolve;
-        (this.controller as any).pendingAbilityData = { source: card, effect: 'return_champion_to_deck', targetType: 'champion', validTargets: champions };
+        (this.controller as any).pendingAbilityData = { source: card, effect: 'return_champion_to_deck', targetType: 'champion', validTargets: champions, canHold: true };
       });
       return;
     }
@@ -1311,7 +1330,7 @@ export class AbilityManager {
       this.controller.zoomOut();
       await new Promise<void>((resolve) => {
         (this.controller as any).resolutionCallback = resolve;
-        (this.controller as any).pendingAbilityData = { source: card, effect: 'place_weakness', targetType: 'creature', validTargets: targets, markerWeakness: 3 };
+        (this.controller as any).pendingAbilityData = { source: card, effect: 'place_weakness', targetType: 'creature', validTargets: targets, markerWeakness: 3, canHold: true };
       });
       return;
     }

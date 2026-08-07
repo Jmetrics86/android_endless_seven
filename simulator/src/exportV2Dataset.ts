@@ -143,5 +143,5 @@ export function generateV2Dataset(numGames = 5000, outputDir = './kaggle_dataset
 }
 
 if (process.argv[1] && process.argv[1].endsWith('exportV2Dataset.ts')) {
-  generateV2Dataset(5000);
+  generateV2Dataset(10000);
 }

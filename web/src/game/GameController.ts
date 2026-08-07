@@ -81,6 +81,7 @@ export class GameController implements IGameController {
   private zoneHoverMeshes: { mesh: THREE.Mesh; zone: 'playerLimbo' | 'enemyLimbo' | 'playerGraveyard' | 'enemyGraveyard' }[] = [];
 
   public isProcessing = false;
+  public laneAbilityDestruction: ('player' | 'enemy' | null)[] = [null, null, null, null, null, null, null];
   /** True while camera is close on the resolving seal; card hover lift is disabled. */
   public sealCameraZoomedIn = false;
   private activeSelection: CardEntity | null = null;
@@ -96,6 +97,7 @@ export class GameController implements IGameController {
   public resolutionCallback: (() => void) | null = null;
   public sealSelectionCallback: ((idx: number) => void) | null = null;
   public nullifyCallback: ((confirmed: boolean) => void) | null = null;
+  public sealContinueCallback: (() => void) | null = null;
 
   // Player Delta: after confirming Delta's end-of-round sacrifice, we enter targeting.
   // The selected target gets +3 markers, then we destroy the Delta source.
@@ -764,7 +766,7 @@ export class GameController implements IGameController {
 
   private buildDeck(pool: CardData[]): CardData[] {
     const tribalFactions = ['Celestial', 'Lycan', 'Daemon', 'Vampyre'];
-    const specialFactions = ['Light', 'Darkness']; // God / Horseman / Avatar: 1 copy each
+    const specialFactions = ['Light', 'Darkness']; // God / Graveborn / Avatar: 1 copy each
     let deck: CardData[] = [];
     pool.forEach(card => {
       const copies = specialFactions.includes(card.faction) ? 1 : (tribalFactions.includes(card.faction) ? 3 : 1);
@@ -788,6 +790,13 @@ export class GameController implements IGameController {
 
   public async resolveSeal(idx: number) {
     await this.phaseManager.resolveSeal(idx);
+  }
+
+  public continueSealResolution() {
+    if (this.sealContinueCallback) {
+      this.sealContinueCallback();
+      this.sealContinueCallback = null;
+    }
   }
 
   public isImmuneToAbilities(target: CardEntity, source: CardEntity): boolean {
@@ -984,8 +993,9 @@ export class GameController implements IGameController {
     this.playerHand.forEach(clearActivationGlow);
     this.playerLimbo.forEach(clearActivationGlow);
     this.enemyLimbo.forEach(clearActivationGlow);
-    this.seals.forEach(seal => clearActivationGlow(seal.champion));
-
+    if (this.pendingAbilityData?.source?.data) {
+      this.pendingAbilityData.source.data.hasActivatedThisRound = false;
+    }
     this.pendingAbilityData = null;
     
     if (this.resolutionCallback) {
@@ -1127,8 +1137,13 @@ export class GameController implements IGameController {
     if (isAgainstChamp) {
       this.seals[idx].champion = null;
     } else {
-      if (isEnemy) this.enemyBattlefield[idx] = null;
-      else this.playerBattlefield[idx] = null;
+      if (isEnemy) {
+        this.enemyBattlefield[idx] = null;
+        this.laneAbilityDestruction[idx] = 'player';
+      } else {
+        this.playerBattlefield[idx] = null;
+        this.laneAbilityDestruction[idx] = 'enemy';
+      }
     }
 
 

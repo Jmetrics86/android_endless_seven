@@ -13,6 +13,9 @@ import type { EnvironmentTheme } from './theme';
 import { THEME_STORAGE_KEY } from './theme';
 import { GameOverAchievements } from './components/GameOverAchievements';
 import { AbilitiesDrawer } from './components/AbilitiesDrawer';
+import { EventLogPanel } from './components/EventLogPanel';
+import { AIAdvisorOverlay } from './components/AIAdvisorOverlay';
+import { evaluateBoardState, getStrategicRecommendation } from './game/AIEvaluationEngine';
 
 function loadStoredTheme(): EnvironmentTheme {
   try {
@@ -32,9 +35,12 @@ export default function App() {
   const [zoneSearchModal, setZoneSearchModal] = useState<'limbo' | 'graveyard' | 'deck' | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAbilitiesDrawerOpen, setIsAbilitiesDrawerOpen] = useState(false);
+  const [isEnemyAbilitiesDrawerOpen, setIsEnemyAbilitiesDrawerOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
   const [activeView, setActiveView] = useState<'combat' | 'starting' | 'hand' | 'board'>('starting');
+  const [aiEvalScore, setAiEvalScore] = useState(0);
+  const [aiRecommendation, setAiRecommendation] = useState('');
 
   useEffect(() => {
     if (gameState?.combatInterstitial) {
@@ -81,10 +87,28 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (displayLogs.length && logScrollRef.current) {
-      logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
-    }
+    // The EventLogPanel handles its own scroll logic, but if we need to sync anything we can do it here.
   }, [displayLogs.length, isDrawerOpen]);
+
+  useEffect(() => {
+    if (gameRef.current && gameState) {
+      setAiEvalScore(evaluateBoardState(gameRef.current));
+      setAiRecommendation(getStrategicRecommendation(gameRef.current));
+    }
+  }, [gameState]);
+
+  const sealsData = gameRef.current?.seals.map(s => {
+    const isClaimed = s.alignment !== Alignment.NEUTRAL;
+    const isPlayerClaimed = isClaimed && s.alignment === gameState?.playerAlignment;
+    const isEnemyClaimed = isClaimed && s.alignment !== gameState?.playerAlignment;
+    return {
+      isClaimed,
+      isPlayerClaimed,
+      isEnemyClaimed,
+      isChampioned: !!s.champion,
+      isEnemyChampion: s.champion?.data.isEnemy
+    };
+  }) || [];
 
   useEffect(() => {
     let gameInstance: GameController | null = null;
@@ -174,15 +198,43 @@ export default function App() {
         </button>
       )}
 
-      {/* Abilities Storage Toggle Button (Far Right Side) */}
+      {/* Enemy Abilities Storage Toggle Button (Top Right) */}
+      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
+        <button
+          onClick={() => {
+            const next = !isEnemyAbilitiesDrawerOpen;
+            setIsEnemyAbilitiesDrawerOpen(next);
+            // We only pause for the player's drawer currently, but could do it here too if needed
+            gameRef.current?.setAbilitiesDrawerPaused(next || isAbilitiesDrawerOpen);
+          }}
+          className={`fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
+            (gameState.enemyAbilityQueue?.length ?? 0) > 0
+              ? 'border-[#ff0044] bg-[#ff0044]/10 shadow-[0_0_15px_rgba(255,0,68,0.4)]'
+              : 'border-white/20 hover:border-[#ff0044]/60 bg-black/40'
+          }`}
+          aria-label="Toggle Enemy Ability Storage"
+        >
+          <span className="text-xl">🛡️</span>
+          <span className="text-[0.65rem] font-bold text-white tracking-widest uppercase hidden sm:inline">
+            Enemy Stored
+          </span>
+          {(gameState.enemyAbilityQueue?.length ?? 0) > 0 && (
+            <span className="bg-[#ff0044] text-black font-extrabold text-[0.6rem] px-1.5 py-0.5 rounded-full min-w-5 text-center">
+              {gameState.enemyAbilityQueue.length}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Player Abilities Storage Toggle Button (Bottom Right) */}
       {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
         <button
           onClick={() => {
             const next = !isAbilitiesDrawerOpen;
             setIsAbilitiesDrawerOpen(next);
-            gameRef.current?.setAbilitiesDrawerPaused(next);
+            gameRef.current?.setAbilitiesDrawerPaused(next || isEnemyAbilitiesDrawerOpen);
           }}
-          className={`fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
+          className={`fixed bottom-[max(4.5rem,env(safe-area-inset-bottom)+3.5rem)] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
             (gameState.playerAbilityQueue?.length ?? 0) > 0
               ? 'border-[#00f2ff] bg-[#00f2ff]/10 shadow-[0_0_15px_rgba(0,242,255,0.4)] animate-pulse'
               : 'border-white/20 hover:border-[#00f2ff]/60 bg-black/40'
@@ -191,7 +243,7 @@ export default function App() {
         >
           <span className="text-xl">⚡</span>
           <span className="text-[0.65rem] font-bold text-white tracking-widest uppercase hidden sm:inline">
-            Abilities
+            My Abilities
           </span>
           {(gameState.playerAbilityQueue?.length ?? 0) > 0 && (
             <span className="bg-[#00f2ff] text-black font-extrabold text-[0.6rem] px-1.5 py-0.5 rounded-full min-w-5 text-center">
@@ -200,6 +252,38 @@ export default function App() {
           )}
         </button>
       )}
+
+      {/* AI Advisor Trigger & Chat Box (Top Center) */}
+      <AIAdvisorOverlay 
+        isVisible={!!(gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER)}
+        recommendation={aiRecommendation}
+        sealsData={sealsData}
+        onApplySuggestion={() => {
+          // If in Prep phase, auto-play the recommended card if possible
+          // Currently, this just dismisses the overlay since we don't have a direct "play card" helper parsed yet.
+          console.log('AI Advisor suggestion applied');
+        }}
+      />
+
+      {/* Seal Resolution Continue Button (Bottom Center) */}
+      <AnimatePresence>
+        {gameState?.waitingForSealContinue && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-[max(2rem,env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2 z-[120]"
+          >
+            <button
+              onClick={() => gameRef.current?.continueSealResolution()}
+              className="px-6 py-3 rounded-full bg-[#00f2ff]/20 hover:bg-[#00f2ff]/40 border-2 border-[#00f2ff] text-[#00f2ff] font-extrabold uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(0,242,255,0.4)] backdrop-blur-md transition-all active:scale-95 flex items-center gap-2"
+            >
+              {gameState.currentResolvingSealIndex === 6 ? 'End Round' : 'Next Seal'}
+              <span className="text-xl">➔</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Tactical Control Left Drawer */}
       <AnimatePresence>
@@ -367,9 +451,14 @@ export default function App() {
                   gameState?.currentPhase === Phase.DELTA_BUFF_TARGETING) && (
                   <button
                     onClick={handleForceSkip}
-                    className="w-full py-1.5 border border-amber-500/20 bg-amber-500/5 text-amber-400 text-[0.55rem] uppercase tracking-widest font-bold rounded hover:bg-amber-500/10 transition-all"
+                    className="w-full py-1.5 border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[0.55rem] uppercase tracking-widest font-bold rounded hover:bg-amber-500/20 transition-all flex flex-col items-center justify-center gap-0.5 shadow-md"
                   >
-                    Pass / Skip Action
+                    <span>{gameRef.current?.pendingAbilityData?.canHold ? 'Hold / Pass Ability' : 'Pass / Skip Ability'}</span>
+                    <span className="text-[0.45rem] text-amber-200/70 font-sans normal-case tracking-normal">
+                      {gameRef.current?.pendingAbilityData?.canHold 
+                        ? 'Hold in My Abilities drawer for later use' 
+                        : 'Ability cannot be held, skip now'}
+                    </span>
                   </button>
                 )}
 
@@ -411,16 +500,8 @@ export default function App() {
                  <button onClick={() => setZoneSearchModal('deck')} className="drawer-btn-icon py-1" title="Deck">D</button>
               </div>
 
-              {/* Log */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="text-[0.5rem] text-gray-500 uppercase tracking-widest mb-1 px-1">Intel Log</div>
-                <div ref={logScrollRef} className="flex-1 overflow-y-auto space-y-1 p-1.5 bg-black/30 rounded border border-white/5 font-mono text-[0.5rem] scrollbar-thin">
-                  {displayLogs.map((log, i) => (
-                    <div key={i} className="text-gray-400 border-l border-white/10 pl-1.5 leading-tight mb-1">
-                      <span className="text-[#00f2ff] mr-1">»</span>{log}
-                    </div>
-                  ))}
-                </div>
+              {/* Removed Log from Left Drawer (Now in Right Side Panel) */}
+              <div className="flex-1 flex flex-col min-h-0 justify-end">
                 <button onClick={handleForceSkip} className="mt-2 w-full py-1 border border-[#ff0044]/30 text-[#ff0044] text-[0.5rem] uppercase tracking-tighter hover:bg-[#ff0044]/10 transition-all">
                   Skip Current Interaction
                 </button>
@@ -804,12 +885,25 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         </button>
       </div>
 
-      {/* Abilities Storage Drawer */}
+      {/* Enemy Abilities Storage Drawer */}
+      <AbilitiesDrawer
+        isOpen={isEnemyAbilitiesDrawerOpen}
+        onClose={() => {
+          setIsEnemyAbilitiesDrawerOpen(false);
+          gameRef.current?.setAbilitiesDrawerPaused(isAbilitiesDrawerOpen);
+        }}
+        abilities={gameState?.enemyAbilityQueue ?? []}
+        position="top"
+        theme="enemy"
+        title="ENEMY ABILITIES"
+      />
+
+      {/* Player Abilities Storage Drawer */}
       <AbilitiesDrawer
         isOpen={isAbilitiesDrawerOpen}
         onClose={() => {
           setIsAbilitiesDrawerOpen(false);
-          gameRef.current?.setAbilitiesDrawerPaused(false);
+          gameRef.current?.setAbilitiesDrawerPaused(isEnemyAbilitiesDrawerOpen);
         }}
         abilities={gameState?.playerAbilityQueue ?? []}
         onUseAbility={(abilityId) => {
@@ -817,6 +911,17 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
           gameRef.current?.setAbilitiesDrawerPaused(false);
           gameRef.current?.useQueuedAbility(abilityId);
         }}
+        position="bottom"
+        theme="player"
+        title="MY ABILITIES"
+      />
+
+      {/* Right Side Event Log Panel & AI Eval Bar */}
+      <EventLogPanel 
+        logs={displayLogs} 
+        isOpen={!!(gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER)} 
+        onSkip={handleForceSkip}
+        evaluationScore={aiEvalScore}
       />
 
       <style>{`

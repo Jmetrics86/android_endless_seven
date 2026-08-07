@@ -81,6 +81,35 @@ export function buildWerewolvesAndVampiresDeck(avatarSet: 'light' | 'dark' = 'li
   return shuffle(deck);
 }
 
+export type TribalFaction = 'Vampyre' | 'Lycan' | 'Celestial' | 'Daemon';
+
+/**
+ * 3-Way Blend 49-Card Deck Builder:
+ * - 21 cards from Tribal 1 (7 cards x 3 copies)
+ * - 21 cards from Tribal 2 (7 cards x 3 copies)
+ * - 7 cards from Avatar pool (7 cards x 1 copy of Light or Dark)
+ * Total: 49 cards
+ */
+export function buildDualTribalDeck(
+  tribal1: TribalFaction,
+  tribal2: TribalFaction,
+  avatarSet: 'light' | 'dark'
+): CardData[] {
+  const allCards = [...LIGHT_POOL, ...DARK_POOL];
+  const t1Cards = allCards.filter(c => c.faction === tribal1);
+  const t2Cards = allCards.filter(c => c.faction === tribal2);
+  const avatars = avatarSet === 'light'
+    ? LIGHT_POOL.filter(c => c.faction === 'Avatars of light')
+    : DARK_POOL.filter(c => c.faction === 'Darkness');
+
+  const deck: CardData[] = [];
+  t1Cards.forEach(card => { for (let i = 0; i < 3; i++) deck.push(cloneCard(card)); });
+  t2Cards.forEach(card => { for (let i = 0; i < 3; i++) deck.push(cloneCard(card)); });
+  avatars.forEach(card => { deck.push(cloneCard(card)); });
+
+  return shuffle(deck);
+}
+
 export function shuffle<T>(array: T[]): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {

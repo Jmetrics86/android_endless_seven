@@ -116,7 +116,7 @@ export class NeuralAI {
         for (let sIdxIdx = 0; sIdxIdx < vacantSlots.length; sIdxIdx++) {
           const slot = vacantSlots[sIdxIdx];
           const oppCard = oppBattlefield[slot];
-          const oppPower = oppCard ? effectivePowerWeb(oppCard) : 0;
+          const oppPower = (oppCard && oppCard.data.faceUp) ? effectivePowerWeb(oppCard) : 0;
           const cId = CARD_NAME_MAP.get(card.name) || 0;
 
           const features = isV2 ? [

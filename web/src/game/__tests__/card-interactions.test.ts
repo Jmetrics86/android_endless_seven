@@ -500,7 +500,7 @@ describe('Post-combat – War and Alpha', () => {
     vi.clearAllMocks();
   });
 
-  it('War gains +2 Power per Horseman in play after destroying a creature', async () => {
+  it('Umbarax gains +2 Power per Graveborn in play after destroying a creature', async () => {
     const war = createMockCard({
       name: 'Umbarax',
       power: 9,
@@ -510,16 +510,17 @@ describe('Post-combat – War and Alpha', () => {
       isEnemy: true,
     }) as unknown as CardEntity;
     const victim = createMockCard({ name: 'Cassiel Haggis', power: 5, isEnemy: false }) as unknown as CardEntity;
-    const otherHorseman = createMockCard({
+    const otherGraveborn = createMockCard({
+      id: 'graveborn-1',
       name: 'Nix',
-      power: 9,
-      type: 'Graveborn',
+      faction: 'Graveborn',
       isEnemy: true,
       faceUp: true,
-    }) as unknown as CardEntity;
+      power: 2,
+    });
     mock.enemyBattlefield[0] = war;
     mock.playerBattlefield[0] = victim;
-    mock.enemyBattlefield[1] = otherHorseman;
+    mock.enemyBattlefield[1] = otherGraveborn;
 
     await mock.phaseManager.handleBattle(war, victim, 0, false);
 
@@ -593,7 +594,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
     return p;
   }
 
-  it('only Pestilence flipping still counts itself: -2 weakness per Horseman (1) on each enemy', async () => {
+  it('only Lycandor flipping still counts itself: -2 weakness per Graveborn (1) on each enemy', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -622,7 +623,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
     );
   });
 
-  it('Pestilence + one other face-up Horseman: 2 Horsemen → -4 weakness per enemy creature', async () => {
+  it('Lycandor + one other face-up Graveborn: 2 Graveborn → -4 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -962,7 +963,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
     expect(championOnSeal3.data.weaknessMarkers).toBe(amountPerCreature);
   });
 
-  it('Pestilence (Horseman) affects Sloth: immunity only applies to Creature sources', async () => {
+  it('Lycandor (Graveborn) affects Sloth: immunity only applies to Creature sources', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -2549,6 +2550,63 @@ describe('Desire – seal influence', () => {
       const creatureAttacker = createMockCard({ name: 'Alistar Elren', type: 'Creature', isEnemy: true }) as unknown as CardEntity;
 
       expect(realAbilityManager.isImmuneToAbilities(avatarChamp, creatureAttacker)).toBe(true);
+    });
+  });
+
+  describe('Hold & Store Activate/Action Abilities in Abilities Drawer', () => {
+    let mock: ReturnType<typeof createMockControllerForAbilities>;
+
+    beforeEach(() => {
+      mock = createMockControllerForAbilities();
+      mock.playerBattlefield.fill(null);
+      mock.enemyBattlefield.fill(null);
+      mock.seals.forEach((s) => {
+        (s as { champion: CardEntity | null }).champion = null;
+      });
+      vi.clearAllMocks();
+    });
+
+    it('Ulfric Thorne remains in getQueuedAbilities when passed/skipped', async () => {
+      const realAbilityManager = new AbilityManager(mock);
+      mock.abilityManager = realAbilityManager;
+      const ulfric = createMockCard({
+        name: 'Ulfric Thorne',
+        hasActivate: true,
+        isEnemy: false,
+        faceUp: true,
+        hasActivatedThisRound: false
+      }) as unknown as CardEntity;
+      mock.playerBattlefield[0] = ulfric;
+
+      // Start activate prompt but do not pick target
+      const p = realAbilityManager.handleActivateAbility(ulfric, false);
+      expect(ulfric.data.hasActivatedThisRound).toBe(false);
+
+      // Force skip (Hold/Pass)
+      if (mock.resolutionCallback) {
+        mock.resolutionCallback();
+        mock.resolutionCallback = null;
+      }
+      await p;
+
+      expect(ulfric.data.hasActivatedThisRound).toBe(false);
+      const list = realAbilityManager.getQueuedAbilities(true);
+      expect(list.some(q => q.cardName === 'Ulfric Thorne')).toBe(true);
+    });
+
+    it('Bogva Action ability appears in getQueuedAbilities when on board', () => {
+      const realAbilityManager = new AbilityManager(mock);
+      mock.abilityManager = realAbilityManager;
+      const bogva = createMockCard({
+        name: 'Bogva',
+        isEnemy: false,
+        faceUp: true,
+        hasActivatedThisRound: false
+      }) as unknown as CardEntity;
+      mock.playerBattlefield[0] = bogva;
+
+      const list = realAbilityManager.getQueuedAbilities(true);
+      expect(list.some(q => q.cardName === 'Bogva')).toBe(true);
     });
   });
 });

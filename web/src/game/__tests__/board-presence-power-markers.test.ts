@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Alignment, Phase } from '../../types';
 import type { CardData } from '../../types';
 import { AbilityManager } from '../AbilityManager';
+import { evaluateBoardState } from '../AIEvaluationEngine';
+import { NeuralAI } from '../NeuralAI';
 import type { CardEntity } from '../../entities/CardEntity';
 import type { IGameController } from '../interfaces';
 
@@ -211,7 +213,7 @@ describe('syncBoardPresencePowerMarkers', () => {
     expect(omega.data.powerMarkers).toBe(2);
   });
 
-  it('Hades: +2 Power per face-up Horseman on that side', () => {
+  it('Pazoo: +2 Power per face-up Graveborn on that side', () => {
     const hades = card({
       name: 'Pazoo',
       faction: 'Darkness',
@@ -333,7 +335,7 @@ describe('Lord Activate (+1 per Vampyre, separate from board-presence sync)', ()
 });
 
 describe('War post-combat (event-based, not board-presence tracked)', () => {
-  it('War still gains +2 per Horseman on each win via handlePostCombat', async () => {
+  it('Umbarax still gains +2 per Graveborn on each win via handlePostCombat', async () => {
     const ctrl = createCtrl();
     const war = card({
       name: 'Umbarax',
@@ -355,8 +357,44 @@ describe('War post-combat (event-based, not board-presence tracked)', () => {
     ctrl.enemyBattlefield[1] = other as unknown as MockCard;
 
     await ctrl.abilityManager.handlePostCombat(war);
-    expect(war.data.powerMarkers).toBe(4);
+    expect(war.data.powerMarkers).toBe(6);
     await ctrl.abilityManager.handlePostCombat(war);
-    expect(war.data.powerMarkers).toBe(8);
+    expect(war.data.powerMarkers).toBe(12);
+  });
+});
+
+describe('AI Eval Bar & Fog of War', () => {
+  it('evaluateBoardState treats face-down cards as standard unrevealed presence (+5 pts)', () => {
+    const ctrl = createCtrl();
+    const faceDownHighPower = card({
+      name: 'Calmadious',
+      power: 15,
+      isEnemy: false,
+      faceUp: false
+    }) as unknown as CardEntity;
+    ctrl.playerBattlefield[0] = faceDownHighPower as unknown as MockCard;
+
+    const score = evaluateBoardState(ctrl as unknown as any);
+    // Face down card gives +5 presence * 1.5 lane weight = +7.5 pts, not 15+10 power!
+    expect(score).toBe(7.5);
+  });
+
+  it('NeuralAI.selectPrepPlacements does not peek at face-down opponent card power', () => {
+    const hand: CardData[] = [
+      { name: 'Bella', faction: 'Avatars of light', type: 'Avatar', power: 9, isChampion: true }
+    ];
+    const oppFaceDown = card({
+      name: 'Calmadious',
+      power: 15,
+      isEnemy: false,
+      faceUp: false
+    }) as unknown as CardEntity;
+
+    const oppBattlefield: (CardEntity | null)[] = [oppFaceDown, null, null, null, null, null, null];
+    const myBattlefield: (CardEntity | null)[] = Array(7).fill(null);
+    const seals = Array.from({ length: 7 }, (_, i) => ({ index: i, champion: null, alignment: Alignment.NEUTRAL } as any));
+
+    const placements = NeuralAI.selectPrepPlacements(hand, myBattlefield, oppBattlefield, seals, true, 1);
+    expect(placements.length).toBeGreaterThan(0);
   });
 });

@@ -7,7 +7,9 @@ import {
   buildVampiresAndDemonsDeck,
   buildWerewolvesAndVampiresDeck,
   buildStandardLightDeck,
-  buildStandardDarkDeck
+  buildStandardDarkDeck,
+  buildDualTribalDeck,
+  TribalFaction
 } from './deckBuilder.js';
 import { CardData, MatchupStats, SimulationResult } from './types.js';
 
@@ -27,33 +29,97 @@ export const MATCHUP_PRESETS: Record<string, MatchupPreset> = {
     getSideADeck: () => buildVampiresAndDemonsDeck('dark'),
     getSideBDeck: () => buildWerewolvesAndVampiresDeck('light')
   },
-  'vd-light-vs-wv-dark': {
-    name: 'Vampires & Demons (Light Avatars) vs Werewolves & Vampires (Dark Avatars)',
-    sideAName: 'Vampires & Demons (Light Avatars)',
-    sideBName: 'Werewolves & Vampires (Dark Avatars)',
-    getSideADeck: () => buildVampiresAndDemonsDeck('light'),
-    getSideBDeck: () => buildWerewolvesAndVampiresDeck('dark')
-  },
-  'both-light-avatars': {
-    name: 'Vampires & Demons (Light Avatars) vs Werewolves & Vampires (Light Avatars)',
-    sideAName: 'Vampires & Demons (Light Avatars)',
-    sideBName: 'Werewolves & Vampires (Light Avatars)',
-    getSideADeck: () => buildVampiresAndDemonsDeck('light'),
-    getSideBDeck: () => buildWerewolvesAndVampiresDeck('light')
-  },
-  'both-dark-avatars': {
-    name: 'Vampires & Demons (Dark Avatars) vs Werewolves & Vampires (Dark Avatars)',
-    sideAName: 'Vampires & Demons (Dark Avatars)',
-    sideBName: 'Werewolves & Vampires (Dark Avatars)',
-    getSideADeck: () => buildVampiresAndDemonsDeck('dark'),
-    getSideBDeck: () => buildWerewolvesAndVampiresDeck('dark')
-  },
   'light-vs-dark': {
     name: 'Full Light Pool vs Full Dark Pool',
     sideAName: 'Light Pool (Avatars, Celestial, Lycan)',
     sideBName: 'Dark Pool (Darkness, Daemon, Vampyre)',
     getSideADeck: () => buildStandardLightDeck(),
     getSideBDeck: () => buildStandardDarkDeck()
+  },
+  // All 12 3-Way Blend Deck Permutations vs Baseline Pool
+  'vampyre-daemon-light': {
+    name: 'Vampyre + Daemon (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Vampyre + Daemon (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Vampyre', 'Daemon', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'vampyre-daemon-dark': {
+    name: 'Vampyre + Daemon (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Vampyre + Daemon (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Vampyre', 'Daemon', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
+  },
+  'lycan-vampyre-light': {
+    name: 'Lycan + Vampyre (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Lycan + Vampyre (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Lycan', 'Vampyre', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'lycan-vampyre-dark': {
+    name: 'Lycan + Vampyre (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Lycan + Vampyre (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Lycan', 'Vampyre', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
+  },
+  'celestial-lycan-light': {
+    name: 'Celestial + Lycan (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Celestial + Lycan (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Lycan', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'celestial-lycan-dark': {
+    name: 'Celestial + Lycan (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Celestial + Lycan (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Lycan', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
+  },
+  'celestial-vampyre-light': {
+    name: 'Celestial + Vampyre (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Celestial + Vampyre (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Vampyre', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'celestial-vampyre-dark': {
+    name: 'Celestial + Vampyre (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Celestial + Vampyre (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Vampyre', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
+  },
+  'celestial-daemon-light': {
+    name: 'Celestial + Daemon (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Celestial + Daemon (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Daemon', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'celestial-daemon-dark': {
+    name: 'Celestial + Daemon (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Celestial + Daemon (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Celestial', 'Daemon', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
+  },
+  'lycan-daemon-light': {
+    name: 'Lycan + Daemon (Light Avatars) vs Dark Pool Baseline',
+    sideAName: 'Lycan + Daemon (Light)',
+    sideBName: 'Dark Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Lycan', 'Daemon', 'light'),
+    getSideBDeck: () => buildStandardDarkDeck()
+  },
+  'lycan-daemon-dark': {
+    name: 'Lycan + Daemon (Dark Avatars) vs Light Pool Baseline',
+    sideAName: 'Lycan + Daemon (Dark)',
+    sideBName: 'Light Pool Baseline',
+    getSideADeck: () => buildDualTribalDeck('Lycan', 'Daemon', 'dark'),
+    getSideBDeck: () => buildStandardLightDeck()
   }
 };
 
@@ -61,8 +127,9 @@ export class Simulator {
   public runSimulation(
     presetKey = 'vampires-demons-vs-werewolves-vampires',
     totalGames = 100,
-    playerAIType: 'easy' | 'smart' | 'neural' = 'easy',
-    enemyAIType: 'easy' | 'smart' | 'neural' = 'easy'
+    playerAIType: 'easy' | 'smart' | 'neural' = 'smart',
+    enemyAIType: 'easy' | 'smart' | 'neural' = 'smart',
+    enableAbilityDeferral = true
   ): MatchupStats {
     const preset = MATCHUP_PRESETS[presetKey] || MATCHUP_PRESETS['vampires-demons-vs-werewolves-vampires'];
     
@@ -93,6 +160,7 @@ export class Simulator {
         playerAIType,
         enemyAIType
       );
+      engine.enableAbilityDeferral = enableAbilityDeferral;
       const res: SimulationResult = engine.runGame();
 
       if (res.winner === 'player') sideAWins++;

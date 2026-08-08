@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+// No motion needed
 
 interface EventLogPanelProps {
   logs: string[];
@@ -33,16 +33,8 @@ export const EventLogPanel: React.FC<EventLogPanelProps> = ({ logs, isOpen, onSk
   const evalBadgeText = evaluationScore > 0 ? `+${normEval}` : `${normEval}`;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ x: '100%', opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: '100%', opacity: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed right-[max(0.35rem,env(safe-area-inset-right))] top-1/2 -translate-y-1/2 z-[90] w-[min(210px,28vw)] sm:w-[250px] md:w-[280px] max-h-[38vh] bg-[#0a0a0c]/85 border border-white/15 shadow-[0_0_25px_rgba(0,0,0,0.85)] flex flex-col font-cinzel rounded-xl backdrop-blur-md"
-        >
-          <div className="p-2 flex flex-col h-full overflow-hidden">
+    <div className="w-full h-full flex flex-col font-cinzel select-none">
+      <div className="px-2 py-1 flex flex-col h-full overflow-hidden">
             <div className="text-[0.58rem] sm:text-[0.62rem] font-bold text-gray-300 uppercase tracking-widest mb-1 px-0.5 flex justify-between items-center">
               <span>Intel Log</span>
               <span className="text-[#00f2ff] text-[0.52rem] px-1 py-0.5 rounded bg-[#00f2ff]/10 border border-[#00f2ff]/30 font-mono tracking-normal">LIVE</span>
@@ -76,11 +68,9 @@ export const EventLogPanel: React.FC<EventLogPanelProps> = ({ logs, isOpen, onSk
                   className="h-full bg-gradient-to-r from-[#00f2ff] via-[#00c8ff] to-[#0090ff] transition-all duration-700 ease-out shadow-[0_0_8px_rgba(0,242,255,0.7)]"
                   style={{ width: `${playerWinPercent}%` }}
                 />
-              </div>
-            </div>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
+    </div>
   );
 };

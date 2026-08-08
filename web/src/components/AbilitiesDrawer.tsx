@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { QueuedAbility } from '../types';
 import { cardArtUrl, CARD_BACK_PATH } from '../cardArtPaths';
 
@@ -31,31 +31,8 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
   const colorHex = isEnemy ? '#ff0044' : '#00f2ff';
   
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="abilities-drawer-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[3px]"
-          />
-
-          {/* Right Drawer */}
-          <motion.div
-            key={`abilities-drawer-${position}`}
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`fixed right-0 z-[105] w-[min(320px,82vw)] md:w-[380px] bg-[#0a0a0c]/95 border-l border-y ${isEnemy ? 'border-[#ff0044]/30' : 'border-white/10'} shadow-2xl flex flex-col font-cinzel select-none
-              ${position === 'top' ? 'top-0 bottom-auto rounded-bl-3xl max-h-[45vh] pt-[env(safe-area-inset-top,10px)] pb-2' : 'bottom-0 top-auto rounded-tl-3xl max-h-[45vh] pb-[env(safe-area-inset-bottom,10px)] pt-2'}
-            `}
-          >
-            <div className="px-3 py-1 flex flex-col h-full overflow-hidden">
+    <div className={`w-full h-full bg-transparent flex flex-col font-cinzel select-none`}>
+      <div className="px-2 py-1 flex flex-col h-full overflow-hidden">
               {/* Header */}
               <div className={`flex items-center justify-between mb-2 border-b ${isEnemy ? 'border-[#ff0044]/20' : 'border-white/10'} pb-1.5`}>
                 <div className="flex items-center gap-2">
@@ -145,10 +122,7 @@ export const AbilitiesDrawer: React.FC<AbilitiesDrawerProps> = ({
                   ))
                 )}
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+        </div>
+      </div>
   );
 };

@@ -14,6 +14,7 @@ import { THEME_STORAGE_KEY } from './theme';
 import { GameOverAchievements } from './components/GameOverAchievements';
 import { AbilitiesDrawer } from './components/AbilitiesDrawer';
 import { EventLogPanel } from './components/EventLogPanel';
+import { RightSidebar } from './components/RightSidebar';
 import { AIAdvisorOverlay } from './components/AIAdvisorOverlay';
 import { evaluateBoardState, getStrategicRecommendation } from './game/AIEvaluationEngine';
 
@@ -33,9 +34,8 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [showSelection, setShowSelection] = useState(true);
   const [zoneSearchModal, setZoneSearchModal] = useState<'limbo' | 'graveyard' | 'deck' | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isAbilitiesDrawerOpen, setIsAbilitiesDrawerOpen] = useState(false);
-  const [isEnemyAbilitiesDrawerOpen, setIsEnemyAbilitiesDrawerOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [environmentTheme, setEnvironmentTheme] = useState<EnvironmentTheme>(loadStoredTheme);
   const [activeView, setActiveView] = useState<'combat' | 'starting' | 'hand' | 'board'>('starting');
@@ -198,60 +198,7 @@ export default function App() {
         </button>
       )}
 
-      {/* Enemy Abilities Storage Toggle Button (Top Right) */}
-      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <button
-          onClick={() => {
-            const next = !isEnemyAbilitiesDrawerOpen;
-            setIsEnemyAbilitiesDrawerOpen(next);
-            // We only pause for the player's drawer currently, but could do it here too if needed
-            gameRef.current?.setAbilitiesDrawerPaused(next || isAbilitiesDrawerOpen);
-          }}
-          className={`fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
-            (gameState.enemyAbilityQueue?.length ?? 0) > 0
-              ? 'border-[#ff0044] bg-[#ff0044]/10 shadow-[0_0_15px_rgba(255,0,68,0.4)]'
-              : 'border-white/20 hover:border-[#ff0044]/60 bg-black/40'
-          }`}
-          aria-label="Toggle Enemy Ability Storage"
-        >
-          <span className="text-xl">🛡️</span>
-          <span className="text-[0.65rem] font-bold text-white tracking-widest uppercase hidden sm:inline">
-            Enemy Stored
-          </span>
-          {(gameState.enemyAbilityQueue?.length ?? 0) > 0 && (
-            <span className="bg-[#ff0044] text-black font-extrabold text-[0.6rem] px-1.5 py-0.5 rounded-full min-w-5 text-center">
-              {gameState.enemyAbilityQueue.length}
-            </span>
-          )}
-        </button>
-      )}
-
-      {/* Player Abilities Storage Toggle Button (Bottom Right) */}
-      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <button
-          onClick={() => {
-            const next = !isAbilitiesDrawerOpen;
-            setIsAbilitiesDrawerOpen(next);
-            gameRef.current?.setAbilitiesDrawerPaused(next || isEnemyAbilitiesDrawerOpen);
-          }}
-          className={`fixed bottom-[max(4.5rem,env(safe-area-inset-bottom)+3.5rem)] right-[max(1rem,env(safe-area-inset-right))] z-[110] min-h-12 px-3 rounded-full glass-panel border flex items-center gap-1.5 transition-all active:scale-95 shadow-lg ${
-            (gameState.playerAbilityQueue?.length ?? 0) > 0
-              ? 'border-[#00f2ff] bg-[#00f2ff]/10 shadow-[0_0_15px_rgba(0,242,255,0.4)] animate-pulse'
-              : 'border-white/20 hover:border-[#00f2ff]/60 bg-black/40'
-          }`}
-          aria-label="Toggle Ability Storage"
-        >
-          <span className="text-xl">⚡</span>
-          <span className="text-[0.65rem] font-bold text-white tracking-widest uppercase hidden sm:inline">
-            My Abilities
-          </span>
-          {(gameState.playerAbilityQueue?.length ?? 0) > 0 && (
-            <span className="bg-[#00f2ff] text-black font-extrabold text-[0.6rem] px-1.5 py-0.5 rounded-full min-w-5 text-center">
-              {gameState.playerAbilityQueue.length}
-            </span>
-          )}
-        </button>
-      )}
+      {/* Player Abilities Storage Toggle Button (Bottom Right) Removed - Now in RightSidebar */}
 
       {/* AI Advisor Trigger & Chat Box (Top Center) */}
       <AIAdvisorOverlay 
@@ -304,17 +251,17 @@ export default function App() {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 z-[105] w-[min(280px,75vw)] md:w-[340px] bg-[#0a0a0c]/95 border-r border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
+            className="fixed left-0 top-0 bottom-0 z-[105] w-[min(240px,65vw)] md:w-[280px] bg-[#0a0a0c]/95 border-r border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
           >
-            <div className="px-3 py-2 flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-1.5">
+            <div className="px-2 py-1 flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between mb-2 border-b border-white/10 pb-1">
                 <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">TACTICAL CONTROL</h2>
                 <button onClick={() => setIsDrawerOpen(false)} className="text-white/60 hover:text-white p-1">✕</button>
               </div>
 
               {/* Active Instructions / Objective */}
               {isActionRequired && (
-                <div className="mb-3 glass-panel p-2.5 border border-[#00f2ff]/30 bg-[#00f2ff]/5 rounded-xl text-center space-y-1.5 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
+                <div className="mb-2 glass-panel p-1.5 border border-[#00f2ff]/30 bg-[#00f2ff]/5 rounded-xl text-center space-y-1.5 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
                   <div className="text-[0.5rem] text-[#00f2ff] font-extrabold uppercase tracking-widest animate-pulse">Tactical Objective</div>
                   <div className="text-[0.6rem] text-gray-200 leading-normal font-sans">
                     {gameState?.decisionMessage ?? gameState?.instructionText}
@@ -885,44 +832,26 @@ gameRef.current?.selectLimboCardForAbility(zone, index);
         </button>
       </div>
 
-      {/* Enemy Abilities Storage Drawer */}
-      <AbilitiesDrawer
-        isOpen={isEnemyAbilitiesDrawerOpen}
-        onClose={() => {
-          setIsEnemyAbilitiesDrawerOpen(false);
-          gameRef.current?.setAbilitiesDrawerPaused(isAbilitiesDrawerOpen);
-        }}
-        abilities={gameState?.enemyAbilityQueue ?? []}
-        position="top"
-        theme="enemy"
-        title="ENEMY ABILITIES"
-      />
-
-      {/* Player Abilities Storage Drawer */}
-      <AbilitiesDrawer
-        isOpen={isAbilitiesDrawerOpen}
-        onClose={() => {
-          setIsAbilitiesDrawerOpen(false);
-          gameRef.current?.setAbilitiesDrawerPaused(isEnemyAbilitiesDrawerOpen);
-        }}
-        abilities={gameState?.playerAbilityQueue ?? []}
-        onUseAbility={(abilityId) => {
-          setIsAbilitiesDrawerOpen(false);
-          gameRef.current?.setAbilitiesDrawerPaused(false);
-          gameRef.current?.useQueuedAbility(abilityId);
-        }}
-        position="bottom"
-        theme="player"
-        title="MY ABILITIES"
-      />
-
-      {/* Right Side Event Log Panel & AI Eval Bar */}
-      <EventLogPanel 
-        logs={displayLogs} 
-        isOpen={!!(gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER)} 
-        onSkip={handleForceSkip}
-        evaluationScore={aiEvalScore}
-      />
+      {/* Unified Right Sidebar */}
+      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
+        <RightSidebar
+          isOpen={isRightSidebarOpen}
+          setIsOpen={(open) => {
+            setIsRightSidebarOpen(open);
+            gameRef.current?.setAbilitiesDrawerPaused(open);
+          }}
+          enemyAbilities={gameState?.enemyAbilityQueue ?? []}
+          playerAbilities={gameState?.playerAbilityQueue ?? []}
+          onUsePlayerAbility={(abilityId) => {
+            setIsRightSidebarOpen(false);
+            gameRef.current?.setAbilitiesDrawerPaused(false);
+            gameRef.current?.useQueuedAbility(abilityId);
+          }}
+          logs={displayLogs}
+          onSkip={handleForceSkip}
+          evaluationScore={aiEvalScore}
+        />
+      )}
 
       <style>{`
         .drawer-btn {

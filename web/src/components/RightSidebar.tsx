@@ -47,11 +47,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,65vw)] md:w-[320px] bg-[#0a0a0c]/95 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,5px)] pb-[env(safe-area-inset-bottom,5px)] font-cinzel select-none"
           >
-            {/* Header / Toggle Close */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-black/40">
-              <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">BATTLE HUD</h2>
-              <button onClick={() => setIsOpen(false)} className="text-white/60 hover:text-white p-1">✕</button>
-            </div>
+
             
             <div className="flex flex-col flex-1 overflow-hidden p-1 gap-1">
               {/* Enemy Abilities Section */}

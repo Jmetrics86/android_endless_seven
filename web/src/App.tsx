@@ -183,20 +183,7 @@ export default function App() {
       {/* Three.js Container */}
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Tactical Control Toggle Button (Left Side) */}
-      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
-        <button
-          onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          className={`fixed top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))] z-[110] min-h-12 min-w-12 rounded-full glass-panel border flex items-center justify-center transition-all active:scale-90 ${
-            isActionRequired && !isDrawerOpen ? 'border-[#00f2ff] shadow-[0_0_15px_rgba(0,242,255,0.5)] animate-pulse' : 'border-white/20 hover:border-[#00f2ff]/60'
-          }`}
-          aria-label="Toggle Tactical Menu"
-        >
-          <span className={`text-2xl ${isActionRequired && !isDrawerOpen ? 'text-[#00f2ff]' : 'text-white'}`}>
-            {isDrawerOpen ? '✕' : isActionRequired ? '!' : '☰'}
-          </span>
-        </button>
-      )}
+
 
       {/* Player Abilities Storage Toggle Button (Bottom Right) Removed - Now in RightSidebar */}
 
@@ -233,32 +220,36 @@ export default function App() {
       </AnimatePresence>
 
       {/* Tactical Control Left Drawer */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <motion.div
-            key="drawer-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsDrawerOpen(false)}
-            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-[2px]"
-          />
-        )}
-        {isDrawerOpen && (
-          <motion.div
-            key="drawer-content"
-            initial={{ x: '-100%' }}
+      {gameState && !showSelection && gameState.currentPhase !== Phase.GAME_OVER && (
+        <AnimatePresence>
+          {/* Collapsed Left Edge Toggle */}
+          {!isDrawerOpen && (
+            <motion.div
+              key="left-drawer-edge"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              onClick={() => setIsDrawerOpen(true)}
+              className="fixed left-0 top-[20vh] bottom-[20vh] z-[100] w-2 sm:w-3 cursor-pointer bg-[#00f2ff]/20 hover:bg-[#00f2ff]/40 border-r border-[#00f2ff]/50 shadow-[2px_0_10px_rgba(0,242,255,0.2)] flex flex-col hover:w-4 transition-all"
+              title="Open Tactical Control"
+            >
+              {isActionRequired && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_10px_white] animate-pulse pointer-events-none" />
+              )}
+            </motion.div>
+          )}
+
+          {/* Expanded Drawer */}
+          {isDrawerOpen && (
+            <motion.div
+              key="drawer-content"
+              initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed left-0 top-0 bottom-0 z-[105] w-[min(240px,65vw)] md:w-[280px] bg-[#0a0a0c]/95 border-r border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
           >
-            <div className="px-2 py-1 flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between mb-2 border-b border-white/10 pb-1">
-                <h2 className="text-[#00f2ff] text-[0.7rem] tracking-[0.2em] font-bold">TACTICAL CONTROL</h2>
-                <button onClick={() => setIsDrawerOpen(false)} className="text-white/60 hover:text-white p-1">✕</button>
-              </div>
-
+            <div className="p-1 flex flex-col h-full overflow-hidden">
               {/* Active Instructions / Objective */}
               {isActionRequired && (
                 <div className="mb-2 glass-panel p-1.5 border border-[#00f2ff]/30 bg-[#00f2ff]/5 rounded-xl text-center space-y-1.5 shadow-[0_0_15px_rgba(0,242,255,0.05)]">
@@ -470,6 +461,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      )}
 
       {/* Selection Overlay */}
       <AnimatePresence>

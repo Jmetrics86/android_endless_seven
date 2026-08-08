@@ -9,13 +9,18 @@
     "simulate": "node ./node_modules/tsx/dist/cli.mjs src/cli.ts",
     "test": "node ./node_modules/vitest/vitest.mjs run"
   },
-  "keywords": ["endless-seven", "simulator", "headless", "game-balance"],
+  "keywords": [
+    "endless-seven",
+    "simulator",
+    "headless",
+    "game-balance"
+  ],
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "^22.14.0",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.6"
   }
 }

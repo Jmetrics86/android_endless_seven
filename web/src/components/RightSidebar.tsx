@@ -45,10 +45,16 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,65vw)] md:w-[320px] bg-[#0a0a0c]/95 border-l border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,5px)] pb-[env(safe-area-inset-bottom,5px)] font-cinzel select-none"
+            className="fixed right-0 top-0 bottom-0 z-[105] w-[min(260px,65vw)] md:w-[320px] bg-[#0a0a0c]/95 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,5px)] pb-[env(safe-area-inset-bottom,5px)] font-cinzel select-none pl-2"
           >
-
-            
+            {/* Clickable Left Edge to Collapse */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-3 cursor-pointer bg-white/5 hover:bg-[#00f2ff]/20 border-r border-white/10 flex items-center justify-center transition-colors z-10 shadow-[2px_0_10px_rgba(0,0,0,0.5)]"
+              onClick={() => setIsOpen(false)}
+              title="Close Battle HUD"
+            >
+              <div className="w-0.5 h-16 bg-[#00f2ff]/40 rounded-full group-hover:bg-[#00f2ff]" />
+            </div>            
             <div className="flex flex-col flex-1 overflow-hidden p-1 gap-1">
               {/* Enemy Abilities Section */}
               <div className="flex-none h-[30%] min-h-[120px] max-h-[160px] bg-black/40 border border-[#ff0044]/20 rounded overflow-hidden">

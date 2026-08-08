@@ -247,8 +247,17 @@ export default function App() {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 bottom-0 z-[105] w-[min(240px,65vw)] md:w-[280px] bg-[#0a0a0c]/95 border-r border-white/10 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)]"
+            className="fixed left-0 top-0 bottom-0 z-[105] w-[min(240px,65vw)] md:w-[280px] bg-[#0a0a0c]/95 shadow-2xl flex flex-col pt-[env(safe-area-inset-top,10px)] pb-[env(safe-area-inset-bottom,10px)] pr-2"
           >
+            {/* Clickable Right Edge to Collapse */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-3 cursor-pointer bg-white/5 hover:bg-[#00f2ff]/20 border-l border-white/10 flex items-center justify-center transition-colors z-10 shadow-[-2px_0_10px_rgba(0,0,0,0.5)]"
+              onClick={() => setIsDrawerOpen(false)}
+              title="Close Tactical Control"
+            >
+              <div className="w-0.5 h-16 bg-[#00f2ff]/40 rounded-full group-hover:bg-[#00f2ff]" />
+            </div>
+
             <div className="p-1 flex flex-col h-full overflow-hidden">
               {/* Active Instructions / Objective */}
               {isActionRequired && (
@@ -443,19 +452,6 @@ export default function App() {
                 <button onClick={handleForceSkip} className="mt-2 w-full py-1 border border-[#ff0044]/30 text-[#ff0044] text-[0.5rem] uppercase tracking-tighter hover:bg-[#ff0044]/10 transition-all">
                   Skip Current Interaction
                 </button>
-              </div>
-
-              {/* Theme Toggle & Version in Drawer Footer */}
-              <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-2">
-                 <div className="flex items-center justify-between">
-                   <span className="text-[0.6rem] text-[#00f2ff] font-medium animate-pulse-subtle">🐢 Slow Play Mode Active</span>
-                   <span className="text-[0.5rem] text-gray-700">v{GAME_VERSION}</span>
-                 </div>
-                 <div className="flex items-center justify-between">
-                   <button onClick={toggleEnvironmentTheme} className="text-[0.6rem] text-gray-500 uppercase hover:text-white transition-colors">
-                     {environmentTheme === 'dark' ? '☀ Light Mode' : '☽ Dark Mode'}
-                   </button>
-                 </div>
               </div>
             </div>
           </motion.div>

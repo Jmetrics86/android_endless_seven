@@ -48,11 +48,6 @@ export const EventLogPanel: React.FC<EventLogPanelProps> = ({ logs, isOpen, onSk
               ))}
             </div>
 
-            {onSkip && (
-              <button onClick={onSkip} className="mt-1.5 w-full py-1 border border-[#ff0044]/40 bg-[#ff0044]/10 hover:bg-[#ff0044]/20 text-[#ff0044] text-[0.55rem] sm:text-[0.6rem] font-bold uppercase tracking-wider transition-all rounded active:scale-95 shadow-sm">
-                Skip Current Interaction
-              </button>
-            )}
 
             {/* AI Evaluation Bar */}
             <div className="mt-2 pt-1.5 border-t border-white/10">

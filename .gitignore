@@ -57,3 +57,6 @@ captures/
 *.db
 *.sqlite
 *.sqlite3
+simulator/package.json
+*.json
+.env

@@ -1,15 +1,15 @@
 /**
  * V2 Advanced Self-Play Dataset Exporter
- * Includes Card ID One-Hot/Categorical Features & Multi-Deck Scenarios
+ * Updated for variant-2026-08-13 and dual-tribal combinations
  */
 
 import { HeadlessGameEngine } from './HeadlessGameEngine.js';
 import { 
-  buildVampiresAndDemonsDeck, 
-  buildWerewolvesAndVampiresDeck, 
-  buildStandardLightDeck, 
-  buildStandardDarkDeck 
+  buildDualTribalDeck,
+  DeckPools,
+  TribalFaction
 } from './deckBuilder.js';
+import { resolveProfile } from './cardRegistry.js';
 import { effectivePower, HeadlessCard } from './types.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,49 +22,51 @@ export function generateV2Dataset(numGames = 5000, outputDir = './kaggle_dataset
   const csvPath = path.join(outputDir, 'v2_selfplay_dataset.csv');
   const rows: string[] = [];
 
-  // Card Dictionary mapping unique card names to numeric IDs (1..42)
   const cardNames = [
     "Bella", "Noble The Great", "Valtarious", "Calmadious", "Coal", "Dawn", "Lucian Blackwood",
     "Tarkidos", "Kaelo", "Luna", "Ulfric Thorne", "Garmr", "Varg Fur-back", "Fenris Lightfoot",
-    "Metatron", "Cassiel Haggis", "Jophiel", "Remiel", "Oriel The bold", "Anakim The Wise", "Samyaza",
+    "Metatron", "Cassiel Haggis", "Jophiel", "Remiel", "Oriel The bold", "Oriel the Bold", "Anakim The Wise", "Anakim the Wise", "Samyaza",
     "Skarados", "Lycandor", "Golgothane", "Umbarax", "Pazoo", "Karlyah", "Nix", "Mammon",
     "Bogva", "Desire", "Zelus", "Belphegor", "Alistar Elren", "Bacchus", "Lord Alaric",
-    "Kaelarion", "Duke Aren Drakos", "Elowen Thornver", "Cyprian", "Valerius Nightshade", "Sulvian Vane"
+    "Kaelarion", "Duke Aren Drakos", "Elowen Thornver", "Cyprian", "Valerius Nightshade", "Sulvian Vane",
+    "Varg Greyback"
   ];
   
   const cardIdMap = new Map<string, number>();
   cardNames.forEach((name, idx) => cardIdMap.set(name, idx + 1));
 
-  for (let g = 0; g < numGames; g++) {
-    // Alternate between 4 distinct deck matchup combinations for maximum training diversity
-    let deckA, deckB, sideAName, sideBName;
-    const mode = g % 4;
+  const PROFILE_PATH = './profiles/variant-2026-08-13.json';
+  const resolved = resolveProfile(PROFILE_PATH);
+  const pools: DeckPools = {
+    lightPool: resolved.lightPool,
+    darkPool: resolved.darkPool,
+    avatarCopies: resolved.rules.avatarCopies ?? 1
+  };
 
-    if (mode === 0) {
-      deckA = buildVampiresAndDemonsDeck('dark');
-      deckB = buildWerewolvesAndVampiresDeck('light');
-      sideAName = "Vampires & Demons";
-      sideBName = "Werewolves & Vampires";
-    } else if (mode === 1) {
-      deckA = buildStandardLightDeck();
-      deckB = buildStandardDarkDeck();
-      sideAName = "Light Pool";
-      sideBName = "Dark Pool";
-    } else if (mode === 2) {
-      deckA = buildVampiresAndDemonsDeck('light');
-      deckB = buildWerewolvesAndVampiresDeck('dark');
-      sideAName = "Vampires & Demons (Light)";
-      sideBName = "Werewolves & Vampires (Dark)";
-    } else {
-      deckA = buildStandardDarkDeck();
-      deckB = buildStandardLightDeck();
-      sideAName = "Dark Pool";
-      sideBName = "Light Pool";
-    }
+  const tribes: TribalFaction[] = ['Celestial', 'Lycan', 'Daemon', 'Vampyre'];
+  const alignments: ('light' | 'dark')[] = ['light', 'dark'];
+
+  for (let g = 0; g < numGames; g++) {
+    // Pick random tribes for side A
+    const tA1 = tribes[Math.floor(Math.random() * tribes.length)];
+    const remainA = tribes.filter(t => t !== tA1);
+    const tA2 = remainA[Math.floor(Math.random() * remainA.length)];
+    const alignA = alignments[Math.floor(Math.random() * alignments.length)];
+    
+    // Pick random tribes for side B
+    const tB1 = tribes[Math.floor(Math.random() * tribes.length)];
+    const remainB = tribes.filter(t => t !== tB1);
+    const tB2 = remainB[Math.floor(Math.random() * remainB.length)];
+    const alignB = alignments[Math.floor(Math.random() * alignments.length)];
+
+    const deckA = buildDualTribalDeck(tA1, tA2, alignA, pools);
+    const deckB = buildDualTribalDeck(tB1, tB2, alignB, pools);
+
+    const sideAName = `${tA1}+${tA2} (${alignA})`;
+    const sideBName = `${tB1}+${tB2} (${alignB})`;
 
     const engine = new HeadlessGameEngine(deckA, deckB, sideAName, sideBName, undefined, undefined, 'smart', 'smart');
 
-    // Run game step-by-step to capture exact prep decisions
     const gameSnapshots: {
       round: number;
       isEnemy: number;
@@ -81,7 +83,6 @@ export function generateV2Dataset(numGames = 5000, outputDir = './kaggle_dataset
       oppPower: number;
     }[] = [];
 
-    // Draw round 1 prep hand to take snapshot
     const pHand: HeadlessCard[] = [];
     for (let i = 0; i < 8 && engine.playerDeck.length > 0; i++) {
       pHand.push(engine.createCard(engine.playerDeck.pop()!, false));
@@ -118,13 +119,11 @@ export function generateV2Dataset(numGames = 5000, outputDir = './kaggle_dataset
       }
     }
 
-    // Run game to completion
     engine.runGame();
 
     const outcome = engine.gameOverResult === 'player' ? 1.0 : (engine.gameOverResult === 'enemy' ? -1.0 : 0.0);
 
     for (const snap of gameSnapshots) {
-      // Apply round-based temporal reward discount (gamma = 0.9)
       const discount = Math.pow(0.9, 3 - snap.round);
       const reward = outcome * discount;
 

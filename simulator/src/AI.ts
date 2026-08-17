@@ -1,15 +1,58 @@
 /**
  * Headless AI Decision Engine
  * Evaluates decisions deterministically and strategically for both Player and Enemy sides.
+ * 
+ * Updated for variant-2026-08-13 mechanics:
+ * - Step-specific power bonuses (flipStepBonusPower, battleStepBonusPower)
+ * - Dynamic faction power bonuses
+ * - Ward marker awareness on seal targeting
+ * - cannotBattleWhilePowerIs1 awareness
+ * - destroyAttackerEndOfRound mutual destruction trade awareness
  */
 
-import { HeadlessCard, HeadlessSeal, effectivePower, Alignment } from './types.js';
+import { HeadlessCard, HeadlessSeal, effectivePower, Alignment, CardData } from './types.js';
+
+/**
+ * Compute expected effective power for a card in combat context.
+ * Accounts for battleStepBonusPower and dynamicFactionPowerBonus scaling.
+ */
+export function expectedBattlePower(card: HeadlessCard, allAlliesInPlay: HeadlessCard[] = [], isChampioning = false): number {
+  let p = effectivePower(card, 'battle', isChampioning);
+  // Add dynamic faction bonus estimate if card has it
+  if (card.data.dynamicFactionPowerBonus) {
+    const { faction, bonusPerCard, excludeSelf } = card.data.dynamicFactionPowerBonus;
+    const count = allAlliesInPlay.filter(c => c.data.faction === faction && (excludeSelf ? c !== card : true)).length;
+    p += bonusPerCard * count;
+  }
+  return p;
+}
+
+/**
+ * Compute expected effective power for a card during Flip resolution.
+ * Accounts for flipStepBonusPower.
+ */
+export function expectedFlipPower(card: HeadlessCard): number {
+  return effectivePower(card, 'flip');
+}
+
+/**
+ * Check if a card effectively cannot battle (either always or conditionally at PV 1).
+ */
+export function cannotBattle(card: HeadlessCard): boolean {
+  if (card.data.cannotBattleOrBeBattled) return true;
+  if (card.data.cannotBattleWhilePowerIs1 && effectivePower(card) === 1) return true;
+  return false;
+}
 
 export function harmTargetScore(source: HeadlessCard, target: HeadlessCard, seals: HeadlessSeal[]): number {
   if (source.isEnemy === target.isEnemy) return -1e9;
   let s = effectivePower(target) * 12;
   if (target.data.isChampion) s += 55;
   if (seals.some(seal => seal.champion === target)) s += 35;
+  // Penalize targeting cards with destroyAttackerEndOfRound (mutual destruction trade is worse)
+  if (target.data.destroyAttackerEndOfRound) s -= 20;
+  // Bonus for targeting cards with dynamicFactionPowerBonus (removes scaling threat)
+  if (target.data.dynamicFactionPowerBonus) s += 15;
   return s;
 }
 
@@ -17,6 +60,8 @@ export function allyPowerBuffScore(card: HeadlessCard, seals: HeadlessSeal[]): n
   let s = effectivePower(card) * 8;
   if (card.data.isChampion) s += 25;
   if (seals.some(seal => seal.champion === card)) s += 45;
+  // Prefer buffing cards with faction scaling (amplifies value)
+  if (card.data.dynamicFactionPowerBonus) s += 12;
   return s;
 }
 
@@ -24,6 +69,8 @@ export function enemyWeaknessScore(card: HeadlessCard, seals: HeadlessSeal[]): n
   let s = effectivePower(card) * 10;
   if (card.data.isChampion) s += 40;
   if (seals.some(seal => seal.champion === card)) s += 30;
+  // Bonus for weakening cards with dynamicFactionPowerBonus
+  if (card.data.dynamicFactionPowerBonus) s += 10;
   return s;
 }
 
@@ -114,6 +161,8 @@ export function pickSealForAbility(
   if (validSeals.length === 0) return null;
   const score = (s: HeadlessSeal) => {
     let sc = 0;
+    // Skip warded seals - the effect will be absorbed/wasted
+    if (s.hasWard) return -1000;
     if (effect === oppAlign) {
       if (s.alignment === oppAlign) sc += 100;
       else if (s.alignment === Alignment.NEUTRAL) sc += 60;
@@ -126,7 +175,12 @@ export function pickSealForAbility(
     sc += 5 - Math.abs(s.index - 3);
     return sc;
   };
-  return validSeals.reduce((a, b) => (score(a) >= score(b) ? a : b));
+  const scored = validSeals.map(s => ({ seal: s, score: score(s) })).filter(x => x.score > -500);
+  if (scored.length === 0) {
+    // All seals are warded, pick least bad option
+    return validSeals.reduce((a, b) => (Math.abs(a.index - 3) <= Math.abs(b.index - 3) ? a : b));
+  }
+  return scored.reduce((a, b) => (a.score >= b.score ? a : b)).seal;
 }
 
 export function pickAnakimSealIndex(seals: HeadlessSeal[], myAlign: Alignment): number {
@@ -138,6 +192,32 @@ export function pickAnakimSealIndex(seals: HeadlessSeal[], myAlign: Alignment): 
     if (s.alignment === Alignment.NEUTRAL) sc += 40;
     if (s.champion && s.champion.isEnemy !== (myAlign === Alignment.DARK)) sc += 25;
     sc += 4 - Math.abs(s.index - 3);
+    if (sc > best) {
+      best = sc;
+      bestIdx = s.index;
+    }
+  }
+  return bestIdx;
+}
+
+/**
+ * Pick best vacant seal for Ward placement (Anakim the Wise variant).
+ * Prioritize seals that are strategically valuable and currently unprotected.
+ */
+export function pickWardSealIndex(seals: HeadlessSeal[], myAlign: Alignment): number {
+  let bestIdx = -1;
+  let best = -Infinity;
+  for (const s of seals) {
+    if (s.champion || s.hasWard) continue; // Skip championed or already warded seals
+    let sc = 0;
+    // Prefer warding seals we already control (protect them from being flipped)
+    if (s.alignment === myAlign) sc += 100;
+    // Then neutral seals (prevent enemy from claiming)
+    else if (s.alignment === Alignment.NEUTRAL) sc += 60;
+    // Enemy seals are low priority to ward (we want to flip those, not protect them)
+    else sc += 10;
+    // Center seals are more strategically valuable
+    sc += 5 - Math.abs(s.index - 3);
     if (sc > best) {
       best = sc;
       bestIdx = s.index;

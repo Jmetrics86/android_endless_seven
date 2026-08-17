@@ -39,6 +39,12 @@ export interface CardData {
   abilityImmune?: boolean;
   hasLustSealEffect?: boolean;
   hasTarkidosNullifyUsedThisRound?: boolean;
+  flipStepBonusPower?: number;
+  battleStepBonusPower?: number;
+  championBattleBonusPower?: number;
+  dynamicFactionPowerBonus?: { faction: string; bonusPerCard: number; excludeSelf?: boolean };
+  cannotBattleWhilePowerIs1?: boolean;
+  destroyAttackerEndOfRound?: boolean;
 }
 
 export interface HeadlessCard {
@@ -55,14 +61,23 @@ export interface HeadlessCard {
   isHeldForRound?: boolean;
 }
 
-export function effectivePower(c: HeadlessCard): number {
-  return c.data.power + c.powerMarkers - c.weaknessMarkers;
+export function effectivePower(c: HeadlessCard, step: 'base' | 'flip' | 'battle' = 'base', isChampioningSeal = false): number {
+  let p = c.data.power + c.powerMarkers - c.weaknessMarkers;
+  if (step === 'flip' && c.data.flipStepBonusPower) {
+    p += c.data.flipStepBonusPower;
+  }
+  if (step === 'battle') {
+    if (c.data.battleStepBonusPower) p += c.data.battleStepBonusPower;
+    if (isChampioningSeal && c.data.championBattleBonusPower) p += c.data.championBattleBonusPower;
+  }
+  return p;
 }
 
 export interface HeadlessSeal {
   index: number;
   alignment: Alignment;
   champion: HeadlessCard | null;
+  hasWard?: boolean;
 }
 
 export interface SimulationResult {

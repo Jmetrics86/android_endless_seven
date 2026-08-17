@@ -49,6 +49,43 @@ High-performance, zero-graphics headless simulation engine for **Endless Seven**
 
 ---
 
+## 🧪 Experimentation & Balance Profiles
+
+The simulator supports **non-destructive experimentation**, allowing you to test alternative card power values, abilities, and rule variants without mutating the canonical game rules or card pools.
+
+### Creating an Experiment Profile (`profiles/*.json`)
+Create a JSON file in `profiles/` (e.g. `profiles/my_experiment.json`):
+```json
+{
+  "id": "celestial_rebalance",
+  "name": "Celestial Rebalance & 5-Round Variant",
+  "rules": {
+    "maxRounds": 5,
+    "errataFlags": {
+      "valeriusStealPower": true
+    }
+  },
+  "cardOverrides": [
+    { "name": "Remiel", "power": 3 },
+    { "name": "Anakim The Wise", "power": 4 }
+  ]
+}
+```
+
+### Running Simulations with an Experiment Profile
+```bash
+# Run 500 games with experimental balance profile
+npx tsx src/cli.ts --games 500 --profile profiles/my_experiment.json
+```
+
+### Running Side-by-Side A/B Comparisons
+Measure the exact win rate delta caused by your proposed card buffs/nerfs against the canonical baseline:
+```bash
+npx tsx src/cli.ts --games 500 --matchup light-vs-dark --compare profiles/my_experiment.json
+```
+
+---
+
 ## 🛠️ Usage & CLI
 
 ### Run 100 Games (Default)
@@ -61,8 +98,14 @@ npm run simulate
 # Run 1,000 games
 npx tsx src/cli.ts --games 1000
 
-# Matchup options: vampires-demons-vs-werewolves-vampires | light-vs-dark
+# Matchup options: vampires-demons-vs-werewolves-vampires | light-vs-dark | celestial-lycan-light | ...
 npx tsx src/cli.ts --games 500 --matchup light-vs-dark
+
+# Run with experiment profile
+npx tsx src/cli.ts --games 500 --profile profiles/example_experiment.json
+
+# Compare baseline vs experimental profile
+npx tsx src/cli.ts --games 500 --matchup light-vs-dark --compare profiles/example_experiment.json
 
 # Output JSON
 npx tsx src/cli.ts --games 100 --json
@@ -83,16 +126,21 @@ npm run build
 
 ```
 endless_simulator/
+├── profiles/                   # JSON balance experiment profiles
+│   └── example_experiment.json # Sample card override & rule profile
 ├── src/
 │   ├── types.ts                # Data types, cards, seals & simulation interfaces
-│   ├── constants.ts            # Card definitions (Light & Dark pools)
-│   ├── deckBuilder.ts          # Faction deck building algorithms
+│   ├── rules.ts                # RuleConfig, default rules & mechanical errata flags
+│   ├── cardRegistry.ts         # Card override engine, profile loader & registry
+│   ├── constants.ts            # Canonical card definitions (Light & Dark pools)
+│   ├── deckBuilder.ts          # Faction deck building algorithms (supports custom pools)
 │   ├── AI.ts                   # Strategic heuristics & target selection
-│   ├── HeadlessGameEngine.ts   # Core headless resolution engine
-│   ├── Simulator.ts            # Batch runner & report generator
-│   ├── cli.ts                  # CLI runner
+│   ├── HeadlessGameEngine.ts   # Core headless resolution engine (parameterized by RuleConfig)
+│   ├── Simulator.ts            # Batch runner, A/B comparator & report generator
+│   ├── cli.ts                  # CLI runner with --profile and --compare support
 │   └── __tests__/
-│       └── simulation.test.ts  # Vitest test suite
+│       ├── simulation.test.ts  # Canonical baseline regression suite
+│       └── experimentation.test.ts # Experimentation & override unit tests
 ├── balance_report.md           # Saved output report
 ├── package.json
 ├── tsconfig.json

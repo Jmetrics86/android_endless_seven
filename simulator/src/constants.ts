@@ -58,6 +58,9 @@ export const DARK_POOL: CardData[] = [
   { name: "Cyprian", faction: "Vampyre", type: "Creature", power: 1, isChampion: false, ability: "Cannot battle or be battled. Flip: Place a +3 Power Marker on any creature in play. Sacrifice this creature at the end of the turn.", hasTargetedAbility: true, effect: 'place_power', targetType: 'creature', markerPower: 3, cannotBattleOrBeBattled: true, sacrificeEndOfTurn: true }
 ];
 
+export const CANONICAL_LIGHT_POOL: CardData[] = LIGHT_POOL;
+export const CANONICAL_DARK_POOL: CardData[] = DARK_POOL;
+
 export const GAME_CONSTANTS = {
   SEVEN: 7
 };

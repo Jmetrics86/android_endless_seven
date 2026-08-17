@@ -1,0 +1,22 @@
+{
+  "id": "celestial_experimental_buff",
+  "name": "Celestial Experimental Buffs & Rule Variant",
+  "description": "Experimental profile to test buffing Remiel & Anakim stats alongside a 5-round game duration.",
+  "rules": {
+    "maxRounds": 5,
+    "errataFlags": {
+      "valeriusStealPower": true
+    }
+  },
+  "cardOverrides": [
+    {
+      "name": "Remiel",
+      "power": 3,
+      "ability": "Flip: Reveal any face-down card, its Flip ability is Nullified."
+    },
+    {
+      "name": "Anakim The Wise",
+      "power": 4
+    }
+  ]
+}

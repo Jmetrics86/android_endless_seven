@@ -8,12 +8,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const CARD_NAME_MAP = new Map<string, number>([
-  ["Bella", 1], ["Noble The Great", 2], ["Valtarious", 3], ["Calmadious", 4], ["Coal", 5], ["Dawn", 6], ["Lucian Blackwood", 7],
-  ["Tarkidos", 8], ["Kaelo", 9], ["Luna", 10], ["Ulfric Thorne", 11], ["Garmr", 12], ["Varg Fur-back", 13], ["Fenris Lightfoot", 14],
-  ["Metatron", 15], ["Cassiel Haggis", 16], ["Jophiel", 17], ["Remiel", 18], ["Oriel The bold", 19], ["Anakim The Wise", 20], ["Samyaza", 21],
+  ["Bella", 1], ["Noble The Great", 2], ["Noble the Great", 2], ["Valtarious", 3], ["Calmadious", 4], ["Coal", 5], ["Dawn", 6], ["Lucian Blackwood", 7],
+  ["Tarkidos", 8], ["Kaelo", 9], ["Luna", 10], ["Ulfric Thorne", 11], ["Garmr", 12], ["Varg Fur-back", 13], ["Varg Greyback", 13], ["Fenris Lightfoot", 14],
+  ["Metatron", 15], ["Cassiel Haggis", 16], ["Jophiel", 17], ["Remiel", 18], ["Oriel The bold", 19], ["Oriel the Bold", 19], ["Anakim The Wise", 20], ["Anakim the Wise", 20], ["Samyaza", 21],
   ["Skarados", 22], ["Lycandor", 23], ["Golgothane", 24], ["Umbarax", 25], ["Pazoo", 26], ["Karlyah", 27], ["Nix", 28], ["Mammon", 29],
   ["Bogva", 30], ["Desire", 31], ["Zelus", 32], ["Belphegor", 33], ["Alistar Elren", 34], ["Bacchus", 35], ["Lord Alaric", 36],
-  ["Kaelarion", 37], ["Duke Aren Drakos", 38], ["Elowen Thornver", 39], ["Cyprian", 40], ["Valerius Nightshade", 41], ["Sulvian Vane", 42]
+  ["Kaelarion", 37], ["Duke Aren Drakos", 38], ["Elowen Thornver", 39], ["Cyprian", 40], ["Valerius Nightshade", 41], ["Sulvian Vane", 42],
+  ["Grelyn Zilkos", 43]
 ]);
 
 export interface NeuralWeightsV2 {
@@ -114,7 +115,12 @@ export class NeuralAI {
     const handChamps = availableHand.filter(c => c.data.isChampion).length;
     const handPowerSum = availableHand.reduce((acc, c) => acc + c.data.power, 0);
 
-    const isV2 = NeuralAI.weights?.version === "v2" || NeuralAI.weights?.mean.length === 13;
+    const isV3 = NeuralAI.weights?.version === "v3" || NeuralAI.weights?.mean.length === 22;
+    const isV2 = !isV3 && (NeuralAI.weights?.version === "v2" || NeuralAI.weights?.mean.length === 13);
+
+    // Precompute board state for V3 features
+    const allOnBoard = [...battlefield, ...oppBattlefield, ...seals.map(s => s.champion)].filter((c): c is HeadlessCard => c !== null);
+    const wardedSealsCount = seals.filter(s => s.hasWard).length;
 
     while (vacantSlots.length > 0 && availableHand.length > 0) {
       let bestChoice: { cardIdx: number; slotIdxIdx: number; score: number } | null = null;
@@ -129,33 +135,71 @@ export class NeuralAI {
           const oppPower = oppCard ? effectivePower(oppCard) : 0;
           const cId = CARD_NAME_MAP.get(card.data.name) || 0;
 
-          const features = isV2 ? [
-            currentRound,
-            isEnemy ? 1 : 0,
-            mySeals,
-            oppSeals,
-            handChamps,
-            handPowerSum,
-            slot,
-            cId,
-            card.data.power,
-            card.data.isChampion ? 1 : 0,
-            card.data.hasHaste ? 1 : 0,
-            card.data.hasActivate ? 1 : 0,
-            oppPower
-          ] : [
-            currentRound,
-            isEnemy ? 1 : 0,
-            mySeals,
-            oppSeals,
-            handChamps,
-            handPowerSum,
-            slot,
-            card.data.power,
-            card.data.isChampion ? 1 : 0,
-            card.data.hasHaste ? 1 : 0,
-            oppPower
-          ];
+          let features: number[];
+          if (isV3) {
+            // V3: Enhanced feature vector with variant-specific mechanics
+            const battlePower = effectivePower(card, 'battle');
+            const flipPower = effectivePower(card, 'flip');
+            const sameFactionOnBoard = allOnBoard.filter(c => c.data.faction === card.data.faction && c.isEnemy === isEnemy).length;
+            const hasDynBonus = card.data.dynamicFactionPowerBonus ? 1 : 0;
+            const dynBonusEstimate = card.data.dynamicFactionPowerBonus
+              ? card.data.dynamicFactionPowerBonus.bonusPerCard * sameFactionOnBoard
+              : 0;
+            features = [
+              currentRound,                                           // 0
+              isEnemy ? 1 : 0,                                       // 1
+              mySeals,                                                // 2
+              oppSeals,                                               // 3
+              handChamps,                                             // 4
+              handPowerSum,                                            // 5
+              slot,                                                    // 6
+              cId,                                                     // 7
+              card.data.power,                                         // 8
+              card.data.isChampion ? 1 : 0,                            // 9
+              card.data.hasHaste ? 1 : 0,                              // 10
+              card.data.hasActivate ? 1 : 0,                           // 11
+              oppPower,                                                // 12
+              battlePower,                                             // 13
+              flipPower,                                               // 14
+              card.data.destroyAttackerEndOfRound ? 1 : 0,             // 15
+              card.data.cannotBattleWhilePowerIs1 ? 1 : 0,             // 16
+              hasDynBonus,                                             // 17
+              dynBonusEstimate,                                        // 18
+              card.data.hasLimboAbility ? 1 : 0,                       // 19
+              sameFactionOnBoard,                                      // 20
+              wardedSealsCount                                         // 21
+            ];
+          } else if (isV2) {
+            features = [
+              currentRound,
+              isEnemy ? 1 : 0,
+              mySeals,
+              oppSeals,
+              handChamps,
+              handPowerSum,
+              slot,
+              cId,
+              card.data.power,
+              card.data.isChampion ? 1 : 0,
+              card.data.hasHaste ? 1 : 0,
+              card.data.hasActivate ? 1 : 0,
+              oppPower
+            ];
+          } else {
+            features = [
+              currentRound,
+              isEnemy ? 1 : 0,
+              mySeals,
+              oppSeals,
+              handChamps,
+              handPowerSum,
+              slot,
+              card.data.power,
+              card.data.isChampion ? 1 : 0,
+              card.data.hasHaste ? 1 : 0,
+              oppPower
+            ];
+          }
 
           const score = NeuralAI.forwardPass(features);
 

@@ -16,7 +16,7 @@ vi.mock('gsap', () => ({
 }));
 
 function getCardDef(name: string): CardData {
-  const card = [...LIGHT_POOL, ...DARK_POOL].find(c => c.name === name);
+  const card = [...LIGHT_POOL, ...DARK_POOL].find(c => c.name.toLowerCase() === name.toLowerCase());
   if (!card) throw new Error(`Card ${name} not found in constants`);
   return card;
 }

@@ -58,6 +58,9 @@ captures/
 *.sqlite
 *.sqlite3
 
+# Tabletop Simulator Deck Builder
+*.tsdb
+
 # Security & OS ignores
 .env
 *.pem

@@ -23,15 +23,19 @@ export const CARD_ART_PATHS: Record<string, string> = {
   'Calmadious': 'card-art/Avatars of light/calmadious copy.png',
   'Coal': 'card-art/Avatars of light/coal copy.png',
   'Noble The Great': 'card-art/Avatars of light/noble the Great copy.png',
+  'Noble the Great': 'card-art/Avatars of light/noble the Great copy.png',
   'Tarkidos': 'card-art/Avatars of light/tarkidos copy.png',
-  'Valtarious': 'card-art/Avatars of light/valtarious copy.png',
+  'Grelyn Zilkos': 'card-art/Avatars of light/grelyn Zilkos copy.png',
+  'Valtarious': 'card-art/Lycan/Valtarious copy.png',
   // Celestial
   'Anakim The Wise': 'card-art/Celestial/Anakim The Wise copy.png',
+  'Anakim the Wise': 'card-art/Celestial/Anakim The Wise copy.png',
   'Metatron': 'card-art/Celestial/Metatron copy.png',
   'Remiel': 'card-art/Celestial/Remiel.png',
   'Cassiel Haggis': 'card-art/Celestial/cassiel haggis copy.png',
   'Jophiel': 'card-art/Celestial/jophiel.png',
   'Oriel The bold': 'card-art/Celestial/oriel the bold copy.png',
+  'Oriel the Bold': 'card-art/Celestial/oriel the bold copy.png',
   'Samyaza': 'card-art/Celestial/samyaza copy.png',
   // Lycan
   'Fenris Lightfoot': 'card-art/Lycan/Fenris Lightfoot copy.png',
@@ -41,6 +45,7 @@ export const CARD_ART_PATHS: Record<string, string> = {
   'Luna': 'card-art/Lycan/luna copy.png',
   'Ulfric Thorne': 'card-art/Lycan/ulfric thorne copy.png',
   'Varg Fur-back': 'card-art/Lycan/varg greyback copy.png',
+  'Varg Greyback': 'card-art/Lycan/varg greyback copy.png',
   // Darkness
   'Karlyah': 'card-art/Darkness/Karlyah copy.png',
   'Nix': 'card-art/Darkness/Nix copy.png',

@@ -44,7 +44,7 @@ export const DEFAULT_RULES: RuleConfig = {
   handDrawCount: 8,
   maxRounds: 4,
   attritionThreshold: 8,
-  avatarCopies: 1,
+  avatarCopies: 2,
   enableAbilityDeferral: true,
   errataFlags: {
     valeriusStealPower: false,

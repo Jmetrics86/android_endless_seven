@@ -1,4 +1,36 @@
-/**
+import * as fs from 'fs';
+import * as path from 'path';
+
+const publicCardArtDir = 'C:/Users/jsnbr/Projects/android_endless_seven/web/public/card-art';
+const cardArtPathsFile = 'C:/Users/jsnbr/Projects/android_endless_seven/web/src/cardArtPaths.ts';
+
+// Stale files to remove
+const staleFiles = [
+  'Avatars of light/valtarious copy.png',
+  'Celestial/jophiel.png',
+  'Celestial/Metatron copy.png',
+  'Celestial/Remiel.png',
+  'Daemon/Alistar elren copy.png',
+  'Daemon/bogva.png',
+  'Daemon/desire copy.png',
+  'Lycan/Fenris Lightfoot copy.png',
+  'Lycan/Garmr.png',
+  'Lycan/lucian blackwood copy.png',
+  'Lycan/ulfric thorne copy.png',
+  'Lycan/varg greyback copy.png',
+  'Vampyre/elowen thornver.png',
+  'Vampyre/grelyn copy.png'
+];
+
+staleFiles.forEach(f => {
+  const full = path.join(publicCardArtDir, f);
+  if (fs.existsSync(full)) {
+    fs.unlinkSync(full);
+    console.log(`Deleted stale file: ${f}`);
+  }
+});
+
+const correctCardArtPathsContent = `/**
  * Paths to card art under public/card-art. Keys are card names (must match constants).
  * Used to load face textures. Back is shared: endless seven card back.png
  */
@@ -11,7 +43,7 @@ const PUBLIC_BASE = (typeof import.meta !== 'undefined' && import.meta.env?.BASE
  */
 export function cardArtUrl(path: string): string {
   const encoded = path.split('/').map(segment => encodeURIComponent(segment)).join('/');
-  return `${PUBLIC_BASE}${encoded}`;
+  return \`\${PUBLIC_BASE}\${encoded}\`;
 }
 
 export const CARD_BACK_PATH = 'card-art/endless seven card back.png';
@@ -81,3 +113,7 @@ export const CARD_ART_PATHS: Record<string, string> = {
   'Duke Aren Drakos': 'card-art/Vampyre/duke aren drakos copy.png',
   'Lord Alaric': 'card-art/Vampyre/lord Alaric copy.png'
 };
+`;
+
+fs.writeFileSync(cardArtPathsFile, correctCardArtPathsContent);
+console.log('Successfully updated cardArtPaths.ts!');

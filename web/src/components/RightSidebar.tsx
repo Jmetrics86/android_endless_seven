@@ -55,9 +55,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             >
               <div className="w-0.5 h-16 bg-[#00f2ff]/40 rounded-full group-hover:bg-[#00f2ff]" />
             </div>            
-            <div className="flex flex-col flex-1 overflow-hidden p-1 gap-1">
+            <div className="flex flex-col flex-1 overflow-hidden p-1 gap-1.5">
               {/* Enemy Abilities Section */}
-              <div className="flex-none h-[30%] min-h-[120px] max-h-[160px] bg-black/40 border border-[#ff0044]/20 rounded overflow-hidden">
+              <div className="flex-none min-h-[100px] max-h-[32%] bg-black/50 border border-[#ff0044]/30 rounded overflow-hidden flex flex-col shadow-inner">
                 <AbilitiesDrawer 
                   theme="enemy" 
                   title="ENEMY STORED" 
@@ -66,7 +66,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               </div>
 
               {/* Event Log Section */}
-              <div className="flex-1 bg-black/40 border border-white/10 rounded overflow-hidden flex flex-col">
+              <div className="flex-1 bg-black/40 border border-white/10 rounded overflow-hidden flex flex-col min-h-[140px]">
                 <EventLogPanel 
                   logs={logs} 
                   onSkip={onSkip} 
@@ -75,7 +75,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               </div>
 
               {/* Player Abilities Section */}
-              <div className="flex-none h-[30%] min-h-[120px] max-h-[160px] bg-black/40 border border-[#00f2ff]/20 rounded overflow-hidden">
+              <div className="flex-none min-h-[130px] max-h-[38%] bg-black/50 border border-[#00f2ff]/30 rounded overflow-hidden flex flex-col shadow-inner">
                 <AbilitiesDrawer 
                   theme="player" 
                   title="MY ABILITIES" 

@@ -8,6 +8,7 @@ import { SealEntity } from '../entities/SealEntity';
 import { IGameController } from './interfaces';
 import { Alignment, Phase, QueuedAbility } from '../types';
 import { GAME_CONSTANTS } from '../constants';
+import { CARD_ART_PATHS } from '../cardArtPaths';
 import {
   pickChampionForLordAlaric,
   pickLimboForKaelo,
@@ -61,7 +62,7 @@ export class AbilityManager {
         sourceCard,
         isPlayer,
         valid: true,
-        faceArtPath: sourceCard.data.faceArtPath
+        faceArtPath: sourceCard.data.faceArtPath || CARD_ART_PATHS[sourceCard.data.name]
       });
       this.controller.addLog(`${sourceCard.data.name} ability stored in Ability Storage.`);
     }

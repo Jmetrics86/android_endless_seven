@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag (e.g. v0.0.42)'
+        description: 'Release tag (e.g. v0.0.43)'
         required: false
         default: ''
 
@@ -52,10 +52,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Android Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Determine Version and Prepare APK
+      - name: Determine Version
         id: prep
         run: |
           if [ -n "${{ github.event.inputs.tag_name }}" ]; then
@@ -66,27 +63,98 @@ jobs:
             VER=$(grep 'versionName' app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
             TAG="v${VER}"
           fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Building Endless Seven ${TAG}..."
+
+      - name: Build Android Release and Debug APKs
+        run: ./gradlew assembleRelease assembleDebug
+
+      - name: Locate Android Build Tools (zipalign & apksigner)
+        id: tools
+        run: |
+          BUILD_TOOLS_DIR="${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)"
+          echo "Using Android Build Tools from: ${BUILD_TOOLS_DIR}"
+          echo "zipalign=${BUILD_TOOLS_DIR}/zipalign" >> $GITHUB_OUTPUT
+          echo "apksigner=${BUILD_TOOLS_DIR}/apksigner" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Signing Key
+        id: keystore
+        run: |
+          KEYSTORE="release.keystore"
+          PASS="endless7release"
+          ALIAS="endless7"
+          
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE" \
+            -alias "$ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "$PASS" \
+            -keypass "$PASS" \
+            -dname "CN=Endless Seven, OU=Engineering, O=Methinks Games, L=Boston, ST=Massachusetts, C=US"
+            
+          echo "keystore_path=${KEYSTORE}" >> $GITHUB_OUTPUT
+          echo "storepass=${PASS}" >> $GITHUB_OUTPUT
+          echo "alias=${ALIAS}" >> $GITHUB_OUTPUT
+
+      - name: Align and Sign APKs (Strict Pipeline Order: Zipalign FIRST -> Apksigner LAST)
+        run: |
+          TAG="${{ steps.prep.outputs.tag }}"
+          ZIPALIGN="${{ steps.tools.outputs.zipalign }}"
+          APKSIGNER="${{ steps.tools.outputs.apksigner }}"
+          KEYSTORE="${{ steps.keystore.outputs.keystore_path }}"
+          PASS="${{ steps.keystore.outputs.storepass }}"
+          ALIAS="${{ steps.keystore.outputs.alias }}"
           
           mkdir -p release-artifacts
-          APK_SOURCE="app/build/outputs/apk/debug/app-debug.apk"
-          APK_TARGET="release-artifacts/endless-seven-${TAG}.apk"
           
-          if [ -f "$APK_SOURCE" ]; then
-            cp "$APK_SOURCE" "$APK_TARGET"
-            cp "$APK_SOURCE" "release-artifacts/endless-seven-debug-latest.apk"
-            echo "Copied $APK_SOURCE -> $APK_TARGET"
-          else
-            echo "Error: APK not found at $APK_SOURCE"
-            exit 1
+          RAW_RELEASE="app/build/outputs/apk/release/app-release-unsigned.apk"
+          if [ ! -f "$RAW_RELEASE" ]; then
+            RAW_RELEASE="app/build/outputs/apk/release/app-release.apk"
           fi
+          RAW_DEBUG="app/build/outputs/apk/debug/app-debug.apk"
           
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "apk_path=${APK_TARGET}" >> $GITHUB_OUTPUT
+          echo "=== 1. Zipaligning APKs (4-byte alignment) ==="
+          $ZIPALIGN -v -p 4 "$RAW_RELEASE" "release-artifacts/release-aligned.apk"
+          $ZIPALIGN -v -p 4 "$RAW_DEBUG" "release-artifacts/debug-aligned.apk"
+          
+          echo "=== 2. Cryptographically Signing Aligned APKs (v1 + v2 + v3 schemes) ==="
+          $APKSIGNER sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:$PASS" \
+            --key-pass "pass:$PASS" \
+            --ks-key-alias "$ALIAS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "release-artifacts/endless-seven-${TAG}.apk" \
+            "release-artifacts/release-aligned.apk"
+            
+          $APKSIGNER sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:$PASS" \
+            --key-pass "pass:$PASS" \
+            --ks-key-alias "$ALIAS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "release-artifacts/endless-seven-debug-${TAG}.apk" \
+            "release-artifacts/debug-aligned.apk"
+            
+          cp "release-artifacts/endless-seven-${TAG}.apk" "release-artifacts/endless-seven-latest.apk"
+          
+          echo "=== 3. Verifying APK Signatures and Integrity ==="
+          $APKSIGNER verify --verbose "release-artifacts/endless-seven-${TAG}.apk"
+          $APKSIGNER verify --verbose "release-artifacts/endless-seven-debug-${TAG}.apk"
+          
+          rm -f "release-artifacts/release-aligned.apk" "release-artifacts/debug-aligned.apk" "$KEYSTORE"
+          ls -la release-artifacts/
 
-      - name: Upload APK as Workflow Artifact
+      - name: Upload APKs as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: endless-seven-apk-${{ steps.prep.outputs.tag }}
+          name: endless-seven-apks-${{ steps.prep.outputs.tag }}
           path: release-artifacts/*
           retention-days: 30
 
@@ -96,13 +164,30 @@ jobs:
           tag_name: ${{ steps.prep.outputs.tag }}
           name: Endless Seven ${{ steps.prep.outputs.tag }}
           body: |
-            ## Endless Seven ${{ steps.prep.outputs.tag }}
-            
-            ### 📦 Download APK
-            - **[endless-seven-${{ steps.prep.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.prep.outputs.tag }}/endless-seven-${{ steps.prep.outputs.tag }}.apk)**
-            
-            ### Changes in this Release
+            ## 📱 Endless Seven ${{ steps.prep.outputs.tag }} Release
+
+            ### 📦 Download APK Files
+            - 🚀 **[endless-seven-${{ steps.prep.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.prep.outputs.tag }}/endless-seven-${{ steps.prep.outputs.tag }}.apk)** *(Optimized Release Build)*
+            - 📦 **[endless-seven-latest.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.prep.outputs.tag }}/endless-seven-latest.apk)** *(Latest release shortcut)*
+            - 🛠️ **[endless-seven-debug-${{ steps.prep.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.prep.outputs.tag }}/endless-seven-debug-${{ steps.prep.outputs.tag }}.apk)** *(Debug Build with Web Inspect)*
+
+            ---
+
+            ### 📲 Easy Mobile Download & Installation
+            > **Important (GitHub Mobile App Users):**  
+            > If you are reading this inside the **GitHub Mobile App**, tap the **three dots (`...`) in the top right** and select **"Open in Browser"** (Chrome, Brave, Samsung Internet). The GitHub app built-in viewer cannot install APK files directly.
+
+            1. **Download:** Tap the `.apk` download link above.
+            2. **Confirm:** When Android prompts *"File might be harmful"*, tap **"Download anyway"**.
+            3. **Open & Install:** Tap the completed download in your notifications or *Downloads* folder and tap **Install**.
+            4. **Permissions:** If prompted, toggle **"Allow from this source"**.
+            5. **Play Protect:** This build is pre-aligned (4-byte `zipalign`) and signed with APK Signature Scheme v2/v3 for smooth installation on Android 8.0 through Android 15+.
+
+            ---
+
+            ### 📜 Changes in this Release
             - Fully verified 42-card tactical card engine (`variant-2026-08-13`).
+            - Exhaustive 42x42 (1,764 matchups) pairwise combat verification matrix.
             - Real-time 3D Three.js tactical board resolution.
             - Automated combat lifecycle, haste strikes, ability step, and siege resolution.
           files: |

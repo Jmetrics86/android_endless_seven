@@ -6,7 +6,7 @@
  */
 
 export function logGameEvent(name: string, params: Record<string, any> = {}): void {
-  const bridge = (window as any).AndroidAnalytics;
+  const bridge = typeof window !== 'undefined' ? (window as any).AndroidAnalytics : undefined;
   if (bridge && typeof bridge.logEvent === 'function') {
     try {
       bridge.logEvent(name, JSON.stringify(params));

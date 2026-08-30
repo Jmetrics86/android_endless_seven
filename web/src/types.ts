@@ -51,7 +51,17 @@ export interface CardData {
   hasLustSealEffect?: boolean;
   hasTarkidosNullifyUsedThisRound?: boolean;
   hasActivatedThisRound?: boolean;
+  flipStepBonusPower?: number;
+  battleStepBonusPower?: number;
+  championBattleBonusPower?: number;
+  dynamicFactionPowerBonus?: { faction: string; bonusPerCard: number; excludeSelf?: boolean };
+  cannotBattleWhilePowerIs1?: boolean;
+  destroyAttackerEndOfRound?: boolean;
+  hasWard?: boolean;
+  boardPresencePowerMarkers?: number;
 }
+
+export type CardDefinition = CardData;
 
 /** Card summary for magnified hover preview (small screens). */
 export interface HoveredCardInfo {

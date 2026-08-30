@@ -1207,6 +1207,12 @@ export class GameController implements IGameController {
       this.addLog(`Seal ${idx + 1} is locked and cannot be changed.`);
       return;
     }
+    // Anakim the Wise Ward Marker: Prevents influence change or ascension on this seal
+    if (this.seals[idx].hasWard && (status === Alignment.LIGHT || status === Alignment.DARK)) {
+      this.seals[idx].setWard(false);
+      this.addLog(`Ward Marker on Seal ${idx + 1} absorbs the influence change!`);
+      return;
+    }
     // Luna: Final Act: Only when Seal has no Champion; optional — you may move Luna to Graveyard to nullify.
     const sealWithoutChampion = !this.seals[idx].champion;
     const lunaCard = sealWithoutChampion
@@ -1901,6 +1907,7 @@ export class GameController implements IGameController {
       if (intersects.length > 0) {
         const card = this.findCardEntityFromObject(intersects[0].object, allBoard);
         if (card) {
+          if (this.pendingAbilityData?.validTargets && !this.pendingAbilityData.validTargets.includes(card)) return;
           if (forSentinel && !this.playerLimbo.includes(card) && !this.enemyLimbo.includes(card)) return; // Sentinel must target Limbo
           if (forChampion && !card.data.isChampion) return; // Lord must target Champion
           const isMetatronSelect = this.pendingAbilityData?.effect === 'metatron_select_type';

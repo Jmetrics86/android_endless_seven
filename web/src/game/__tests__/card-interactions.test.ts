@@ -594,7 +594,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
     return p;
   }
 
-  it('only Lycandor flipping still counts itself: -2 weakness per Graveborn (1) on each enemy', async () => {
+  it('Lycandor flip applies -3 weakness markers to enemy creature', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -617,13 +617,13 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemyCreature.data.weaknessMarkers).toBe(2);
+    expect(enemyCreature.data.weaknessMarkers).toBe(3);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(1\).*\(2 total per creature\)/)
+      'Lycandor places -3 Weakness Marker on each enemy creature in play.'
     );
   });
 
-  it('Lycandor + one other face-up Graveborn: 2 Graveborn → -4 weakness per enemy creature', async () => {
+  it('Lycandor + one other face-up Graveborn: applies canonical -3 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -655,13 +655,13 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemyCreature.data.weaknessMarkers).toBe(4);
+    expect(enemyCreature.data.weaknessMarkers).toBe(3);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(2\).*\(4 total per creature\)/)
+      'Lycandor places -3 Weakness Marker on each enemy creature in play.'
     );
   });
 
-  it('Pestilence + two other face-up Horsemen: 3 Horsemen → -6 weakness per enemy creature', async () => {
+  it('Pestilence + two other face-up Horsemen: applies canonical -3 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -702,13 +702,13 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemyCreature.data.weaknessMarkers).toBe(6);
+    expect(enemyCreature.data.weaknessMarkers).toBe(3);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(3\).*\(6 total per creature\)/)
+      'Lycandor places -3 Weakness Marker on each enemy creature in play.'
     );
   });
 
-  it('Pestilence + three other face-up Horsemen: 4 Horsemen → -8 weakness per enemy creature', async () => {
+  it('Pestilence + three other face-up Horsemen: applies canonical -3 weakness per enemy creature', async () => {
     const pestilence = createMockCard({
       name: 'Lycandor',
       power: 9,
@@ -755,9 +755,9 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemyCreature.data.weaknessMarkers).toBe(8);
+    expect(enemyCreature.data.weaknessMarkers).toBe(3);
     expect(mock.addLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Lycandor places -2 Weakness per Graveborn \(4\).*\(8 total per creature\)/)
+      'Lycandor places -3 Weakness Marker on each enemy creature in play.'
     );
   });
 
@@ -800,7 +800,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(faceUpEnemy.data.weaknessMarkers).toBe(4);
+    expect(faceUpEnemy.data.weaknessMarkers).toBe(3);
     expect(faceDownEnemy.data.weaknessMarkers).toBe(0);
   });
 
@@ -851,9 +851,9 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemy0.data.weaknessMarkers).toBe(4);
-    expect(enemy1.data.weaknessMarkers).toBe(4);
-    expect(enemy2.data.weaknessMarkers).toBe(4);
+    expect(enemy0.data.weaknessMarkers).toBe(3);
+    expect(enemy1.data.weaknessMarkers).toBe(3);
+    expect(enemy2.data.weaknessMarkers).toBe(3);
   });
 
   it('applies weakness to enemy champions on seals (ascended)', async () => {
@@ -896,8 +896,8 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(enemyOnBattlefield.data.weaknessMarkers).toBe(4);
-    expect(enemyChampionOnSeal.data.weaknessMarkers).toBe(4);
+    expect(enemyOnBattlefield.data.weaknessMarkers).toBe(3);
+    expect(enemyChampionOnSeal.data.weaknessMarkers).toBe(3);
   });
 
   it('applies weakness to enemies on battlefield and on multiple seals', async () => {
@@ -957,7 +957,7 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    const amountPerCreature = 6;
+    const amountPerCreature = 3;
     expect(enemyOnField.data.weaknessMarkers).toBe(amountPerCreature);
     expect(championOnSeal0.data.weaknessMarkers).toBe(amountPerCreature);
     expect(championOnSeal3.data.weaknessMarkers).toBe(amountPerCreature);
@@ -1004,8 +1004,8 @@ describe('Lycandor – flip weakness by Graveborn count', () => {
 
     await resolveSealWithFakeTimers(0);
 
-    expect(sloth.data.weaknessMarkers).toBe(4);
-    expect(normalEnemy.data.weaknessMarkers).toBe(4);
+    expect(sloth.data.weaknessMarkers).toBe(3);
+    expect(normalEnemy.data.weaknessMarkers).toBe(3);
   });
 });
 

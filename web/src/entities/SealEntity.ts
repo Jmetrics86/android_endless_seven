@@ -92,6 +92,13 @@ export class SealEntity implements GameEntity {
     }
   }
 
+  public hasWard: boolean = false;
+
+  public setWard(hasWard: boolean) {
+    this.hasWard = hasWard;
+    this.setLocked(hasWard);
+  }
+
   public update(time: number) {
     if (this.lockBorder && this.lockBorder.visible) {
       const mat = this.lockBorder.material as THREE.MeshBasicMaterial;

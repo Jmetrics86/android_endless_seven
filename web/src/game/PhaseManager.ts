@@ -14,6 +14,7 @@ import {
   vacantSlotPriorityForReinforce,
 } from './EnemyEasyAI';
 import { NeuralAI } from './NeuralAI';
+import { getCardEffectivePower } from './CombatManager';
 
 export class PhaseManager {
   constructor(private controller: IGameController) {}
@@ -360,6 +361,7 @@ export class PhaseManager {
     const seal = this.controller.seals[idx];
     this.controller.updateState({ phaseStep: `Resolving Seal ${idx + 1}` });
     this.controller.addLog(`Resolving Seal ${idx + 1}...`);
+    this.controller.abilityManager.syncBoardPresencePowerMarkers();
     
     if (this.controller.state.slowMode) {
       this.controller.zoomIn(idx);
@@ -383,8 +385,10 @@ export class PhaseManager {
     // Step 0: Haste Check
     const pHaste = pCard && pCard.data.hasHaste;
     const eHaste = eCard && eCard.data.hasHaste;
+    const pCannotBattleHaste = pCard?.data.cannotBattleOrBeBattled || (pCard?.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(pCard, 'battle') === 1));
+    const eCannotBattleHaste = eCard?.data.cannotBattleOrBeBattled || (eCard?.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(eCard, 'battle') === 1));
 
-    if ((pHaste || eHaste) && !pCard?.data.cannotBattleOrBeBattled && !eCard?.data.cannotBattleOrBeBattled) {
+    if ((pHaste || eHaste) && !pCannotBattleHaste && !eCannotBattleHaste) {
       this.controller.updateState({ phaseStep: "Step 0: Haste Strike" });
       
       if (hasCards) {
@@ -464,8 +468,8 @@ export class PhaseManager {
 
     // Step A Tie Rule Check: Equal effective power upon reveal = both cards destroyed immediately before Step B abilities
     if (pCard && eCard) {
-      const pEffInitial = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
-      const eEffInitial = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
+      const pEffInitial = getCardEffectivePower(pCard, 'flip');
+      const eEffInitial = getCardEffectivePower(eCard, 'flip');
       if (pEffInitial === eEffInitial && !pCard.data.cannotBattleOrBeBattled && !eCard.data.cannotBattleOrBeBattled) {
         this.controller.addLog(`Tie Rule (Step A): ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEffInitial}). Both are destroyed immediately before abilities!`);
         
@@ -499,8 +503,8 @@ export class PhaseManager {
     // Step B: Flip & Activate Abilities
     this.controller.updateState({ phaseStep: "Step B: Abilities" });
     this.controller.addLog("Processing Abilities...");
-    let pEff = pCard ? pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers : -999;
-    let eEff = eCard ? eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers : -999;
+    let pEff = pCard ? getCardEffectivePower(pCard, 'flip') : -999;
+    let eEff = eCard ? getCardEffectivePower(eCard, 'flip') : -999;
     
     let executionOrder: ('player' | 'enemy' | 'champion')[] = [];
     
@@ -585,9 +589,27 @@ export class PhaseManager {
       }
       
       // Invulnerability
-      if (current.data.ability.toLowerCase().includes("invulnerability") || current.data.name === "Anakim The Wise" || current.data.name === "Mammon" || current.data.name === "Ulfric Thorne") {
+      if (current.data.ability.toLowerCase().includes("invulnerability") || current.data.name === "Anakim The Wise" || current.data.name === "Anakim the Wise" || current.data.name === "Mammon" || current.data.name === "Ulfric Thorne" || current.data.name === "Umbarax") {
         current.data.isInvincible = true;
         this.controller.addLog(`${current.data.name} gains battle invulnerability this turn`);
+      }
+
+      // Grelyn Zilkos: Flip = Move up to 3 creatures from opponent Limbo to Graveyard
+      if (current.data.name === "Grelyn Zilkos" && isFlipping) {
+        const oppLimbo = current.data.isEnemy ? this.controller.playerLimbo : this.controller.enemyLimbo;
+        const oppGrave = current.data.isEnemy ? this.controller.playerGraveyard : this.controller.enemyGraveyard;
+        const count = Math.min(3, oppLimbo.length);
+        if (count > 0) {
+          for (let i = 0; i < count; i++) {
+            const milled = oppLimbo.shift();
+            if (milled) oppGrave.push(milled);
+          }
+          this.controller.addLog(`${current.data.name} moves ${count} creature(s) from opponent's Limbo to Graveyard.`);
+          this.controller.abilityManager.syncBoardPresencePowerMarkers();
+          this.controller.updateState({});
+        } else {
+          this.controller.addLog(`${current.data.name}: Opponent Limbo has no creatures.`);
+        }
       }
 
       // Bogva: Flip — -1 Weakness on each enemy creature (no allocation)
@@ -605,14 +627,14 @@ export class PhaseManager {
         this.controller.addLog(`${current.data.name} places a -1 Weakness Marker on each enemy creature.`);
       }
 
-      // Anakim The Wise Activate
-      if (isActivate && current.data.name === "Anakim The Wise") {
+      // Anakim the Wise Activate
+      if (isActivate && (current.data.name === "Anakim the Wise" || current.data.name === "Anakim The Wise")) {
         current.data.isActivatingAbility = true;
         await (this.controller.abilityManager as any).handleActivateAbility(current, current.data.isEnemy);
         current.data.isActivatingAbility = false;
       }
       // Activate abilities
-      if (isActivate && (current.data.name === "Calmadious" || current.data.name === "Bella" || current.data.name === "Metatron" || current.data.name === "Coal" || current.data.name === "Dawn" || current.data.name === "Lord Alaric" || current.data.name === "Mammon" || current.data.name === "Skarados" || current.data.name === "Karlyah" || current.data.name === "Nix" || current.data.name === "Ulfric Thorne" || current.data.name === "Varg Fur-back")) {
+      if (isActivate && (current.data.name === "Calmadious" || current.data.name === "Bella" || current.data.name === "Metatron" || current.data.name === "Coal" || current.data.name === "Dawn" || current.data.name === "Lord Alaric" || current.data.name === "Mammon" || current.data.name === "Skarados" || current.data.name === "Karlyah" || current.data.name === "Nix" || current.data.name === "Ulfric Thorne" || current.data.name === "Varg Fur-back" || current.data.name === "Varg Greyback")) {
         current.data.isActivatingAbility = true;
         await (this.controller.abilityManager as any).handleActivateAbility(current, current.data.isEnemy);
         current.data.isActivatingAbility = false;
@@ -635,8 +657,8 @@ export class PhaseManager {
         }
       }
 
-      // Oriel The bold (formerly Thrones)
-      if (current.data.name === "Oriel The bold") {
+      // Oriel the Bold (formerly Thrones)
+      if (current.data.name === "Oriel the Bold" || current.data.name === "Oriel The bold") {
         const pAlign = this.controller.state.playerAlignment;
         const eAlign = pAlign === Alignment.LIGHT ? Alignment.DARK : Alignment.LIGHT;
         const targetAlign = !current.data.isEnemy ? pAlign : eAlign;
@@ -658,7 +680,7 @@ export class PhaseManager {
           if (hasValid) {
             this.controller.updateState({ 
               currentPhase: Phase.SEAL_TARGETING,
-              instructionText: "Oriel The bold: Select a Seal without a Champion to change its Influence."
+              instructionText: `${current.data.name}: Select a Seal without a Champion to change its Influence.`
             });
             this.controller.zoomOut();
             const targetIdx = await new Promise<number>((resolve) => {
@@ -673,7 +695,7 @@ export class PhaseManager {
                   cardName: current.data.name
                 });
               } else {
-                this.controller.addLog(`Oriel The bold cannot change a Seal that already has a Champion.`);
+                this.controller.addLog(`${current.data.name} cannot change a Seal that already has a Champion.`);
               }
             }
           } else {
@@ -684,7 +706,7 @@ export class PhaseManager {
 
       // Beta: Flip invulnerability + Action: +2 Power Marker on any adjacent creature (each adjacent). Only flipped cards are affected.
       // Varg Fur-back (formerly Delta) Activate: mark that Varg Fur-back can sacrifice at end of round
-      if (isActivate && current.data.name === "Varg Fur-back") {
+      if (isActivate && (current.data.name === "Varg Fur-back" || current.data.name === "Varg Greyback")) {
         current.data.isActivatingAbility = true;
         current.data.pendingDeltaSacrifice = true;
         this.controller.addLog(`${current.data.name} readies its end-of-round sacrifice.`);
@@ -741,9 +763,9 @@ export class PhaseManager {
 
       // Duke: Flip = place any creature in play on top of that player's deck (handled via hasTargetedAbility)
 
-      // Death: Flip = Choose a creature type, destroy all cards of that type in play. Only flipped cards count or are destroyed.
+      // Nix (formerly Death): Flip = Choose a creature type, destroy all cards of that type in play. Only flipped cards count or are destroyed.
       // Target types: Avatar, Graveborn, God, or creature factions (Vampyre, Lycan, Celestial, Daemon) — not generic "Creature".
-      if (current.data.name === "Death" && isFlipping) {
+      if ((current.data.name === "Nix" || current.data.name === "Death") && isFlipping) {
         const allInPlay = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)].filter(c => c !== null && (c as CardEntity).data.faceUp) as CardEntity[];
         const deathTargetType = (c: CardEntity): string =>
           c.data.type === 'Creature' ? c.data.faction : c.data.type;
@@ -762,7 +784,7 @@ export class PhaseManager {
                   currentPhase: Phase.ABILITY_TARGETING,
                   decisionContext: 'DEATH_CREATURE_TYPE',
                   creatureTypeOptions: typesInPlay,
-                  instructionText: `Death: Choose a creature type to destroy all of that type in play.`,
+                  instructionText: `${current.data.name}: Choose a creature type to destroy all of that type in play.`,
                   decisionMessage: `Types in play: ${typesInPlay.join(', ')}`
                 });
                 this.controller.zoomOut();
@@ -828,21 +850,19 @@ export class PhaseManager {
         }
       }
 
-      // Lycandor: Flip = Place -2 Weakness on all Enemy creatures for each Graveborn you have in play. Only flipped cards are affected.
+      // Lycandor: Flip = Place a -3 Weakness Marker on each enemy creature in play. Only flipped cards are affected.
       if (current.data.name === "Lycandor" && isFlipping) {
-        const gravebornCount = this.controller.abilityManager.countGravebornForLycandorFlip(current.data.isEnemy, current);
-        const amount = 2 * gravebornCount;
         const enemyCreatures = (!current.data.isEnemy
           ? [...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && c!.data.isEnemy)]
           : [...this.controller.playerBattlefield, ...this.controller.seals.map(s => s.champion).filter(c => c !== null && !c!.data.isEnemy)]
         ).filter(c => c !== null && (c as CardEntity).data.faceUp) as CardEntity[];
         enemyCreatures.forEach(c => {
           if (!this.controller.abilityManager.isImmuneToAbilities(c, current)) {
-            c.data.weaknessMarkers += amount;
+            c.data.weaknessMarkers += 3;
             c.updateVisualMarkers();
           }
         });
-        this.controller.addLog(`${current.data.name} places -2 Weakness per Graveborn (${gravebornCount}) on each enemy creature (${amount} total per creature).`);
+        this.controller.addLog(`${current.data.name} places -3 Weakness Marker on each enemy creature in play.`);
       }
 
       if (current.data.needsAllocation && isFlipping) {
@@ -872,14 +892,14 @@ export class PhaseManager {
       }
     }
 
+    if (pCard) pCard.data.faceUp = true;
+    if (eCard) eCard.data.faceUp = true;
+    this.controller.abilityManager.syncBoardPresencePowerMarkers();
+
     // After all flip/activate abilities (including global marker changes), enforce that
     // any creature whose effective Power Value has been reduced to 0 or less is destroyed,
     // even if it has temporary combat invincibility. This applies across the whole board.
     this.controller.abilityManager.enforceZeroPowerDestruction();
-
-    if (pCard) pCard.data.faceUp = true;
-    if (eCard) eCard.data.faceUp = true;
-    this.controller.abilityManager.syncBoardPresencePowerMarkers();
 
     // Re-check battlefield cards after Step B abilities
     pCard = this.controller.playerBattlefield[idx];
@@ -887,8 +907,8 @@ export class PhaseManager {
 
     // The Tie Rule: Equal Power = both cards are destroyed immediately (evaluated after Flip abilities)
     if (pCard && eCard) {
-      const pEff = pCard.data.power + pCard.data.powerMarkers - pCard.data.weaknessMarkers;
-      const eEff = eCard.data.power + eCard.data.powerMarkers - eCard.data.weaknessMarkers;
+      const pEff = getCardEffectivePower(pCard, 'flip');
+      const eEff = getCardEffectivePower(eCard, 'flip');
       if (pEff === eEff) {
         this.controller.addLog(`Tie Rule: ${pCard.data.name} and ${eCard.data.name} have equal effective Power (${pEff}). Both are destroyed immediately!`);
         
@@ -924,12 +944,15 @@ export class PhaseManager {
     let pStymied = false;
     let eStymied = false;
 
-    // Fledgeling: Cannot battle or be battled — skip combat at this seal
-    if (pCard?.data.cannotBattleOrBeBattled || eCard?.data.cannotBattleOrBeBattled) {
-      this.controller.addLog(`${pCard?.data.cannotBattleOrBeBattled ? pCard?.data.name : eCard?.data.name} cannot battle or be battled.`);
+    const pIsCombatLocked = pCard?.data.cannotBattleOrBeBattled || (pCard?.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(pCard, 'battle') === 1));
+    const eIsCombatLocked = eCard?.data.cannotBattleOrBeBattled || (eCard?.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(eCard, 'battle') === 1));
+
+    // Cannot battle or be battled / Oriel power is 1 — skip combat at this seal
+    if (pIsCombatLocked || eIsCombatLocked) {
+      this.controller.addLog(`${pIsCombatLocked ? pCard?.data.name : eCard?.data.name} cannot battle while Power is 1 (or has combat immunity).`);
       if (hasCards) {
         this.refreshInterstitialCards(
-          `${pCard?.data.cannotBattleOrBeBattled ? pCard?.data.name : eCard?.data.name} cannot battle or be battled. Skipping combat.`,
+          `${pIsCombatLocked ? pCard?.data.name : eCard?.data.name} cannot battle. Skipping combat.`,
           'combat'
         );
         await this.delay(1500);
@@ -1045,10 +1068,17 @@ export class PhaseManager {
         }
       }
 
+      const seal = this.controller.seals[idx];
+      if (seal && seal.hasWard) {
+        seal.setWard(false);
+        this.controller.addLog(`Ward Marker on Seal ${idx + 1} absorbs ${survivor.data.name}'s ascension.`);
+        blocked = true;
+      }
+
       if (blocked) {
-        this.controller.addLog(`${survivor.data.name}'s ascension was blocked by Coal.`);
+        this.controller.addLog(`${survivor.data.name}'s ascension was prevented.`);
         if (hasCards) {
-          this.refreshInterstitialCards(`Ascension blocked by Coal.`, 'done');
+          this.refreshInterstitialCards(`Ascension prevented.`, 'done');
           await this.delay(1500);
         }
       } else {
@@ -1071,9 +1101,20 @@ export class PhaseManager {
   public async handleBattle(attacker: CardEntity, defender: CardEntity, idx: number, isAgainstChamp: boolean): Promise<boolean> {
     this.controller.cardsThatBattledThisRound.push(attacker);
     this.controller.cardsThatBattledThisRound.push(defender);
-    // Power is computed after Valerius steal is applied below, so we use a let
-    let aPow = attacker.data.power + attacker.data.powerMarkers - attacker.data.weaknessMarkers;
-    let dPow = defender.data.power + defender.data.powerMarkers - defender.data.weaknessMarkers;
+
+    const isAttackerStymied = attacker.data.cannotBattleOrBeBattled || (attacker.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(attacker, 'battle') === 1));
+    const isDefenderStymied = defender.data.cannotBattleOrBeBattled || (defender.data.cannotBattleWhilePowerIs1 && (getCardEffectivePower(defender, 'battle') === 1));
+    if (isAttackerStymied || isDefenderStymied) {
+      this.controller.addLog(`${isAttackerStymied ? attacker.data.name : defender.data.name} cannot battle while Power is 1 (or has combat immunity).`);
+      return true;
+    }
+
+    const isAChamp = isAgainstChamp && this.controller.seals[idx]?.champion === attacker;
+    const isDChamp = isAgainstChamp && this.controller.seals[idx]?.champion === defender;
+
+    // Power is computed with step bonuses & champion bonuses
+    let aPow = getCardEffectivePower(attacker, 'battle', isAChamp);
+    let dPow = getCardEffectivePower(defender, 'battle', isDChamp);
 
     const isAProtected = this.controller.abilityManager.isProtected(attacker);
     const isDProtected = this.controller.abilityManager.isProtected(defender);
@@ -1106,8 +1147,8 @@ export class PhaseManager {
     }
 
     // Recalculate effective power after any Valerius steal
-    aPow = attacker.data.power + attacker.data.powerMarkers - attacker.data.weaknessMarkers;
-    dPow = defender.data.power + defender.data.powerMarkers - defender.data.weaknessMarkers;
+    aPow = getCardEffectivePower(attacker, 'battle', isAChamp);
+    dPow = getCardEffectivePower(defender, 'battle', isDChamp);
 
     const elderAttacker = attacker.data.name === "Sulvian Vane";
     const elderDefender = defender.data.name === "Sulvian Vane";
@@ -1127,6 +1168,7 @@ export class PhaseManager {
     await this.delay(1500);
 
     const playCombatSmashWinnerLoser = async (winner: CardEntity, loser: CardEntity): Promise<void> => {
+      if (!this.controller.state.slowMode) return;
       const w0 = { x: winner.mesh.position.x, y: winner.mesh.position.y, z: winner.mesh.position.z };
       const l0 = { x: loser.mesh.position.x, y: loser.mesh.position.y, z: loser.mesh.position.z };
       const elevate = 0.85;
@@ -1185,6 +1227,7 @@ export class PhaseManager {
     };
 
     const playCombatSmashMutual = async (a: CardEntity, d: CardEntity): Promise<void> => {
+      if (!this.controller.state.slowMode) return;
       const a0 = { x: a.mesh.position.x, y: a.mesh.position.y, z: a.mesh.position.z };
       const d0 = { x: d.mesh.position.x, y: d.mesh.position.y, z: d.mesh.position.z };
       const elevate = 0.85;
@@ -1370,7 +1413,7 @@ export class PhaseManager {
       await this.delay(1000);
     }
 
-    // Fenris Lightfoot (formerly Wild Wolf): Any creature that does battle with Fenris Lightfoot is destroyed at end of the round.
+    // Fenris Lightfoot / Elowen Thornver: Any creature that does battle with this creature is destroyed at end of the round.
     const applyWildWolfMark = (wolf: CardEntity, other: CardEntity | null) => {
       if (!other) return;
       // Only mark if the other creature is still in play after combat
@@ -1385,9 +1428,10 @@ export class PhaseManager {
       }
     };
 
-    if (attacker.data.name === "Fenris Lightfoot") {
+    if (attacker.data.destroyAttackerEndOfRound || attacker.data.name === "Fenris Lightfoot" || attacker.data.name === "Elowen Thornver") {
       applyWildWolfMark(attacker, defender);
-    } else if (defender.data.name === "Fenris Lightfoot") {
+    }
+    if (defender.data.destroyAttackerEndOfRound || defender.data.name === "Fenris Lightfoot" || defender.data.name === "Elowen Thornver") {
       applyWildWolfMark(defender, attacker);
     }
 
@@ -1526,24 +1570,6 @@ export class PhaseManager {
       }
     }
 
-    // Kaelarion (Noble): End of Turn — +2 Power Marker on this creature
-    for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
-      for (const card of [this.controller.playerBattlefield[i], this.controller.enemyBattlefield[i]]) {
-        if (card && card.data.name === "Kaelarion") {
-          card.data.powerMarkers += 2;
-          card.updateVisualMarkers();
-          this.controller.addLog(`${card.data.name} gains +2 Power Markers at end of turn.`);
-        }
-      }
-    }
-    this.controller.seals.forEach((seal) => {
-      const champ = seal.champion;
-      if (champ && champ.data.name === "Kaelarion") {
-        champ.data.powerMarkers += 2;
-        champ.updateVisualMarkers();
-        this.controller.addLog(`${champ.data.name} gains +2 Power Markers at end of turn.`);
-      }
-    });
 
     // Player Varg Fur-back (Delta) Choice
     for (let i = 0; i < GAME_CONSTANTS.SEVEN; i++) {
@@ -1746,6 +1772,13 @@ export class PhaseManager {
   }
 
   public ascendToSeal(card: CardEntity, idx: number) {
+    const seal = this.controller.seals[idx];
+    if (seal && seal.hasWard) {
+      seal.setWard(false);
+      this.controller.addLog(`Ward Marker on Seal ${idx + 1} absorbs ${card.data.name}'s ascension.`);
+      return;
+    }
+
     if (this.controller.state.currentRound >= 4) {
       this.controller.addLog(`Sudden Death Victory! ${card.data.name} ascended to a Seal.`);
       const result = card.data.isEnemy ? 'enemy' : 'player';

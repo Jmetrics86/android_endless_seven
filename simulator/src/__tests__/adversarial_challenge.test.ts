@@ -66,7 +66,7 @@ describe('Adversarial Verification & Edge Case Mechanics Suite', () => {
       weaknessMarkers: 0,
       boardPresencePowerMarkers: 0
     };
-    expect(effectivePower(cardZelus, 'battle')).toBe(7); // 3 + 4
+    expect(effectivePower(cardZelus, 'battle')).toBe(6); // 3 + 3
 
     const bacchus = resolved.darkPool.find(c => c.name === 'Bacchus')!;
     const cardBacchus: HeadlessCard = {

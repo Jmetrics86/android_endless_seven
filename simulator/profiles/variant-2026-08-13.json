@@ -334,12 +334,12 @@
       "type": "Creature",
       "power": 3,
       "isChampion": false,
-      "ability": "During the battle step, +4 Power. Flip: Place a -3 Weakness Marker on any creature with Power equal to or greater than this creature.",
+      "ability": "During the battle step, +3 Power. Flip: Place a -2 Weakness Marker on any creature with Power equal to or greater than this creature.",
       "hasTargetedAbility": true,
       "effect": "place_weakness",
       "targetType": "creature_power_gte",
-      "markerWeakness": 3,
-      "battleStepBonusPower": 4
+      "markerWeakness": 2,
+      "battleStepBonusPower": 3
     },
     {
       "name": "Belphegor",

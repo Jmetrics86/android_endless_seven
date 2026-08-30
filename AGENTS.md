@@ -41,12 +41,16 @@ Most development happens in `web/` for game logic, `app/` for the Android shell,
 
 ## Release and Deployment
 
-### Google Cloud Storage (GCS) Integration
-- **gcloud CLI** and **GCS** access are configured on this environment.
-- The GCS bucket location used for builds is: `gs://ai-studio-bucket-236764767416-us-west1/antigravity_projects/`
-- When finalizing changes and making a commit, follow this deployment workflow:
-  1. Increment the version code and name: `python3 increment_version.py`
-  2. Build the web game assets: `node ./node_modules/cross-env/src/bin/cross-env.js VITE_BASE=./ node ./node_modules/vite/bin/vite.js build --outDir ../app/src/main/assets/web` inside the `web/` folder.
-  3. Compile the Android app: `./gradlew assembleDebug` in the root folder.
-  4. Copy the compiled APK to root: `cp app/build/outputs/apk/debug/app-debug.apk ./app-debug-v<version>.apk`
-  5. Upload the compiled APK to GCS: `gcloud storage cp app-debug-v<version>.apk gs://ai-studio-bucket-236764767416-us-west1/antigravity_projects/`
+### GitHub Releases Workflow
+- Android APK releases are published directly to **GitHub Releases**: `https://github.com/Jmetrics86/android_endless_seven/releases`.
+- When finalizing changes and making a release, run the automated release tool:
+  ```bash
+  python release_to_github.py
+  ```
+- This automated workflow:
+  1. Increments the version code and name (`increment_version.py`).
+  2. Builds the production web assets into `app/src/main/assets/web`.
+  3. Commits and creates a Git tag (e.g. `v0.0.42`).
+  4. Pushes to GitHub, triggering the `.github/workflows/release.yml` GitHub Actions runner.
+  5. GitHub Actions builds the Android APK and publishes it to GitHub Releases with the direct download link.
+

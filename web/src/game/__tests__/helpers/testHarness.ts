@@ -450,6 +450,44 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
     configurable: true
   });
 
+  let _alignmentChoiceCallback: any = null;
+  Object.defineProperty(controller, 'alignmentChoiceCallback', {
+    get: () => _alignmentChoiceCallback,
+    set: (cb) => {
+      _alignmentChoiceCallback = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_alignmentChoiceCallback) {
+            const fn = _alignmentChoiceCallback;
+            _alignmentChoiceCallback = null;
+            fn(Alignment.LIGHT);
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
+
+  let _metatronResolve: any = null;
+  Object.defineProperty(abilityManager, 'metatronResolve', {
+    get: () => _metatronResolve,
+    set: (cb) => {
+      _metatronResolve = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_metatronResolve) {
+            const fn = _metatronResolve;
+            _metatronResolve = null;
+            const valid = (controller as any).pendingAbilityData?.validTargets || [];
+            fn(valid[0] || null);
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
   return {
     controller,
     abilityManager,

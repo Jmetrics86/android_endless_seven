@@ -98,7 +98,7 @@ jobs:
           echo "storepass=${PASS}" >> $GITHUB_OUTPUT
           echo "alias=${ALIAS}" >> $GITHUB_OUTPUT
 
-      - name: Align and Sign APKs (Strict Pipeline Order: Zipalign FIRST -> Apksigner LAST)
+      - name: "Align and Sign APKs (Strict Pipeline Order: Zipalign FIRST -> Apksigner LAST)"
         run: |
           TAG="${{ steps.prep.outputs.tag }}"
           ZIPALIGN="${{ steps.tools.outputs.zipalign }}"

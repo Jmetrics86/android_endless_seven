@@ -992,7 +992,7 @@ function CombatResolutionCard({
 
     switch (itemId) {
       case 'haste':
-        if (abilityLower.includes('haste') || card.hasHaste || name === 'Fenris Lightfoot' || name === 'Zelus' || name === 'Lucian Blackwood' || name === 'Samyaza') {
+        if (card.hasHaste || abilityLower.includes('haste')) {
           if (name === 'Fenris Lightfoot') {
             return '⚡ Fenris: Strikes immediately. Targets are destroyed at round end.';
           }

@@ -376,6 +376,80 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
     configurable: true
   });
 
+  let _singleTargetCallback: any = null;
+  Object.defineProperty(controller, 'singleTargetCallback', {
+    get: () => _singleTargetCallback,
+    set: (cb) => {
+      _singleTargetCallback = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_singleTargetCallback) {
+            const fn = _singleTargetCallback;
+            _singleTargetCallback = null;
+            const valid = (controller as any).pendingAbilityData?.validTargets || [];
+            fn(valid[0] || null);
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
+  let _targetChoiceCallback: any = null;
+  Object.defineProperty(controller, 'targetChoiceCallback', {
+    get: () => _targetChoiceCallback,
+    set: (cb) => {
+      _targetChoiceCallback = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_targetChoiceCallback) {
+            const fn = _targetChoiceCallback;
+            _targetChoiceCallback = null;
+            fn('power');
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
+  let _targetCardCallback: any = null;
+  Object.defineProperty(controller, 'targetCardCallback', {
+    get: () => _targetCardCallback,
+    set: (cb) => {
+      _targetCardCallback = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_targetCardCallback) {
+            const fn = _targetCardCallback;
+            _targetCardCallback = null;
+            const valid = (controller as any).pendingAbilityData?.validTargets || [];
+            fn(valid[0] || null);
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
+  let _alignmentCallback: any = null;
+  Object.defineProperty(controller, 'alignmentCallback', {
+    get: () => _alignmentCallback,
+    set: (cb) => {
+      _alignmentCallback = cb;
+      if (cb) {
+        queueMicrotask(() => {
+          if (_alignmentCallback) {
+            const fn = _alignmentCallback;
+            _alignmentCallback = null;
+            fn(Alignment.LIGHT);
+          }
+        });
+      }
+    },
+    configurable: true
+  });
+
   return {
     controller,
     abilityManager,

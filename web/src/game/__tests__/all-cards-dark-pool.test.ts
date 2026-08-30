@@ -322,13 +322,13 @@ describe('Dark Pool — 21 Cards Test Matrix', () => {
 
   // 31. Zelus
   describe('Card 31: Zelus', () => {
-    it('has +4 Battle step bonus power (effective 7)', () => {
+    it('has +3 Battle step bonus power (effective 6)', () => {
       const zelus = createCard('Zelus', true);
-      expect(zelus.data.battleStepBonusPower).toBe(4);
-      expect(CombatManager.getEffectivePower(zelus, 'battle', false)).toBe(7);
+      expect(zelus.data.battleStepBonusPower).toBe(3);
+      expect(CombatManager.getEffectivePower(zelus, 'battle', false)).toBe(6);
     });
 
-    it('Flip places -3 Weakness Marker on creature with Power >= Zelus', () => {
+    it('Flip places -2 Weakness Marker on creature with Power >= Zelus', () => {
       const zelus = createCard('Zelus', true);
       const enemyTarget = createCard('Dawn', false, { power: 9 });
 
@@ -340,10 +340,10 @@ describe('Dark Pool — 21 Cards Test Matrix', () => {
       harness.abilityManager.applyAbilityEffect(enemyTarget, {
         source: zelus,
         effect: 'place_weakness',
-        markerWeakness: 3
+        markerWeakness: 2
       });
 
-      expect(enemyTarget.data.weaknessMarkers).toBe(3);
+      expect(enemyTarget.data.weaknessMarkers).toBe(2);
     });
   });
 

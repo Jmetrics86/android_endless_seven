@@ -1200,7 +1200,7 @@ export class AbilityManager {
     } else if (targetType === 'creature_pv_lte_3') {
       instructionText = `${source.data.name}: Choose a creature with Power Value ≤ 3 to destroy.`;
     } else if (targetType === 'creature_power_gte') {
-      instructionText = `Zelus: Choose a creature with Power Value ≥ Zelus's to place -3 Weakness on.`;
+      instructionText = `Zelus: Choose a creature with Power Value ≥ Zelus's to place -2 Weakness on.`;
     } else if (targetType === 'limbo_creature') {
       instructionText = `${source.data.name}: Choose a creature in Limbo (power value added to ${source.data.name}).`;
     } else if (effect === 'place_power') {

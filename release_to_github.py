@@ -70,7 +70,7 @@ def main():
     run_command(build_cmd, cwd=web_dir, env={'VITE_BASE': './'})
 
     print("\n3. Staging and committing release files...")
-    run_command("git add app/build.gradle.kts web/ .version_name .github/ AGENTS.md README.md release_to_github.py")
+    run_command("git add app/build.gradle.kts web/ gradle.properties .version_name .github/ AGENTS.md README.md release_to_github.py")
     
     # Check if there are staged changes to commit
     status = run_command("git status --porcelain", check=False).stdout

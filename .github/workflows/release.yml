@@ -33,7 +33,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install Web dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Build Web Game Assets

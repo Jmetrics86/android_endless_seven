@@ -89,10 +89,10 @@ def main():
     run_command(f"git push origin {tag} --force")
 
     print("\n==================================================")
-    print(f"🎉 Release {tag} successfully triggered on GitHub!")
+    print(f"[*] Release {tag} successfully triggered on GitHub!")
     print(f"GitHub Actions is now compiling the APK and publishing the release.")
     print(f"Download link will be live at:")
-    print(f"  👉 https://github.com/Jmetrics86/android_endless_seven/releases/tag/{tag}")
+    print(f"  -> https://github.com/Jmetrics86/android_endless_seven/releases/tag/{tag}")
     print("==================================================")
 
 if __name__ == '__main__':

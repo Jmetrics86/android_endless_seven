@@ -1,0 +1,21 @@
+--- a/scripts/generate_pairwise_matrix.py
++++ b/scripts/generate_pairwise_matrix.py
+@@ -799,11 +799,16 @@
+     if p_locked_c or e_locked_c:
+         locked_card = p.name if p_locked_c else e.name
+         math_log.append(f"Step C Combat: Combat is stymied because {locked_card} cannot battle or be battled.")
+-        if p.sacrifice_end_of_turn:
++        if p.sacrifice_end_of_turn and e.sacrifice_end_of_turn:
++            p.in_play = False
++            e.in_play = False
++            math_log.append(f"End of Round: Both Player {p.name} and Enemy {e.name} self-sacrifice at end of round. Lane remains Neutral.")
++            return 'Tie', 'End of Round', math_log
++        elif p.sacrifice_end_of_turn:
+             p.in_play = False
+             math_log.append(f"End of Round: Player {p.name} self-sacrifices at end of round. Enemy {e.name} wins by survival.")
+             return 'Enemy', 'End of Round', math_log
+-        if e.sacrifice_end_of_turn:
++        elif e.sacrifice_end_of_turn:
+             e.in_play = False
+             math_log.append(f"End of Round: Enemy {e.name} self-sacrifices at end of round. Player {p.name} wins by survival.")
+             return 'Player', 'End of Round', math_log

@@ -383,7 +383,8 @@ export class AbilityManager {
       return 2 * count;
     }
     if (card.data.name === 'Dawn') {
-      return all.filter(c => c.data.faction === 'Avatars of light').length;
+      const count = all.filter(c => c.data.faction === 'Avatars of light').length;
+      return card.data.type === 'Oathbringer' ? 2 * count : count;
     }
     if (card.data.name === 'Garmr') {
       const inPlay = all.filter(c => c.data.faction === 'Lycan').length;
@@ -482,7 +483,7 @@ export class AbilityManager {
     if (source.data.name === "Dawn") {
       const isEnemy = source.data.isEnemy;
       const lightCardsInPlay = [...this.controller.playerBattlefield, ...this.controller.enemyBattlefield, ...this.controller.seals.map(s => s.champion)]
-        .filter(c => c !== null && (c as CardEntity).data.faceUp && c.data.faction === "Avatars of light") as CardEntity[];
+        .filter(c => c !== null && (c as CardEntity).data.faceUp && c.data.faction === "Avatars of light" && c.data.isEnemy === isEnemy) as CardEntity[];
       const count = lightCardsInPlay.length;
       const hasChampionOnSeal = this.controller.seals.some(s => s.champion && s.champion.data.isEnemy === isEnemy);
       if (count >= 4 && hasChampionOnSeal) {

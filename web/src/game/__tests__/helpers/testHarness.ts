@@ -112,6 +112,7 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
     state,
     playerBattlefield,
     enemyBattlefield,
+    laneAbilityDestruction: Array(7).fill(null),
     playerHand,
     playerLimbo,
     enemyLimbo,
@@ -171,6 +172,9 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
         if (playerBattlefield[idx] === card) {
           playerBattlefield[idx] = null;
         }
+      }
+      if (!isChampion) {
+        controller.laneAbilityDestruction[idx] = killedBy?.cause === 'ability' ? (isEnemy ? 'player' : 'enemy') : null;
       }
       const gv = isEnemy ? enemyGraveyard : playerGraveyard;
       if (!gv.includes(card)) {
@@ -532,6 +536,7 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
     reset: () => {
       playerBattlefield.fill(null);
       enemyBattlefield.fill(null);
+      controller.laneAbilityDestruction.fill(null);
       playerHand.length = 0;
       playerLimbo.length = 0;
       enemyLimbo.length = 0;

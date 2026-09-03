@@ -1139,10 +1139,13 @@ export class GameController implements IGameController {
     } else {
       if (isEnemy) {
         this.enemyBattlefield[idx] = null;
-        this.laneAbilityDestruction[idx] = 'player';
       } else {
         this.playerBattlefield[idx] = null;
-        this.laneAbilityDestruction[idx] = 'enemy';
+      }
+      if (killedBy?.cause === 'ability') {
+        this.laneAbilityDestruction[idx] = isEnemy ? 'player' : 'enemy';
+      } else {
+        this.laneAbilityDestruction[idx] = null;
       }
     }
 
@@ -1246,14 +1249,6 @@ export class GameController implements IGameController {
           return;
         }
       }
-    }
-
-    // Valtarious: Passive: Prevents Purified Seals from being Corrupted while in play.
-    // Exception: Desire's explicit player choice to corrupt is allowed (Desire's "influence seal dark" option).
-    if (status === Alignment.DARK) {
-      const hasValtarious = [...this.playerBattlefield, ...this.seals.map(s => s.champion)].some(c => c && c.data.name === "Valtarious");
-      const isDesireChoice = cause?.cardName === 'Desire';
-      if (hasValtarious && this.seals[idx].alignment === Alignment.LIGHT && !isDesireChoice) return;
     }
 
     const previousAlignment = this.seals[idx].alignment;

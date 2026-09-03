@@ -380,6 +380,7 @@ export const DARK_POOL: CardData[] = [
     "power": 7,
     "isChampion": true,
     "ability": "Champion. Flip: Place a -1 Weakness Marker on each enemy creature in play . Activate: Destroy any creature in play that has a Weakness Marker.",
+    "hasActivate": true,
     "markerWeakness": 1
   },
   {

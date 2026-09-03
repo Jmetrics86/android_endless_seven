@@ -35,6 +35,7 @@ export interface IGameController {
   pendingAbilityData: any;
   nullifyCallback: ((choice: any) => void) | null;
   sealSelectionCallback: ((idx: number) => void) | null;
+  laneAbilityDestruction: ('player' | 'enemy' | null)[];
   updateState(patch: Partial<GameState>): void;
   cardToHoveredInfo(card: CardEntity): HoveredCardInfo;
   addLog(msg: string): void;

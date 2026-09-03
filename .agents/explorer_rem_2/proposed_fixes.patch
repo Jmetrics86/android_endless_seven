@@ -1,0 +1,169 @@
+diff --git a/web/src/game/GameController.ts b/web/src/game/GameController.ts
+--- a/web/src/game/GameController.ts
++++ b/web/src/game/GameController.ts
+@@ -1137,13 +1137,16 @@ export class GameController implements IGameController {
+     if (isAgainstChamp) {
+       this.seals[idx].champion = null;
+     } else {
+       if (isEnemy) {
+         this.enemyBattlefield[idx] = null;
+-        this.laneAbilityDestruction[idx] = 'player';
+       } else {
+         this.playerBattlefield[idx] = null;
+-        this.laneAbilityDestruction[idx] = 'enemy';
++      }
++      if (killedBy?.cause === 'ability') {
++        this.laneAbilityDestruction[idx] = isEnemy ? 'player' : 'enemy';
++      } else {
++        this.laneAbilityDestruction[idx] = null;
+       }
+     }
+ 
+diff --git a/web/src/game/PhaseManager.ts b/web/src/game/PhaseManager.ts
+--- a/web/src/game/PhaseManager.ts
++++ b/web/src/game/PhaseManager.ts
+@@ -487,6 +487,7 @@ export class PhaseManager {
+         this.controller.destroyCard(eCard, true, idx, false, killer);
+         this.controller.playerBattlefield[idx] = null;
+         this.controller.enemyBattlefield[idx] = null;
++        this.controller.laneAbilityDestruction[idx] = null;
+         await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+         
+         if (hasCards) {
+@@ -926,6 +927,7 @@ export class PhaseManager {
+         this.controller.destroyCard(eCard, true, idx, false, killer);
+         this.controller.playerBattlefield[idx] = null;
+         this.controller.enemyBattlefield[idx] = null;
++        this.controller.laneAbilityDestruction[idx] = null;
+         await this.controller.claimSeal(idx, Alignment.NEUTRAL);
+         
+         if (hasCards) {
+@@ -1020,6 +1022,7 @@ export class PhaseManager {
+           await this.delay(1500);
+         }
+         await this.controller.claimSeal(idx, targetAlign);
++        this.controller.laneAbilityDestruction[idx] = null;
+       }
+     }
+ 
+@@ -1026,6 +1029,9 @@ export class PhaseManager {
+     // Step E: Ascension
+     this.controller.updateState({ phaseStep: "Step E: Ascension" });
+-    const survivor = this.controller.playerBattlefield[idx] || this.controller.enemyBattlefield[idx];
++    pCard = this.controller.playerBattlefield[idx];
++    eCard = this.controller.enemyBattlefield[idx];
++    const isUncontested = (pCard && !eCard) || (eCard && !pCard);
++    const survivor = isUncontested && !pStymied && !eStymied ? (pCard || eCard) : null;
+     if (survivor && survivor.data.isChampion && !seal.champion) {
+       // Coal block ascension check
+diff --git a/web/src/game/interfaces.ts b/web/src/game/interfaces.ts
+--- a/web/src/game/interfaces.ts
++++ b/web/src/game/interfaces.ts
+@@ -37,6 +37,7 @@ export interface IGameController {
+   sealSelectionCallback: ((idx: number) => void) | null;
++  laneAbilityDestruction: ('player' | 'enemy' | null)[];
+   updateState(patch: Partial<GameState>): void;
+diff --git a/web/src/game/__tests__/helpers/testHarness.ts b/web/src/game/__tests__/helpers/testHarness.ts
+--- a/web/src/game/__tests__/helpers/testHarness.ts
++++ b/web/src/game/__tests__/helpers/testHarness.ts
+@@ -165,11 +165,14 @@ export function createTestHarness(initialPlayerAlignment: Alignment = Alignment.
+       } else if (isEnemy) {
+         if (enemyBattlefield[idx] === card) {
+           enemyBattlefield[idx] = null;
+         }
+       } else {
+         if (playerBattlefield[idx] === card) {
+           playerBattlefield[idx] = null;
+         }
+       }
++      if (!isChampion) {
++        controller.laneAbilityDestruction[idx] = killedBy?.cause === 'ability' ? (isEnemy ? 'player' : 'enemy') : null;
++      }
+       const gv = isEnemy ? enemyGraveyard : playerGraveyard;
+diff --git a/simulator/src/HeadlessGameEngine.ts b/simulator/src/HeadlessGameEngine.ts
+--- a/simulator/src/HeadlessGameEngine.ts
++++ b/simulator/src/HeadlessGameEngine.ts
+@@ -331,8 +331,9 @@ export class HeadlessGameEngine {
+ 
+     // Step A Tie Rule Check: Equal effective power upon reveal = both cards destroyed immediately before abilities
+     if (pCard && eCard && effectivePower(pCard, 'flip') === effectivePower(eCard, 'flip') && !this.cannotBattle(pCard) && !this.cannotBattle(eCard)) {
+-      this.destroyCard(pCard);
+-      this.destroyCard(eCard);
++      this.destroyCard(pCard, 'combat');
++      this.destroyCard(eCard, 'combat');
++      this.laneAbilityDestruction[idx] = null;
+       this.seals[idx].alignment = Alignment.NEUTRAL;
+       return;
+     }
+@@ -401,6 +402,7 @@ export class HeadlessGameEngine {
+         oppAlignment = isPlayerClaim ? this.enemyAlignment : this.playerAlignment;
++        this.laneAbilityDestruction[idx] = null;
+       }
+ 
+     // Step E: Ascension Phase (Champion takes control of Seal)
+@@ -431,7 +433,7 @@ export class HeadlessGameEngine {
+ 
+     // Step E: Ascension Phase (Champion takes control of Seal)
+     if (!seal.champion && idx !== this.lockedSealIndex) {
+-      if (pCard && pCard.data.isChampion) {
++      if (pCard && !eCard && pCard.data.isChampion) {
+         if (seal.hasWard) {
+           seal.hasWard = false; // Ward absorbs the championing attempt!
+         } else {
+@@ -442,7 +444,7 @@ export class HeadlessGameEngine {
+             this.playerBattlefield[idx] = null;
+           }
+         }
+-      } else if (eCard && eCard.data.isChampion) {
++      } else if (eCard && !pCard && eCard.data.isChampion) {
+         if (seal.hasWard) {
+           seal.hasWard = false; // Ward absorbs the championing attempt!
+         } else {
+@@ -937,13 +939,13 @@ export class HeadlessGameEngine {
+ 
+     if (powA > powB) {
+       if (!cardB.isInvincible) {
+-        this.destroyCard(cardB);
++        this.destroyCard(cardB, 'combat');
+         if (isAgainstChampion) this.seals[sealIdx].champion = null;
+       }
+       this.handlePostCombatWin(cardA);
+     } else if (powB > powA) {
+       if (!cardA.isInvincible) {
+-        this.destroyCard(cardA);
++        this.destroyCard(cardA, 'combat');
+       }
+       this.handlePostCombatWin(cardB);
+     } else {
+@@ -951,9 +953,10 @@ export class HeadlessGameEngine {
+       if (!cardA.isInvincible) {
+-        this.destroyCard(cardA);
++        this.destroyCard(cardA, 'combat');
+       }
+       if (!cardB.isInvincible) {
+-        this.destroyCard(cardB);
++        this.destroyCard(cardB, 'combat');
+         if (isAgainstChampion) this.seals[sealIdx].champion = null;
+       }
++      this.laneAbilityDestruction[sealIdx] = null;
+     }
+   }
+@@ -975,15 +978,15 @@ export class HeadlessGameEngine {
+-  public destroyCard(card: HeadlessCard) {
++  public destroyCard(card: HeadlessCard, cause: 'combat' | 'ability' = 'ability') {
+     const idxP = this.playerBattlefield.indexOf(card);
+     const idxE = this.enemyBattlefield.indexOf(card);
+     const seal = this.seals.find(s => s.champion === card);
+ 
+     if (seal) seal.champion = null;
+     else if (idxP !== -1) {
+       this.playerBattlefield[idxP] = null;
+-      this.laneAbilityDestruction[idxP] = 'enemy';
++      this.laneAbilityDestruction[idxP] = cause === 'ability' ? 'enemy' : null;
+     } else if (idxE !== -1) {
+       this.enemyBattlefield[idxE] = null;
+-      this.laneAbilityDestruction[idxE] = 'player';
++      this.laneAbilityDestruction[idxE] = cause === 'ability' ? 'player' : null;
+     }
+ 
+     const grave = card.isEnemy ? this.enemyGraveyard : this.playerGraveyard;

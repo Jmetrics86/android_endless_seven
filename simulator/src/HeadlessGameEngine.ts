@@ -328,11 +328,13 @@ export class HeadlessGameEngine {
     // Step A: The Flip
     if (pCard) pCard.faceUp = true;
     if (eCard) eCard.faceUp = true;
+    this.syncBoardPresencePowerMarkers();
 
     // Step A Tie Rule Check: Equal effective power upon reveal = both cards destroyed immediately before abilities
     if (pCard && eCard && effectivePower(pCard, 'flip') === effectivePower(eCard, 'flip') && !this.cannotBattle(pCard) && !this.cannotBattle(eCard)) {
-      this.destroyCard(pCard);
-      this.destroyCard(eCard);
+      this.destroyCard(pCard, 'combat');
+      this.destroyCard(eCard, 'combat');
+      this.laneAbilityDestruction[idx] = null;
       this.seals[idx].alignment = Alignment.NEUTRAL;
       return;
     }
@@ -357,6 +359,8 @@ export class HeadlessGameEngine {
     }
 
     if (this.isGameOver) return;
+
+    this.syncBoardPresencePowerMarkers();
 
     // Refresh slots
     pCard = this.playerBattlefield[idx];
@@ -399,6 +403,7 @@ export class HeadlessGameEngine {
         isPlayerClaim = this.laneAbilityDestruction[idx] === 'player';
         targetAlignment = isPlayerClaim ? this.playerAlignment : this.enemyAlignment;
         oppAlignment = isPlayerClaim ? this.enemyAlignment : this.playerAlignment;
+        this.laneAbilityDestruction[idx] = null;
       }
 
       if (targetAlignment && oppAlignment) {
@@ -431,7 +436,7 @@ export class HeadlessGameEngine {
 
     // Step E: Ascension Phase (Champion takes control of Seal)
     if (!seal.champion && idx !== this.lockedSealIndex) {
-      if (pCard && pCard.data.isChampion) {
+      if (pCard && !eCard && pCard.data.isChampion) {
         if (seal.hasWard) {
           seal.hasWard = false; // Ward absorbs the championing attempt!
         } else {
@@ -442,7 +447,7 @@ export class HeadlessGameEngine {
             this.playerBattlefield[idx] = null;
           }
         }
-      } else if (eCard && eCard.data.isChampion) {
+      } else if (eCard && !pCard && eCard.data.isChampion) {
         if (seal.hasWard) {
           seal.hasWard = false; // Ward absorbs the championing attempt!
         } else {
@@ -616,10 +621,8 @@ export class HeadlessGameEngine {
     const name = card.data.name;
 
     if (name === "Dawn") {
-      const oathbringers = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)]
-        .filter(c => c !== null && c.faceUp && c.data.faction === "Avatars of light").length;
-      const multiplier = card.data.ability?.includes("+2 Power Marker") ? 2 : 1;
-      card.powerMarkers += (oathbringers * multiplier);
+      // Board-presence Power Markers for Dawn (+2 per Oathbringer in play)
+      // are managed dynamically via syncBoardPresencePowerMarkers() matching web AbilityManager.ts:385-388
     } else if (name === "Bella") {
       const foes = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)]
         .filter((c): c is HeadlessCard => c !== null && c.faceUp && c.isEnemy !== isEnemy);
@@ -721,7 +724,15 @@ export class HeadlessGameEngine {
           f.weaknessMarkers += 2 * gravebornCount;
         });
       }
-    } else if (name === "Umbarax") {
+    } else if (
+      name === "Umbarax" ||
+      name === "Anakim the Wise" ||
+      name === "Anakim The Wise" ||
+      name === "Mammon" ||
+      name === "Ulfric Thorne" ||
+      card.data.ability?.toLowerCase().includes("invulnerability") ||
+      card.data.ability?.includes("Cannot be destroyed by battle")
+    ) {
       card.isInvincible = true;
     } else if (name === "Pazoo") {
       const gravebornCount = [...this.playerBattlefield, ...this.enemyBattlefield, ...this.seals.map(s => s.champion)].filter(c => c !== null && c.faceUp && c.data.type === 'Graveborn' && c.isEnemy === isEnemy).length;
@@ -937,15 +948,25 @@ export class HeadlessGameEngine {
 
     if (powA > powB) {
       if (!cardB.isInvincible) {
-        this.destroyCard(cardB);
+        this.destroyCard(cardB, 'combat');
         if (isAgainstChampion) this.seals[sealIdx].champion = null;
       }
       this.handlePostCombatWin(cardA);
     } else if (powB > powA) {
       if (!cardA.isInvincible) {
-        this.destroyCard(cardA);
+        this.destroyCard(cardA, 'combat');
       }
       this.handlePostCombatWin(cardB);
+    } else {
+      // Tied effective power: mutual destruction unless protected by invulnerability
+      if (!cardA.isInvincible) {
+        this.destroyCard(cardA, 'combat');
+      }
+      if (!cardB.isInvincible) {
+        this.destroyCard(cardB, 'combat');
+        if (isAgainstChampion) this.seals[sealIdx].champion = null;
+      }
+      this.laneAbilityDestruction[sealIdx] = null;
     }
   }
 
@@ -963,7 +984,7 @@ export class HeadlessGameEngine {
     }
   }
 
-  public destroyCard(card: HeadlessCard) {
+  public destroyCard(card: HeadlessCard, cause: 'combat' | 'ability' = 'ability') {
     const idxP = this.playerBattlefield.indexOf(card);
     const idxE = this.enemyBattlefield.indexOf(card);
     const seal = this.seals.find(s => s.champion === card);
@@ -971,10 +992,10 @@ export class HeadlessGameEngine {
     if (seal) seal.champion = null;
     else if (idxP !== -1) {
       this.playerBattlefield[idxP] = null;
-      this.laneAbilityDestruction[idxP] = 'enemy';
+      this.laneAbilityDestruction[idxP] = cause === 'ability' ? 'enemy' : null;
     } else if (idxE !== -1) {
       this.enemyBattlefield[idxE] = null;
-      this.laneAbilityDestruction[idxE] = 'player';
+      this.laneAbilityDestruction[idxE] = cause === 'ability' ? 'player' : null;
     }
 
     const grave = card.isEnemy ? this.enemyGraveyard : this.playerGraveyard;
@@ -1056,7 +1077,9 @@ export class HeadlessGameEngine {
         const count = allInPlay.filter(x => x.data.faction === faction && (excludeSelf ? x !== c : true)).length;
         expected = bonusPerCard * count;
       } else if (c.data.name === 'Dawn') {
-        expected = allInPlay.filter(x => x.data.faction === 'Avatars of light').length;
+        const count = allInPlay.filter(x => x.data.faction === 'Avatars of light').length;
+        const multiplier = c.data.ability?.includes("+2 Power Marker") || c.data.type === 'Oathbringer' ? 2 : 1;
+        expected = multiplier * count;
       } else if (c.data.name === 'Garmr') {
         const inPlay = allInPlay.filter(x => x.data.faction === 'Lycan').length;
         const inLimbo = [...this.playerLimbo, ...this.enemyLimbo].filter(x => x.data.faction === 'Lycan').length;

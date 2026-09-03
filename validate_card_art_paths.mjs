@@ -1,9 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-const webConstantsFile = 'C:/Users/jsnbr/Projects/android_endless_seven/web/src/constants.ts';
-const cardArtPathsFile = 'C:/Users/jsnbr/Projects/android_endless_seven/web/src/cardArtPaths.ts';
-const publicDir = 'C:/Users/jsnbr/Projects/android_endless_seven/web/public';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const webConstantsFile = path.resolve(__dirname, 'web/src/constants.ts');
+const cardArtPathsFile = path.resolve(__dirname, 'web/src/cardArtPaths.ts');
+const publicDir = path.resolve(__dirname, 'web/public');
 
 // Read constants
 const constantsContent = fs.readFileSync(webConstantsFile, 'utf-8');
@@ -35,3 +39,10 @@ for (const name of uniqueNames) {
 
 console.log("Missing from CARD_ART_PATHS:", missingInPaths);
 console.log("Files missing on disk:", missingFiles);
+
+if (missingInPaths.length > 0 || missingFiles.length > 0) {
+  console.error("Card art path validation failed!");
+  process.exit(1);
+} else {
+  console.log("Card art path validation passed successfully!");
+}

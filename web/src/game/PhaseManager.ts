@@ -487,6 +487,7 @@ export class PhaseManager {
         this.controller.destroyCard(eCard, true, idx, false, killer);
         this.controller.playerBattlefield[idx] = null;
         this.controller.enemyBattlefield[idx] = null;
+        this.controller.laneAbilityDestruction[idx] = null;
         await this.controller.claimSeal(idx, Alignment.NEUTRAL);
         
         if (hasCards) {
@@ -926,6 +927,7 @@ export class PhaseManager {
         this.controller.destroyCard(eCard, true, idx, false, killer);
         this.controller.playerBattlefield[idx] = null;
         this.controller.enemyBattlefield[idx] = null;
+        this.controller.laneAbilityDestruction[idx] = null;
         await this.controller.claimSeal(idx, Alignment.NEUTRAL);
         
         if (hasCards) {
@@ -1020,12 +1022,16 @@ export class PhaseManager {
           await this.delay(1500);
         }
         await this.controller.claimSeal(idx, targetAlign);
+        this.controller.laneAbilityDestruction[idx] = null;
       }
     }
 
     // Step E: Ascension
     this.controller.updateState({ phaseStep: "Step E: Ascension" });
-    const survivor = this.controller.playerBattlefield[idx] || this.controller.enemyBattlefield[idx];
+    pCard = this.controller.playerBattlefield[idx];
+    eCard = this.controller.enemyBattlefield[idx];
+    const isUncontested = (pCard && !eCard) || (eCard && !pCard);
+    const survivor = isUncontested && !pStymied && !eStymied ? (pCard || eCard) : null;
     if (survivor && survivor.data.isChampion && !seal.champion) {
       // Coal block ascension check
       const opponentIsEnemy = !survivor.data.isEnemy;
